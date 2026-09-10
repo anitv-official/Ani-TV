@@ -115,12 +115,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _handleNavigation(int index) {
     if (index == _currentNavIndex) return;
 
-    if (index == 5) {
-       // Exit case if using Desktop
-       windowManager.close();
-       return;
-    }
-
     setState(() {
       _previousNavIndex = _currentNavIndex;
       _currentNavIndex = index;
