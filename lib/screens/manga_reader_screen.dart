@@ -344,14 +344,13 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       // Pastikan URL gambar sudah dibersihkan dari spasi
       final cleanImageUrl = _pages[i].trim();
       // Preload gambar menggunakan CachedNetworkImageProvider
-      final provider = cleanImageUrl.startsWith('/') || cleanImageUrl.startsWith('file://')
-          ? FileImage(File(cleanImageUrl.replaceFirst('file://', '')))
+      final ImageProvider<Object> provider = cleanImageUrl.startsWith('/') || cleanImageUrl.startsWith('file://')
+          ? FileImage(File(cleanImageUrl.replaceFirst('file://', ''))) as ImageProvider<Object>
           : CachedNetworkImageProvider(
           cleanImageUrl,
           cacheKey: 'manga_${_chapterId}_$i',
-        );
+        ) as ImageProvider<Object>;
       precacheImage(provider, context,
-        context,
         onError: (exception, stackTrace) {
           // Tangani error saat preload
           setState(() {
@@ -812,4 +811,3 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     super.dispose();
   }
 }
-
