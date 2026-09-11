@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../sources/source_registry.dart';
 
 class ApiService {
   static String _baseUrl = 'http://38.47.176.56:5000';
@@ -126,6 +127,10 @@ class ApiService {
   // API Methods
   static Future<List<dynamic>> fetchTopAnime() async {
     try {
+      final sourced = await SourceRegistry.latestAnime(page: 1);
+      if (sourced.isNotEmpty) return sourced.take(12).toList();
+    } catch (_) {}
+    try {
       final response = await _makeRequest('/top-anime');
       if (response['data'] != null) {
         return response['data'];
@@ -138,6 +143,10 @@ class ApiService {
   }
 
   static Future<List<dynamic>> fetchLatestAnime({int page = 1}) async {
+    try {
+      final sourced = await SourceRegistry.latestAnime(page: page);
+      if (sourced.isNotEmpty) return sourced;
+    } catch (_) {}
     try {
       final response = await _makeRequest(
         '/latest-anime',
@@ -155,6 +164,10 @@ class ApiService {
 
   static Future<dynamic> fetchAnimeDetails(String url) async {
     try {
+      final sourced = await SourceRegistry.details(url);
+      if (sourced != null) return sourced;
+    } catch (_) {}
+    try {
       final response = await _makeRequest(
         '/anime-details',
         queryParameters: {'url': url},
@@ -170,6 +183,10 @@ class ApiService {
   }
 
   static Future<dynamic> fetchEpisodeStreams(String url) async {
+    try {
+      final sourced = await SourceRegistry.streams(url);
+      if (sourced != null) return sourced;
+    } catch (_) {}
     try {
       final response = await _makeRequest(
         '/episode-streams',
@@ -259,13 +276,16 @@ class ApiService {
 
   static Future<List<dynamic>> searchAnime(String query) async {
     try {
+      final sourced = await SourceRegistry.searchAnime(query);
+      if (sourced.isNotEmpty) return sourced;
+    } catch (_) {}
+    try {
       final response = await _makeRequest(
         '/search',
         queryParameters: {'query': query},
       );
       if (response['data'] != null) {
         final data = response['data'];
-        // Add category 'anime' to each item
         return data.map((item) => {...item, 'category': 'anime', 'type': item['type'] ?? 'anime'}).toList();
       } else {
         throw ApiException('Invalid response format: missing data field');
@@ -276,6 +296,10 @@ class ApiService {
   }
 
   static Future<List<dynamic>> fetchLatestComics({int page = 1}) async {
+    try {
+      final sourced = await SourceRegistry.latestManga(page: page);
+      if (sourced.isNotEmpty) return sourced;
+    } catch (_) {}
     try {
       final response = await _makeRequest(
         '/latest-comics',
@@ -293,6 +317,10 @@ class ApiService {
 
   static Future<dynamic> fetchComicDetails(String url) async {
     try {
+      final sourced = await SourceRegistry.details(url);
+      if (sourced != null) return sourced;
+    } catch (_) {}
+    try {
       final response = await _makeRequest(
         '/comic-details',
         queryParameters: {'url': url},
@@ -309,13 +337,16 @@ class ApiService {
 
   static Future<List<dynamic>> searchComics(String query) async {
     try {
+      final sourced = await SourceRegistry.searchManga(query);
+      if (sourced.isNotEmpty) return sourced;
+    } catch (_) {}
+    try {
       final response = await _makeRequest(
         '/search-comics',
         queryParameters: {'query': query},
       );
       if (response['data'] != null) {
         final data = response['data'];
-        // Add category 'comic' to each item
         return data.map((item) => {...item, 'category': 'comic', 'type': item['type'] ?? 'comic'}).toList();
       } else {
         throw ApiException('Invalid response format: missing data field');
@@ -326,6 +357,10 @@ class ApiService {
   }
 
   static Future<dynamic> fetchChapterImages(String url) async {
+    try {
+      final sourced = await SourceRegistry.chapterImages(url);
+      if (sourced != null) return sourced;
+    } catch (_) {}
     try {
       final response = await _makeRequest(
         '/chapter-images',
