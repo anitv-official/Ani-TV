@@ -1,5 +1,3 @@
-import 'dart:async';
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -62,20 +60,23 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final _appLinks = AppLinks();
-  StreamSubscription<Uri>? _linkSubscription;
+  static const _deepLinkChannel = MethodChannel('com.anitv.app/deeplink');
   String? _lastRecoveryLink;
 
   @override
   void initState() {
     super.initState();
-    _linkSubscription = _appLinks.uriLinkStream.listen(_handleUri);
-    _appLinks.getInitialLink().then((uri) {
-      if (uri != null) _handleUri(uri);
+    _deepLinkChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onLink' && call.arguments is String) _handleUri(Uri.tryParse(call.arguments as String));
+      return null;
+    });
+    _deepLinkChannel.invokeMethod<String>('getInitialLink').then((value) {
+      if (value != null) _handleUri(Uri.tryParse(value));
     });
   }
 
-  void _handleUri(Uri uri) {
+  void _handleUri(Uri? uri) {
+    if (uri == null) return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
     if (userId == null || secret == null || userId.isEmpty || secret.isEmpty) return;
@@ -92,7 +93,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _linkSubscription?.cancel();
     super.dispose();
   }
 

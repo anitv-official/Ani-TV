@@ -11,9 +11,16 @@ import java.io.File
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.anitv.app/installer"
+    private val DEEP_LINK_CHANNEL = "com.anitv.app/deeplink"
+    private lateinit var deepLinkChannel: MethodChannel
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEP_LINK_CHANNEL)
+        deepLinkChannel.setMethodCallHandler { call, result ->
+            if (call.method == "getInitialLink") result.success(intent?.data?.toString()) else result.notImplemented()
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "installApk") {
@@ -29,6 +36,12 @@ class MainActivity: FlutterActivity() {
         }
     }
     
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.data?.toString()?.let { deepLinkChannel.invokeMethod("onLink", it) }
+    }
+
     private fun installApk(apkPath: String, result: MethodChannel.Result) {
         try {
             val file = File(apkPath)
