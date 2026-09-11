@@ -4,6 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -42,7 +43,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (!mounted) return;
       ToastUtils.show('تم إنشاء الحساب وتسجيل الدخول بنجاح.', backgroundColor: Colors.green);
-      Navigator.of(context).pop();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (_) => false,
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

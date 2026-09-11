@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => AppStateProvider(),
-        child: MyApp(),
+        child: const MyApp(),
       ),
     );
     expect(find.byType(MyApp), findsOneWidget);

@@ -151,7 +151,7 @@ class AppStateProvider extends ChangeNotifier {
       _favoriteComics = jsonDecode(comicsJson);
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to load favorites: $e');
+      _setErrorMessage('تعذر تحميل المفضلة. حاول مرة أخرى.');
     }
   }
   
@@ -163,7 +163,7 @@ class AppStateProvider extends ChangeNotifier {
       
       // Check if item already exists
       if (list.any((existingItem) => existingItem['url'] == item['url'])) {
-        _setErrorMessage('Item already in favorites');
+        _setErrorMessage('العنصر موجود بالفعل في المفضلة');
         return;
       }
       
@@ -186,7 +186,7 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.setString(key, jsonEncode(list));
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to add to favorites: $e');
+      _setErrorMessage('تعذر الإضافة إلى المفضلة. حاول مرة أخرى.');
     }
   }
   
@@ -208,7 +208,7 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.setString(key, jsonEncode(updatedList));
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to remove from favorites: $e');
+      _setErrorMessage('تعذر إزالة العنصر من المفضلة. حاول مرة أخرى.');
     }
   }
   
@@ -223,7 +223,7 @@ class AppStateProvider extends ChangeNotifier {
       _comicHistory = jsonDecode(comicsJson);
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to load history: $e');
+      _setErrorMessage('تعذر تحميل السجل. حاول مرة أخرى.');
     }
   }
   
@@ -261,7 +261,7 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.setString(key, jsonEncode(list));
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to add to history: $e');
+      _setErrorMessage('تعذر إضافة العنصر إلى السجل. حاول مرة أخرى.');
     }
   }
   
@@ -283,7 +283,7 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.setString(key, jsonEncode(updatedList));
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to remove from history: $e');
+      _setErrorMessage('تعذر إزالة العنصر من السجل. حاول مرة أخرى.');
     }
   }
   
@@ -303,7 +303,7 @@ class AppStateProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to clear history: $e');
+      _setErrorMessage('تعذر مسح السجل. حاول مرة أخرى.');
     }
   }
   

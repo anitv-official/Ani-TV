@@ -47,11 +47,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         future: _animeDetailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CustomLoadingWidget(message: "Loading anime details...", size: 100));
+            return const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل الأنمي...', size: 100));
           } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.white)));
+            return const Center(child: Text('تعذر تحميل التفاصيل. حاول مرة أخرى.', style: TextStyle(color: Colors.white)));
           } else if (!snapshot.hasData) {
-            return const Center(child: Text('No data found', style: TextStyle(color: Colors.white)));
+            return const Center(child: Text('لا توجد بيانات', style: TextStyle(color: Colors.white)));
           }
 
           final anime = snapshot.data!;
@@ -124,12 +124,12 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           ),
         ),
         // Back Button
-        Positioned(
+        PositionedDirectional(
           top: 16,
-          left: 16,
+          start: 16,
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
           ),
         ),
         // Center Play Icon (Decoration)
@@ -151,7 +151,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          anime['title'] ?? 'No Title',
+          anime['title'] ?? 'بدون عنوان',
           style: const TextStyle(
             color: Colors.white,
              fontSize: 24,
@@ -179,7 +179,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             ),
             const SizedBox(width: 8),
              Text(
-              '${anime['total_episodes'] ?? '?'} Episodes',
+              '${anime['total_episodes'] ?? '?'} حلقة',
               style: TextStyle(color: Colors.grey[400], fontSize: 13),
             ),
              const SizedBox(width: 8),
@@ -207,12 +207,12 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                   // Play first episode or resume
                    if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
                       _showStreamBottomSheet(context, anime['episodes'][0], anime);
                    }
                 },
-                label: Text('Play', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.play_arrow, color: Colors.white),
+                label: const Text('تشغيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF393053),
                   foregroundColor: Colors.white,
@@ -227,11 +227,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                    if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
                       _showDownloadBottomSheet(context, anime['episodes'][0]);
                    } else {
-                      ToastUtils.show('No episodes available to download', backgroundColor: Colors.orange);
+                       ToastUtils.show('لا توجد حلقات متاحة للتنزيل', backgroundColor: Colors.orange);
                    }
                 },
                 icon: Icon(Icons.download, color: Colors.white),
-                label: Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: const Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
                    padding: EdgeInsets.symmetric(vertical: 12),

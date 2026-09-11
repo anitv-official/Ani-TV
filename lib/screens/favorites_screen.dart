@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../services/api_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
-import 'comic_details_screen.dart';
 import 'explore_screen.dart';
-import 'search_screen.dart';
 import '../utils/toast_utils.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -263,11 +259,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 130),
           physics: const BouncingScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 0.7, // Poster ratio
+            childAspectRatio: 0.7,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -368,7 +364,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    item['image_url'],
+                    item['image_url'] ?? '',
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
@@ -422,7 +418,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            item['title'],
+            item['title'] ?? '',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

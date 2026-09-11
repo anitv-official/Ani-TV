@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:carousel_slider/carousel_controller.dart' as slider;
-import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../widgets/custom_loading_widget.dart';
 import '../widgets/update_bottom_sheet.dart';
-import '../providers/app_state_provider.dart';
-import '../services/ad_service.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'categories_screen.dart';
@@ -35,9 +30,6 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClientMixin {
-  final slider.CarouselSliderController carouselController =
-      slider.CarouselSliderController();
-
   List<dynamic> featuredContent = [];
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
@@ -107,7 +99,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);
-        _showErrorDialog('Error Loading Content', 'Failed to load content: $e');
+        _showErrorDialog('خطأ في التحميل', 'تعذر تحميل المحتوى. حاول مرة أخرى.');
       }
     }
   }
@@ -193,7 +185,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
     final item = featuredContent[_currentCarouselIndex]; // Use current index
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
-    final double heroHeight = (screenHeight * 0.45).clamp(200.0, 500.0); 
+    final double heroHeight = (screenHeight * 0.48).clamp(320.0, 520.0); 
 
     return SizedBox(
       height: heroHeight,
@@ -217,7 +209,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               return Builder(
                 builder: (BuildContext context) {
                   return Image.network(
-                    contentItem['image_url'],
+                    contentItem['image_url'] ?? '',
                     fit: BoxFit.cover,
                     width: double.infinity,
                     errorBuilder: (_,__,___) => Container(color: AppTheme.surfaceColor),
@@ -270,9 +262,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
           // Content
           SafeArea(
-            bottom: false, // Ignore bottom padding (nav bar/ads) for hero section
+            bottom: false,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Header (AniTV + Icons)
                 Padding(
@@ -349,8 +340,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     ),
                   ),
                 ),
-
-                // Hero Details & Actions
+                const Spacer(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0), // Bottom padding removed for tight spacing
                   child: Column(
@@ -358,7 +348,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     children: [
                       // Title
                       Text(
-                        item['title'],
+                        item['title'] ?? '',
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -448,9 +438,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             children: [
               SvgPicture.asset(
                 iconPath,
-                color: Colors.white,
                 width: 24,
                 height: 24,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
               const SizedBox(height: 4),
               Text(
@@ -481,7 +471,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             AnimatedAlign(
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
-              alignment: _showAnime ? Alignment.centerLeft : Alignment.centerRight,
+              alignment: _showAnime
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.centerEnd,
               child: FractionallySizedBox(
                 widthFactor: 0.5,
                 child: Container(
@@ -502,7 +494,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     child: Container(
                       alignment: Alignment.center,
                       child: Text(
-                        'ANIME',
+                        'أنمي',
                         style: TextStyle(
                           color: Colors.white, 
                           fontWeight: FontWeight.bold,
@@ -561,7 +553,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             shrinkWrap: true,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.70, 
+              childAspectRatio: 0.58,
               crossAxisSpacing: 12,
               mainAxisSpacing: 16,
             ),
@@ -586,7 +578,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              item['image_url'],
+                              item['image_url'] ?? '',
                               fit: BoxFit.cover,
                               width: double.infinity,
                               errorBuilder: (_,__,___) => Container(color: Colors.grey[800]),
@@ -621,13 +613,16 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      item['title'],
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+                    SizedBox(
+                      height: 32,
+                      child: Text(
+                        item['title'] ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],

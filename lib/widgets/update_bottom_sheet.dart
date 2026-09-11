@@ -36,12 +36,12 @@ class UpdateBottomSheet extends StatefulWidget {
 class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _downloadStatus = 'Mempersiapkan download...';
+  String _downloadStatus = 'جارٍ تجهيز التنزيل...';
 
   Future<void> _onUpdatePressed() async {
     setState(() {
       _isDownloading = true;
-      _downloadStatus = 'Mengunduh update...';
+      _downloadStatus = 'جارٍ تنزيل التحديث...';
     });
 
     HapticFeedback.lightImpact();
@@ -49,7 +49,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
     try {
       final downloadUrl = await AppVersionService.getDownloadUrl();
       if (downloadUrl == null) {
-        _showError('URL download tidak tersedia');
+        _showError('رابط التنزيل غير متوفر');
         return;
       }
 
@@ -59,15 +59,15 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
           setState(() {
             _downloadProgress = progress;
             if (progress < 1.0) {
-              _downloadStatus = 'Mengunduh... ${(progress * 100).toInt()}%';
+              _downloadStatus = 'جارٍ التنزيل... ${(progress * 100).toInt()}%';
             } else {
-              _downloadStatus = 'Menginstall...';
+              _downloadStatus = 'جارٍ التثبيت...';
             }
           });
         },
         onComplete: () {
           setState(() {
-            _downloadStatus = 'Install selesai!';
+            _downloadStatus = 'تم التثبيت بنجاح';
             _downloadProgress = 1.0;
           });
           
@@ -82,7 +82,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
         },
       );
     } catch (e) {
-      _showError('Terjadi kesalahan: $e');
+      _showError('حدث خطأ أثناء التحديث. حاول مرة أخرى.');
     }
   }
 
@@ -164,7 +164,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isDownloading ? 'Mengunduh Update' : 'Update Tersedia',
+                        _isDownloading ? 'جارٍ تنزيل التحديث' : 'تحديث متاح',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -173,7 +173,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                       ),
                       if (widget.latestVersion != null)
                         Text(
-                          'Versi ${widget.latestVersion}',
+                          'الإصدار ${widget.latestVersion}',
                           style: TextStyle(
                             color: Colors.greenAccent,
                             fontSize: 14,
@@ -198,7 +198,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                 if (!_isDownloading) ...[
                   if (widget.changelog != null && widget.changelog!.isNotEmpty) ...[
                     Text(
-                      'Apa yang baru:',
+                      'ما الجديد:',
                       style: TextStyle(
                         color: AppTheme.textPrimaryColor,
                         fontWeight: FontWeight.bold,
@@ -277,7 +277,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                             padding: EdgeInsets.symmetric(vertical: 16),
                           ),
                           child: Text(
-                            'Nanti Saja',
+                            'لاحقاً',
                             style: TextStyle(color: Colors.grey),
                           ),
                         ),
@@ -297,7 +297,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                           disabledBackgroundColor: Colors.grey[800],
                         ),
                         child: Text(
-                          _isDownloading ? 'Mohon Tunggu...' : 'Update Sekarang',
+                          _isDownloading ? 'يرجى الانتظار...' : 'حدّث الآن',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,

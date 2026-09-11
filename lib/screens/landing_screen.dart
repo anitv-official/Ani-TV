@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
@@ -41,7 +40,7 @@ class LandingScreen extends StatelessWidget {
                         );
                       },
                       child: const Text(
-                        'Skip',
+                        'تجاوز',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

@@ -98,7 +98,6 @@ class AppTheme {
       primary: primaryColor,
       secondary: accentColor,
       error: errorColor,
-      background: Colors.white,
       surface: Colors.white,
     ),
     scaffoldBackgroundColor: Colors.white,
@@ -113,7 +112,7 @@ class AppTheme {
         fontWeight: FontWeight.bold
       ),
     ),
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: const TabBarTheme(
       labelColor: Colors.white,
       unselectedLabelColor: Colors.white70,
       indicatorColor: accentColor,
@@ -148,7 +147,6 @@ class AppTheme {
       primary: primaryColor,
       secondary: accentColor,
       error: errorColor,
-      background: backgroundColor,
       surface: surfaceColor,
     ),
     scaffoldBackgroundColor: backgroundColor,
@@ -164,7 +162,7 @@ class AppTheme {
         letterSpacing: 0.5,
       ),
     ),
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: const TabBarTheme(
       labelColor: Colors.white,
       unselectedLabelColor: Colors.white70,
       indicatorColor: accentColor,

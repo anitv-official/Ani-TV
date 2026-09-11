@@ -8,7 +8,6 @@ import '../providers/app_state_provider.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'manga_reader_screen.dart';
-import 'manga_reader_screen.dart';
 import '../services/ad_service.dart';
 import 'video_player_screen.dart';
 import '../utils/toast_utils.dart';

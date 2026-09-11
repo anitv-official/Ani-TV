@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'package:lottie/lottie.dart';
 import 'home_screen.dart';
-import 'login_screen.dart';
 import 'landing_screen.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -12,6 +9,8 @@ import '../services/ad_service.dart';
 import '../providers/app_state_provider.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -58,7 +57,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    AdService.dispose();
     _controller.dispose();
     super.dispose();
   }

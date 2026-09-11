@@ -11,8 +11,7 @@ class ToastUtils {
     Color? textColor,
     ToastGravity gravity = ToastGravity.BOTTOM,
   }) {
-    if (false) {
-      // Use SnackBar for Desktop/Web
+    if (kIsWeb) {
       final messenger = scaffoldMessengerKey.currentState;
       if (messenger != null) {
         messenger.clearSnackBars();

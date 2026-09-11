@@ -61,7 +61,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         setState(() {
           isLoadingContent = false;
         });
-        _showErrorDialog('Error Loading Content', 'Failed to load content: $e');
+        _showErrorDialog('خطأ في التحميل', 'تعذر تحميل المحتوى. حاول مرة أخرى.');
       }
     }
   }
@@ -185,7 +185,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       children: [
         Expanded(
           child: _buildToggleItem(
-            label: 'ANIME',
+            label: 'أنمي',
             isActive: _currentTabIndex == 0,
             onTap: () => setState(() => _currentTabIndex = 0),
           ),
@@ -249,7 +249,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         }
 
         return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8), // Padding handled by parent
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 130),
           physics: const BouncingScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
@@ -325,9 +325,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Title
           Text(
-            item['title'] ?? 'No Title',
+            item['title'] ?? 'بدون عنوان',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

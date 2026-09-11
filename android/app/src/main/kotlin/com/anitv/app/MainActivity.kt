@@ -3,7 +3,6 @@ package com.anitv.app
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugins.GeneratedPluginRegistrant
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -14,8 +13,8 @@ class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.anitv.app/installer"
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        GeneratedPluginRegistrant.registerWith(flutterEngine)
-        
+        super.configureFlutterEngine(flutterEngine)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "installApk") {
                 val path = call.argument<String>("path")

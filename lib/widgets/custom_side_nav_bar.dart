@@ -9,19 +9,25 @@ class CustomSideNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final radius = BorderRadius.horizontal(
+      left: isRtl ? const Radius.circular(20) : Radius.zero,
+      right: isRtl ? Radius.zero : const Radius.circular(20),
+    );
     return Container(
       width: 80,
       decoration: BoxDecoration(
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(20)),
-        gradient: LinearGradient(begin: Alignment.centerLeft, end: Alignment.centerRight, colors: [const Color(0xFF1A0000).withOpacity(.8), Colors.black.withOpacity(.9)]),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 10, offset: const Offset(5, 0))],
+        borderRadius: radius,
+        gradient: LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [const Color(0xFF1A0000).withOpacity(.8), Colors.black.withOpacity(.9)]),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(.5), blurRadius: 10, offset: Offset(isRtl ? -5 : 5, 0))],
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.horizontal(right: Radius.circular(20)),
+        borderRadius: radius,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: SafeArea(
-            right: false,
+            left: !isRtl,
+            right: isRtl,
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               _buildNavItem(0, 'assets/icons/home.svg', 'assets/icons/home_red.svg'),
               const SizedBox(height: 30),

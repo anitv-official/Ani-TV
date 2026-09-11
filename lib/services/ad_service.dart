@@ -15,7 +15,9 @@ class AdService {
   static BannerAd? _bottomNavBanner;
 
   static bool get isMobileAdsSupported {
-    return !kIsWeb;
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   static Future<void> loadRewardedAd({bool forceReload = false}) async {
@@ -137,26 +139,25 @@ class AdService {
   static Future<void> loadInterstitialAd() async {
     if (!isMobileAdsSupported) return;
 
-    await InterstitialAd.load(
-      adUnitId: _interstitialAdUnitId,
-      request: AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (InterstitialAd ad) {
-          _interstitialAd = ad;
-          _interstitialLoadAttempts = 0;
-          print('Interstitial ad loaded');
-        },
-        onAdFailedToLoad: (LoadAdError error) {
-          _interstitialAd = null;
-          _interstitialLoadAttempts++;
-          print('Interstitial ad failed to load: $error');
-          
-          if (_interstitialLoadAttempts < _maxInterstitialLoadAttempts) {
-            loadInterstitialAd();
-          }
-        },
-      ),
-    );
+    try {
+      await InterstitialAd.load(
+        adUnitId: _interstitialAdUnitId,
+        request: AdRequest(),
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (InterstitialAd ad) {
+            _interstitialAd = ad;
+            _interstitialLoadAttempts = 0;
+          },
+          onAdFailedToLoad: (LoadAdError error) {
+            _interstitialAd = null;
+            _interstitialLoadAttempts++;
+            if (_interstitialLoadAttempts < _maxInterstitialLoadAttempts) {
+              loadInterstitialAd();
+            }
+          },
+        ),
+      );
+    } catch (_) {}
   }
 
   static Future<void> showInterstitialAd({

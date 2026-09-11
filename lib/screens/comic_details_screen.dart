@@ -274,11 +274,11 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: _isLoading
-          ? const Center(child: CustomLoadingWidget(message: "Loading comic details...", size: 100))
+          ? const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل المانجا...', size: 100))
           : _error != null
-              ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.white)))
+              ? const Center(child: Text('تعذر تحميل التفاصيل. حاول مرة أخرى.', style: TextStyle(color: Colors.white)))
               : _comicData == null
-                  ? const Center(child: Text('No data found', style: TextStyle(color: Colors.white)))
+                  ? const Center(child: Text('لا توجد بيانات', style: TextStyle(color: Colors.white)))
                   : SafeArea(
                       child: SingleChildScrollView(
                         child: Column(
@@ -344,9 +344,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           ),
         ),
         // Back Button
-        Positioned(
+        PositionedDirectional(
           top: 16,
-          left: 16,
+          start: 16,
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
             child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
@@ -362,7 +362,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          comic['title'] ?? 'No Title',
+          comic['title'] ?? 'بدون عنوان',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 24,
@@ -390,7 +390,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${chapters.length} Chapters',
+              '${chapters.length} فصل',
               style: TextStyle(color: Colors.grey[400], fontSize: 13),
             ),
              const SizedBox(width: 8),
@@ -437,7 +437,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                       });
                    }
                 },
-                label: const Text('Read Ch1', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.menu_book, color: Colors.white),
+                label: const Text('اقرأ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF393053),
                   foregroundColor: Colors.white,
@@ -449,10 +450,10 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                   ToastUtils.show('Download functionality coming soon', backgroundColor: AppTheme.primaryColor);
+                    ToastUtils.show('ميزة التنزيل غير متاحة حالياً', backgroundColor: AppTheme.primaryColor);
                 },
                 icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: const Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
                    padding: const EdgeInsets.symmetric(vertical: 12),

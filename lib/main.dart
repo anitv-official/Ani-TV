@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart' as ads;
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
@@ -13,12 +12,9 @@ import 'package:flutter/services.dart';
 import 'utils/toast_utils.dart';
 
 void main() async {
-  // Initialize WebView platform
+  WidgetsFlutterBinding.ensureInitialized();
   WebViewPlatform.instance =
       WebViewPlatform.instance ?? AndroidWebViewPlatform();
-
-  // Initialize Flutter binding
-  WidgetsFlutterBinding.ensureInitialized();
 
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -34,12 +30,12 @@ void main() async {
     await MobileAds.instance.initialize();
 
     // Initialize UMP (User Messaging Platform) for GDPR/CCPA compliance
-    ads.ConsentInformation.instance.requestConsentInfoUpdate(
-      ads.ConsentRequestParameters(),
+    ConsentInformation.instance.requestConsentInfoUpdate(
+      ConsentRequestParameters(),
       () async {
-        if (await ads.ConsentInformation.instance.isConsentFormAvailable()) {
-          ads.ConsentForm.loadConsentForm(
-            (ads.ConsentForm consentForm) async {
+        if (await ConsentInformation.instance.isConsentFormAvailable()) {
+          ConsentForm.loadConsentForm(
+            (ConsentForm consentForm) async {
               consentForm.show(
                 (formError) {
                   // Handle error if consent form fails to show
@@ -89,6 +85,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppStateProvider>(
@@ -100,10 +98,15 @@ class MyApp extends StatelessWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode:
               appStateProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: SplashScreen(),
+          home: const SplashScreen(),
           debugShowCheckedModeBanner: false,
           locale: const Locale('ar'),
           supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           builder: (context, child) => Directionality(
             textDirection: TextDirection.rtl,
             child: child ?? const SizedBox.shrink(),

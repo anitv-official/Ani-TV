@@ -3,9 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
-import '../screens/home_screen.dart';
 import '../providers/app_state_provider.dart';
-import 'favorites_screen.dart';
+import 'landing_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 import '../utils/toast_utils.dart';
@@ -100,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ToastUtils.show('تم تسجيل الخروج بنجاح', backgroundColor: AppTheme.accentColor);
 
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
+        MaterialPageRoute(builder: (context) => const LandingScreen()),
         (route) => false,
       );
     } catch (e) {
@@ -345,7 +344,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 130),
                   ],
                 ),
               ),

@@ -204,21 +204,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                    if (AdService.bottomNavBanner != null)
                     Container(
                       width: double.infinity,
-                      color: Colors.black, // Ensures background is black behind system nav bar if transparent
-                      child: SafeArea(
-                        top: false,
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.only(top: 4), // Separator above ad
-                            child: SizedBox(
-                              width: AdService.bottomNavBanner!.size.width.toDouble(),
-                              height: AdService.bottomNavBanner!.size.height.toDouble(),
-                              child: AdWidget(ad: AdService.bottomNavBanner!),
-                            ),
-                          ),
-                        ),
+                      color: Colors.black,
+                      padding: const EdgeInsets.only(top: 4),
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: AdService.bottomNavBanner!.size.width.toDouble(),
+                        height: AdService.bottomNavBanner!.size.height.toDouble(),
+                        child: AdWidget(ad: AdService.bottomNavBanner!),
                       ),
                     ),
                    CustomBottomNavBar(
