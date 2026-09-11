@@ -12,6 +12,7 @@ import 'comic_details_screen.dart';
 import 'categories_screen.dart';
 import 'favorites_screen.dart';
 import 'search_screen.dart';
+import 'sources_screen.dart';
 
 class HomeContent extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -160,6 +161,12 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             child: Column(
               children: [
                 _buildHeroSection(MediaQuery.of(context).size.width, screenHeight),
+                SourceSummary(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SourcesScreen()),
+                  ),
+                ),
                 _buildCategoryToggle(),
                 _buildContentGrid(MediaQuery.of(context).size.width),
                 // Add extra padding at bottom to avoid content being hidden behind floating nav bar + ads

@@ -11,6 +11,8 @@ import '../utils/toast_utils.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
 import 'splash_screen.dart';
+import '../sources/source_registry.dart';
+import 'sources_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -180,16 +182,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('مصدر المحتوى', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const Text('مصادر المحتوى المفعّلة', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ...SourceRegistry.all.map((source) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(children: [
+                Icon(source.kind == 'anime' ? Icons.movie_outlined : Icons.menu_book_outlined,
+                    color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('${source.name} (${source.kind == 'anime' ? 'أنمي' : 'مانجا'})',
+                    style: const TextStyle(color: Colors.white))),
+              ]),
+            )),
+            const SizedBox(height: 16),
+            const Text('واجهة API الاحتياطية', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             SelectableText(_apiBaseUrl.isEmpty ? 'جارٍ التحميل...' : _apiBaseUrl, style: TextStyle(color: Colors.grey[300])),
-            const SizedBox(height: 16),
-            const Text('مصدر تحديثات التطبيق', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            SelectableText(_appVersionUrl.isEmpty ? 'جارٍ التحميل...' : _appVersionUrl, style: TextStyle(color: Colors.grey[300])),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسنًا'))],
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen()));
+            },
+            child: const Text('تصفح المصادر'),
+          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسنًا')),
+        ],
       ),
     );
   }
