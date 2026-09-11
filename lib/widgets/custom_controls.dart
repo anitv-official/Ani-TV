@@ -7,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:screen_brightness/screen_brightness.dart';
 
 class CustomControls extends StatefulWidget {
   final Color backgroundColor;
@@ -118,22 +117,10 @@ class _MaterialControlsState extends State<MaterialControls>
   void initState() {
     super.initState();
     notifier = PlayerNotifier();
-    _initBrightness();
   }
 
   bool _isLocked = false;
   double _brightness = 0.5;
-
-  Future<void> _initBrightness() async {
-    try {
-      final current = await ScreenBrightness().current;
-      setState(() {
-        _brightness = current;
-      });
-    } catch (e) {
-      print('Failed to get current brightness: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -330,11 +317,6 @@ class _MaterialControlsState extends State<MaterialControls>
                     setState(() {
                       _brightness = value;
                     });
-                    try {
-                      ScreenBrightness().setScreenBrightness(value);
-                    } catch (e) {
-                      print('Failed to set brightness: $e');
-                    }
                   },
                 ),
               ),
