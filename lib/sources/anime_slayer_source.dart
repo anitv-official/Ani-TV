@@ -1,15 +1,10 @@
-import 'html_client.dart';
+import 'anime_slayer_api.dart';
 import 'source_base.dart';
 
-/// Anime Slayer HTML source.
-///
-/// The public site currently has no documented API. The historical web
-/// catalogue exposes search pages, title pages, and episode pages; this
-/// source deliberately parses those pages and returns an empty result when
-/// the upstream is parked, redirected, or unavailable.
+/// Anime Slayer source backed by the public API used by the official Android app.
+/// The source identity remains unchanged so existing UI, badges, history and player
+/// integration continue to work.
 class AnimeSlayerSource extends ContentSource {
-  static const String _base = 'https://video.anime-slayer.com';
-
   @override
   String get id => 'anime_slayer';
 
@@ -20,166 +15,63 @@ class AnimeSlayerSource extends ContentSource {
   String get kind => 'anime';
 
   @override
-  List<String> get hosts => [
-        'video.anime-slayer.com',
-        'anime-slayer.com',
-        'anslayer.com',
-      ];
+  List<String> get hosts => ['anslayer.com', 'img.anslayer.com', 'video.anime-slayer.com', 'anime-slayer.com'];
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
     if (query.trim().isEmpty) return [];
-    try {
-      final html = await HtmlClient.getHtml(
-        '$_base/?search_param=animes&s=${Uri.encodeQueryComponent(query.trim())}',
-      );
-      return _parseCards(html);
-    } catch (_) {
-      return [];
-    }
+    final records = await AnimeSlayerApi.search(query);
+    return records.map(_asItem).toList();
   }
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    try {
-      final suffix = page <= 1 ? '' : '&page=$page';
-      final html = await HtmlClient.getHtml('$_base/?search_param=animes$suffix');
-      return _parseCards(html);
-    } catch (_) {
-      return [];
-    }
+    final records = await AnimeSlayerApi.latest(offset: (page - 1) * 30);
+    return records.map(_asItem).toList();
   }
 
   @override
   Future<Map<String, dynamic>> details(String url) async {
-    final html = await HtmlClient.getHtml(url);
-    final title = HtmlParse.stripTags(
-      HtmlParse.meta(html, 'og:title') ??
-          HtmlParse.firstMatch(html, [
-            RegExp(r'<h1[^>]*>([\s\S]*?)</h1>', caseSensitive: false),
-            RegExp(r'<title[^>]*>([\s\S]*?)</title>', caseSensitive: false),
-          ]) ??
-          'بدون عنوان',
-    );
-    final image = HtmlParse.meta(html, 'og:image') ??
-        HtmlParse.firstMatch(html, [
-          RegExp(r'''<img[^>]+(?:src|data-src)=["']([^"']+)''',
-              caseSensitive: false),
-        ]) ??
-        '';
-    final description = HtmlParse.stripTags(
-      HtmlParse.meta(html, 'og:description') ??
-          HtmlParse.firstMatch(html, [
-            RegExp(r'(?:description|synopsis|story)[^>]*>([\s\S]*?)</(?:div|p|span)>',
-                caseSensitive: false),
-          ]) ??
-          '',
-    );
-    final genres = HtmlParse.all(
-      html,
-      RegExp(r'''href=["'][^"']*(?:genre|category)[^"']*["'][^>]*>([^<]+)<''',
-          caseSensitive: false),
-    );
-    final episodes = _parseEpisodes(html, url);
+    final uri = Uri.tryParse(url);
+    final id = int.tryParse(uri?.queryParameters['anime_id'] ?? '');
+    if (id == null || id <= 0) throw Exception('تعذر تحديد الأنمي من Anime Slayer');
+    final data = await AnimeSlayerApi.details(id);
     return {
-      ...item(
-        title: title,
-        url: url,
-        image: HtmlParse.absUrl(url, image),
-        type: 'anime',
-        genres: genres.toSet().toList(),
-        description: description,
-      ),
-      'synopsis': description,
-      'total_episodes': episodes.length,
-      'episodes': episodes,
+      ...data,
+      'url': url,
+      'source': name,
+      'source_id': this.id,
+      'type': 'anime',
+      'category': 'anime',
     };
   }
 
   @override
-  Future<Map<String, dynamic>> streams(String url) async {
-    final html = await HtmlClient.getHtml(url);
-    final servers = <Map<String, String>>[];
-    final seen = <String>{};
-
-    void add(String raw, [String quality = 'خادم']) {
-      final resolved = HtmlParse.absUrl(url, raw);
-      if (resolved.isEmpty || !seen.add(resolved)) return;
-      servers.add({'quality': quality, 'url': resolved});
-    }
-
-    // Anime Slayer's episode page exposes servers through data-ep-url.
-    for (final match in RegExp(
-      r'''<[^>]+(?:id=["']episode-servers["'][^>]*[\s\S]*?)?<a[^>]+data-ep-url=["']([^"']+)["']''',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(1)!);
-    }
-    for (final match in RegExp(
-      r'''data-ep-url=["']([^"']+)["']''',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(1)!);
-    }
-    for (final match in RegExp(
-      r'''<iframe[^>]+src=["']([^"']+)["']''',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(1)!, 'مشغل');
-    }
-    for (final media in SourceUtils.extractMediaUrls(html, url)) {
-      add(media, 'مباشر');
-    }
-    if (servers.isEmpty) {
-      throw Exception('لم يتم العثور على خوادم تشغيل لهذه الحلقة');
-    }
-    final direct = servers
-        .where((server) => RegExp(r'\.(?:mp4|m3u8)(?:\?|$)', caseSensitive: false)
-            .hasMatch(server['url']!))
-        .toList();
-    return {
-      'stream_url': (direct.isNotEmpty ? direct : servers).first['url'],
-      'direct_stream_urls': direct.isNotEmpty ? direct : servers,
-      'download_links': <String, dynamic>{},
-    };
+  Future<Map<String, dynamic>?> streams(String url) async {
+    final uri = Uri.tryParse(url);
+    final animeId = int.tryParse(uri?.queryParameters['anime_id'] ?? '');
+    final episodeId = int.tryParse(uri?.queryParameters['episode_id'] ?? '');
+    if (animeId == null || episodeId == null || animeId <= 0 || episodeId <= 0) return null;
+    return AnimeSlayerApi.streams(animeId, episodeId);
   }
 
-  List<Map<String, dynamic>> _parseCards(String html) {
-    final items = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    final pattern = RegExp(
-      r'''<div[^>]+class=["'][^"']*anime-list-content[^"']*["'][\s\S]*?<h3[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>\s*</h3>''',
-      caseSensitive: false,
-    );
-    for (final match in pattern.allMatches(html)) {
-      final url = HtmlParse.absUrl(_base, match.group(1)!);
-      final title = HtmlParse.stripTags(match.group(2) ?? '');
-      if (title.isEmpty || !seen.add(url)) continue;
-      items.add(item(title: title, url: url, type: 'anime'));
-    }
-    return items;
-  }
-
-  List<Map<String, dynamic>> _parseEpisodes(String html, String pageUrl) {
-    final episodes = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    final pattern = RegExp(
-      r'''<h3[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>\s*</h3>''',
-      caseSensitive: false,
-    );
-    for (final match in pattern.allMatches(html)) {
-      final url = HtmlParse.absUrl(pageUrl, match.group(1)!);
-      if (!seen.add(url) || url == pageUrl) continue;
-      final text = HtmlParse.stripTags(match.group(2) ?? '');
-      final number = SourceUtils.episodeNumber('$text $url');
-      if (number == null && !RegExp(r'\d+').hasMatch(text)) continue;
-      episodes.add({
-        'title': 'الحلقة ${number ?? episodes.length + 1}',
-        'url': url,
-        'number': number ?? episodes.length + 1,
+  Map<String, dynamic> _asItem(Map<String, dynamic> record) {
+    final title = (record['title'] ?? '').toString().trim();
+    return item(
+      title: title,
+      url: record['url'].toString(),
+      image: (record['image_url'] ?? '').toString(),
+      type: 'anime',
+      genres: record['genres'] as List? ?? const [],
+      description: (record['description'] ?? '').toString(),
+      rating: (record['rating'] ?? '').toString(),
+    )
+      ..addAll({
+        'anime_id': record['anime_id'],
+        'english_title': record['english_title'] ?? '',
+        'banner_image_url': record['banner_image_url'] ?? '',
+        'status': record['status'] ?? '',
+        'release_year': record['release_year'] ?? '',
       });
-    }
-    episodes.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
-    return episodes;
   }
 }
