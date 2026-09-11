@@ -72,6 +72,23 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل بريدك الإلكتروني أولًا')));
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await context.read<AppStateProvider>().sendPasswordRecovery(email);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال رابط استعادة كلمة المرور إلى بريدك')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   InputDecoration _decoration(String hint, {Widget? suffix}) {
     return InputDecoration(
       hintText: hint,
@@ -136,6 +153,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   controlAffinity: ListTileControlAffinity.leading,
                   activeColor: AppTheme.primaryColor,
                   title: const Text('تذكر البريد الإلكتروني', style: TextStyle(color: AppTheme.textSecondaryColor)),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(onPressed: _isLoading ? null : _forgotPassword, child: const Text('نسيت كلمة المرور؟')),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(

@@ -9,6 +9,7 @@ import 'login_screen.dart';
 import 'register_screen.dart';
 import '../utils/toast_utils.dart';
 import '../sources/source_registry.dart';
+import '../services/appwrite_service.dart';
 import 'sources_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -168,10 +169,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showChangePasswordDialog() => _showEditValueDialog(
-    title: 'تغيير كلمة المرور', initial: '', obscure: true,
-    onSave: (value) { if (value.length < 6) { _showInfoDialog('كلمة المرور قصيرة', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'); } else { _showInfoDialog('تغيير كلمة المرور', 'لا يمكن تغيير كلمة المرور من هذا الإصدار لأن المصادقة الحالية لا توفر هذه العملية.'); } },
-  );
+  void _showChangePasswordDialog() {
+    final oldController = TextEditingController();
+    final newController = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        title: const Text('تغيير كلمة المرور', style: TextStyle(color: Colors.white)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: oldController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور الحالية')),
+          TextField(controller: newController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(onPressed: () async {
+            if (newController.text.length < 8) return;
+            try {
+              await context.read<AppStateProvider>().updatePassword(password: newController.text, oldPassword: oldController.text);
+              if (mounted) Navigator.pop(context);
+              if (mounted) ToastUtils.show('تم تغيير كلمة المرور', backgroundColor: AppTheme.accentColor);
+            } catch (error) {
+              if (mounted) _showInfoDialog('تعذر تغيير كلمة المرور', authErrorMessage(error, registering: false));
+            }
+          }, child: const Text('حفظ')),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pingAppwrite() async {
+    try {
+      await context.read<AppStateProvider>().pingAppwrite();
+      if (mounted) _showInfoDialog('اتصال Appwrite', 'الاتصال ناجح والمشروع متاح.');
+    } catch (error) {
+      if (mounted) _showInfoDialog('تعذر الاتصال', authErrorMessage(error, registering: false));
+    }
+  }
+
+  void _showEditNameDialog() {
+    _showEditValueDialog(
+      title: 'تعديل الاسم الظاهر',
+      initial: username,
+      onSave: (value) async {
+        if (value.length < 2) return;
+        try {
+          await context.read<AppStateProvider>().updateProfileName(value);
+          if (mounted) setState(() => username = value);
+          if (mounted) ToastUtils.show('تم تحديث الاسم', backgroundColor: AppTheme.accentColor);
+        } catch (error) {
+          if (mounted) _showInfoDialog('تعذر تحديث الاسم', authErrorMessage(error, registering: false));
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +273,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildSectionContainer(
                         children: [
                           _buildMenuItem('بيانات الحساب', trailing: email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
+                          _buildMenuItem('تعديل الاسم الظاهر', onTap: _showEditNameDialog),
+                          _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
+                          _buildMenuItem('اختبار اتصال Appwrite', onTap: _pingAppwrite),
                           _buildMenuItem('المصادر', onTap: _showSourcesDialog),
                         ],
                       ),

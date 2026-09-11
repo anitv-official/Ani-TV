@@ -12,8 +12,8 @@ class AppwriteService {
 
   static final AppwriteService instance = AppwriteService._internal();
 
-  static const String _endpoint = 'https://sgp.cloud.appwrite.io/v1';
-  static const String _projectId = '6a9ff222002ab1073f0f';
+  static const String _endpoint = 'https://nyc.cloud.appwrite.io/v1';
+  static const String _projectId = '6aa4295900094d600163';
 
   final Client client = Client();
   late final Account account;
@@ -52,6 +52,22 @@ class AppwriteService {
 
   Future<void> logout() async {
     await account.deleteSession(sessionId: 'current');
+  }
+
+  Future<void> ping() async {
+    await client.ping();
+  }
+
+  Future<models.User> updateName(String name) async {
+    return account.updateName(name: name.trim());
+  }
+
+  Future<models.User> updatePassword({required String password, required String oldPassword}) async {
+    return account.updatePassword(password: password, oldPassword: oldPassword);
+  }
+
+  Future<void> sendPasswordRecovery(String email, String redirectUrl) async {
+    await account.createRecovery(email: email.trim(), url: redirectUrl);
   }
 }
 

@@ -154,10 +154,10 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.play_circle_fill,
-                  size: 100,
-                  color: AppTheme.primaryColor,
+                clipBehavior: Clip.antiAlias,
+                child: Image.asset(
+                  'assets/images/anitv_app_icon.png',
+                  fit: BoxFit.cover,
                 ),
               ),
               SizedBox(height: 32),

@@ -16,6 +16,7 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
@@ -39,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await context.read<AppStateProvider>().register(
         email: email,
         password: _passwordController.text,
-        name: email.split('@').first,
+        name: _nameController.text.trim(),
       );
       if (!mounted) return;
       ToastUtils.show('تم إنشاء الحساب وتسجيل الدخول بنجاح.', backgroundColor: Colors.green);
@@ -95,6 +97,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 const Text('أنشئ حسابك للمتابعة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 16)),
                 const SizedBox(height: 32),
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _decoration('الاسم الظاهر'),
+                  validator: (value) => value == null || value.trim().length < 2 ? 'أدخل اسمًا من حرفين على الأقل' : null,
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,

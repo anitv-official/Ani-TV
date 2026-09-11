@@ -130,6 +130,15 @@ class Anime3rbSource extends ContentSource {
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
       add(media, 'مباشر');
     }
+    // Anime3rb periodically moves the actual file behind a player page. Keep
+    // the external player as a usable fallback instead of reporting that the
+    // episode has no link; the video screen can open it in its WebView.
+    for (final match in RegExp(
+      r'''(?:src|href|data-src|data-url)=["']([^"']*(?:vid3rb|3rbcdn|vidmoly|streamtape|filemoon|voe|uqload)[^"']*)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(1)!, 'مشغل خارجي');
+    }
     if (servers.isEmpty) {
       throw Exception('Anime3rb: لم يتم العثور على رابط تشغيل صالح للحلقة');
     }
@@ -151,8 +160,11 @@ class Anime3rbSource extends ContentSource {
         }
       } catch (_) {}
     }
-    if (playUrl == null) {
-      throw Exception('Anime3rb: لم يتم العثور على ملف فيديو مباشر؛ تم تجاهل صفحات المشغل والصور');
+    // A player URL is still playable through the app WebView. Only fail when
+    // the source page contains no candidate at all.
+    playUrl ??= servers.first['url'];
+    if (playUrl == null || playUrl.isEmpty) {
+      throw Exception('Anime3rb: لم يتم العثور على رابط تشغيل للحلقة');
     }
     return {
       'source_id': id,

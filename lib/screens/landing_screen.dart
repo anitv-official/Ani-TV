@@ -54,7 +54,7 @@ class LandingScreen extends StatelessWidget {
                 // Center - App Logo
                 Center(
                   child: Image.asset(
-                    'assets/images/anitv_logo.png',
+                    'assets/images/anitv_app_icon.png',
                     width: 150,
                     height: 150,
                   ),

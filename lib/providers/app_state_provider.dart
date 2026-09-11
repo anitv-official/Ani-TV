@@ -139,7 +139,23 @@ class AppStateProvider extends ChangeNotifier {
       rethrow;
     }
   }
-  
+
+  Future<void> updateProfileName(String name) async {
+    final user = await _appwrite.updateName(name);
+    _setUserFromAppwrite(user);
+    notifyListeners();
+  }
+
+  Future<void> updatePassword({required String password, required String oldPassword}) async {
+    await _appwrite.updatePassword(password: password, oldPassword: oldPassword);
+  }
+
+  Future<void> sendPasswordRecovery(String email) async {
+    await _appwrite.sendPasswordRecovery(email, 'https://anitv.app/reset-password');
+  }
+
+  Future<void> pingAppwrite() => _appwrite.ping();
+
   // Favorites methods
   Future<void> _loadFavorites() async {
     try {
