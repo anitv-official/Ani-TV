@@ -151,7 +151,11 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> sendPasswordRecovery(String email) async {
-    await _appwrite.sendPasswordRecovery(email, 'https://anitv.app/reset-password');
+    await _appwrite.sendPasswordRecovery(email, 'anitv://reset-password');
+  }
+
+  Future<void> completePasswordRecovery({required String userId, required String secret, required String password}) async {
+    await _appwrite.completePasswordRecovery(userId: userId, secret: secret, password: password);
   }
 
   Future<void> pingAppwrite() => _appwrite.ping();

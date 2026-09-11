@@ -69,6 +69,14 @@ class AppwriteService {
   Future<void> sendPasswordRecovery(String email, String redirectUrl) async {
     await account.createRecovery(email: email.trim(), url: redirectUrl);
   }
+
+  Future<models.Token> completePasswordRecovery({
+    required String userId,
+    required String secret,
+    required String password,
+  }) async {
+    return account.updateRecovery(userId: userId, secret: secret, password: password);
+  }
 }
 
 String authErrorMessage(Object error, {required bool registering}) {

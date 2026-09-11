@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -27,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _streamCellular = false;
   bool _showMatureContent = false;
   bool _notificationsEnabled = true;
+  String? _avatarPath;
 
   @override
   void initState() {
@@ -64,7 +67,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _streamCellular = prefs.getBool('stream_cellular') ?? false;
       _showMatureContent = prefs.getBool('show_mature_content') ?? false;
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _avatarPath = prefs.getString('profile_avatar_path');
     });
+  }
+
+  Future<void> _pickAvatar() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final path = result?.files.single.path;
+    if (path == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_avatar_path', path);
+    if (mounted) setState(() => _avatarPath = path);
   }
 
   Future<void> _savePreference(String key, bool value) async {
@@ -250,11 +263,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 32),
 
                     // Neutral avatar: no profile image is shown unless Appwrite provides one.
-                    CircleAvatar(
-                      radius: 64,
-                      backgroundColor: AppTheme.surfaceColor,
-                      child: Icon(Icons.person_outline, size: 72, color: AppTheme.textSecondaryColor),
+                    GestureDetector(
+                      onTap: _pickAvatar,
+                      child: CircleAvatar(
+                        radius: 64,
+                        backgroundColor: AppTheme.surfaceColor,
+                        backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync() ? FileImage(File(_avatarPath!)) : null,
+                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? Icon(Icons.person_outline, size: 72, color: AppTheme.textSecondaryColor) : null,
+                      ),
                     ),
+                    const SizedBox(height: 10),
+                    Text(username.isEmpty ? 'زائر' : username, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    TextButton.icon(onPressed: _pickAvatar, icon: const Icon(Icons.edit, size: 16), label: const Text('تغيير صورة الملف الشخصي')),
 
                     const SizedBox(height: 40),
 

@@ -4,6 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
+import '../widgets/auth_branding.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -93,6 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const AuthBranding(),
                 const Text('إنشاء حساب جديد', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text('أنشئ حسابك للمتابعة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 16)),

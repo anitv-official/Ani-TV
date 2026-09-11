@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
+import '../widgets/auth_branding.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -123,6 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const AuthBranding(),
                 const Text('مرحبًا بعودتك', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 const Text('سجّل الدخول إلى حسابك', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 16)),
