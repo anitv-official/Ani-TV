@@ -164,7 +164,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isDownloading ? 'جارٍ تنزيل التحديث' : 'يتوفر تحديث',
+                        _isDownloading ? 'Mengunduh Update' : 'Update Tersedia',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -297,7 +297,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                           disabledBackgroundColor: Colors.grey[800],
                         ),
                         child: Text(
-                          _isDownloading ? 'يرجى الانتظار...' : 'تحديث الآن',
+                          _isDownloading ? 'Mohon Tunggu...' : 'Update Sekarang',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,

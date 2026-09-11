@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:ui'; // For ClipRect and BackdropFilter
 
 class CustomBottomNavBar extends StatelessWidget {
@@ -41,7 +42,7 @@ class CustomBottomNavBar extends StatelessWidget {
           child: SafeArea( // Added SafeArea to handle system gesture area
             top: false,
             child: Container(
-              padding: const EdgeInsets.only(top: 6, bottom: 4, left: 8, right: 8),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8), 
               color: Colors.black.withOpacity(0.2),
               child: Center(
                 child: ConstrainedBox(
@@ -53,11 +54,11 @@ class CustomBottomNavBar extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
-                      _buildNavItem(1, Icons.search_rounded, Icons.search, 'بحث'),
-                      _buildNavItem(2, Icons.explore_outlined, Icons.explore, 'استكشاف'),
-                      _buildNavItem(3, Icons.favorite_border_rounded, Icons.favorite_rounded, 'المفضلة'),
-                      _buildNavItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'الملف الشخصي'),
+                      _buildNavItem(0, 'assets/icons/home.svg', 'assets/icons/home_red.svg'),
+                      _buildNavItem(1, 'assets/icons/Search.svg', 'assets/icons/search_red.svg'),
+                      _buildNavItem(2, 'assets/icons/explore.svg', 'assets/icons/explore_red.svg'),
+                      _buildNavItem(3, 'assets/icons/favorite.svg', 'assets/icons/favorite_red.svg'),
+                      _buildNavItem(4, 'assets/icons/profile.svg', 'assets/icons/profile_red.svg'),
                     ],
                   ),
                 ),
@@ -69,21 +70,23 @@ class CustomBottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData inactiveIcon, IconData activeIcon, String label) {
+  Widget _buildNavItem(int index, String inactiveIcon, String activeIcon) {
     final isActive = currentIndex == index;
     
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(isActive ? activeIcon : inactiveIcon, size: 24, color: isActive ? const Color(0xFFE53935) : Colors.white70),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 10, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-          ],
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        child: SvgPicture.asset(
+          isActive ? activeIcon : inactiveIcon,
+          width: 22, // Reduced from 28
+          height: 22, // Reduced from 28
+          // No color filter for active icon as we use the provided red assets
+          // For inactive, we ensure they are white (assuming the SVG is white or we tint it)
+          colorFilter: isActive 
+              ? null // Use original colors (red) for active
+              : const ColorFilter.mode(Colors.white, BlendMode.srcIn), // Tint white for inactive
         ),
       ),
     );

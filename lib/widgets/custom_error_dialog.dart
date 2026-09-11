@@ -364,7 +364,7 @@ class _CustomErrorDialogState extends State<CustomErrorDialog> with TickerProvid
                                     highlightColor: Colors.white.withOpacity(0.1),
                                     child: Center(
                                       child: Text(
-                                        'إغلاق',
+                                        'Dismiss',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,

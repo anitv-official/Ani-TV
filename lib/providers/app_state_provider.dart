@@ -46,7 +46,7 @@ class AppStateProvider extends ChangeNotifier {
       _isDarkMode = prefs.getBool('dark_mode') ?? true;
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('تعذر تحميل بيانات المستخدم: $e');
+      _setErrorMessage('Failed to load user data: $e');
     }
   }
   

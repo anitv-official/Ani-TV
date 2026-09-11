@@ -61,7 +61,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         setState(() {
           isLoadingContent = false;
         });
-        _showErrorDialog('Error جارٍ التحميل Content', 'Failed to load content: $e');
+        _showErrorDialog('Error Loading Content', 'Failed to load content: $e');
       }
     }
   }
@@ -132,7 +132,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
               // Section Title
               Text(
-                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'الأحدث Komik',
+                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'Latest Komik',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -185,7 +185,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       children: [
         Expanded(
           child: _buildToggleItem(
-            label: 'أنمي',
+            label: 'ANIME',
             isActive: _currentTabIndex == 0,
             onTap: () => setState(() => _currentTabIndex = 0),
           ),
@@ -193,7 +193,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildToggleItem(
-            label: 'مانغا',
+            label: 'KOMIK',
             isActive: _currentTabIndex == 1,
             onTap: () => setState(() => _currentTabIndex = 1),
           ),

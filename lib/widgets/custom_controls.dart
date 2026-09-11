@@ -145,7 +145,7 @@ class _MaterialControlsState extends State<MaterialControls>
             if (latestValue.hasError) {
                return chewieController?.errorBuilder?.call(
                     context,
-                    latestValue.errorDescription ?? 'خطأ في تحميل الفيديو',
+                    latestValue.errorDescription ?? 'Error loading video',
                   ) ??
                   const Center(
                     child: Icon(
@@ -736,7 +736,7 @@ class _MaterialControlsState extends State<MaterialControls>
   void _startHideTimer() {
     _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 5), () {
-      if (controller?.value.isتشغيلing == true) {
+      if (controller?.value.isPlaying == true) {
         if (mounted) {
           setState(() {
             notifier.hideStuff = true;
@@ -761,7 +761,7 @@ class _MaterialControlsState extends State<MaterialControls>
     }
   }
 
-  Widget _buildBottomBar(BuildContext context, VideoتشغيلerValue latestValue) {
+  Widget _buildBottomBar(BuildContext context, VideoPlayerValue latestValue) {
     return Container(
       // Remove horizontal padding from main container to allow scrubber to be edge-to-edge
       padding: EdgeInsets.symmetric(vertical: 20), 
@@ -810,20 +810,20 @@ class _MaterialControlsState extends State<MaterialControls>
               _buildActionIcon(
                 'الحلقات', 
                 'assets/icons/episode.svg', 
-                widget.onShowالحلقةs,
+                widget.onShowEpisodes,
               ),
               _buildActionIcon(
                 'Subtitles', 
                 'assets/icons/subtitle.svg', 
                 () {
                   // TODO: Implement new function here
-                  // _showالجودةDialog(); // Disabled as requested
+                  // _showQualityDialog(); // Disabled as requested
                 },
               ),
               _buildActionIcon(
                 'Next Ep.', 
                 'assets/icons/next.svg', 
-                widget.onNextالحلقة,
+                widget.onNextEpisode,
               ),
                ],
              ),
@@ -865,7 +865,7 @@ class _MaterialControlsState extends State<MaterialControls>
     );
   }
 
-  Widget _buildDurationText(VideoتشغيلerValue latestValue) {
+  Widget _buildDurationText(VideoPlayerValue latestValue) {
     final duration = latestValue.duration;
     final position = latestValue.position;
     
@@ -905,12 +905,12 @@ class _MaterialControlsState extends State<MaterialControls>
     );
   }
   
-  // Unused legacy builders removed (تشغيلإيقاف مؤقت, Mute, Volume, etc) to clean up.
+  // Unused legacy builders removed (PlayPause, Mute, Volume, etc) to clean up.
 
 
   void _showSpeedDialog() {
     final currentSpeed =
-        chewieController?.videoتشغيلerController.value.playbackSpeed ?? 1.0;
+        chewieController?.videoPlayerController.value.playbackSpeed ?? 1.0;
 
     showModalBottomSheet(
       context: context,
@@ -988,7 +988,7 @@ class _MaterialControlsState extends State<MaterialControls>
       },
     ).then((_) {
       // Restart timer when dialog closes, if playing
-      if (controller?.value.isتشغيلing == true) {
+      if (controller?.value.isPlaying == true) {
         _startHideTimer();
       }
     });
@@ -998,7 +998,7 @@ class _MaterialControlsState extends State<MaterialControls>
       String speed, String description, double value, bool isSelected) {
     return InkWell(
       onTap: () {
-        chewieController?.videoتشغيلerController.setتشغيلbackSpeed(value);
+        chewieController?.videoPlayerController.setPlaybackSpeed(value);
         Navigator.pop(context);
       },
       child: Container(
@@ -1065,7 +1065,7 @@ class _MaterialControlsState extends State<MaterialControls>
     );
   }
 
-  void _showالجودةDialog() {
+  void _showQualityDialog() {
     if (widget.qualityOptions.isEmpty) return;
 
     showModalBottomSheet(
@@ -1115,7 +1115,7 @@ class _MaterialControlsState extends State<MaterialControls>
                   ],
                 ),
               ),
-              // الجودة options
+              // Quality options
               Expanded(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -1123,10 +1123,10 @@ class _MaterialControlsState extends State<MaterialControls>
                   itemBuilder: (context, index) {
                     final item = widget.qualityOptions[index];
                     final isSelected =
-                        widget.selectedالجودة == item['quality'];
-                    return _buildالجودةOption(
+                        widget.selectedQuality == item['quality'];
+                    return _buildQualityOption(
                       item['quality'] ?? 'Unknown',
-                      _getالجودةDescription(item['quality'] ?? ''),
+                      _getQualityDescription(item['quality'] ?? ''),
                       item['url'] ?? '',
                       item['quality'] ?? '',
                       isSelected,
@@ -1141,13 +1141,13 @@ class _MaterialControlsState extends State<MaterialControls>
       },
     ).then((_) {
       // Restart timer when dialog closes, if playing
-      if (controller?.value.isتشغيلing == true) {
+      if (controller?.value.isPlaying == true) {
         _startHideTimer();
       }
     });
   }
 
-  String _getالجودةDescription(String quality) {
+  String _getQualityDescription(String quality) {
     switch (quality.toLowerCase()) {
       case '1080p':
         return 'Full HD';
@@ -1164,13 +1164,13 @@ class _MaterialControlsState extends State<MaterialControls>
     }
   }
 
-  Widget _buildالجودةOption(String quality, String description, String url,
+  Widget _buildQualityOption(String quality, String description, String url,
       String qualityValue, bool isSelected) {
     return InkWell(
       onTap: () {
         Navigator.pop(context);
-        if (widget.onالجودةChanged != null) {
-          widget.onالجودةChanged!(url, qualityValue);
+        if (widget.onQualityChanged != null) {
+          widget.onQualityChanged!(url, qualityValue);
         }
       },
       child: Container(
@@ -1237,7 +1237,7 @@ class _MaterialControlsState extends State<MaterialControls>
     );
   }
 
-  Widget _buildالترجمة(BuildContext context, VideoتشغيلerValue latestValue) {
+  Widget _buildSubtitles(BuildContext context, VideoPlayerValue latestValue) {
     final subtitle = _subtitleOn
         ? chewieController!.subtitle?.getByPosition(latestValue.position)
         : null;
@@ -1279,7 +1279,7 @@ class _MaterialControlsState extends State<MaterialControls>
     );
   }
 
-  void _playإيقاف مؤقت() {
+  void _playPause() {
     if (controller == null || !mounted) return;
 
     try {
@@ -1287,7 +1287,7 @@ class _MaterialControlsState extends State<MaterialControls>
           (controller!.value.duration);
 
       setState(() {
-        if (controller!.value.isتشغيلing) {
+        if (controller!.value.isPlaying) {
           notifier.hideStuff = false;
           _hideTimer?.cancel();
           controller!.pause();
@@ -1371,7 +1371,7 @@ class _MaterialControlsState extends State<MaterialControls>
       // Do NOT toggle controls here. Just start the skip timer.
       _startSkipResetTimer();
       
-      // إلغاء auto-hide timer since controls are hidden
+      // Cancel auto-hide timer since controls are hidden
       _hideTimer?.cancel();
     }
   }
@@ -1478,8 +1478,8 @@ class _MaterialControlsState extends State<MaterialControls>
   }
 }
 
-class _تشغيلbackSpeedDialog extends StatelessWidget {
-  const _تشغيلbackSpeedDialog({
+class _PlaybackSpeedDialog extends StatelessWidget {
+  const _PlaybackSpeedDialog({
     Key? key,
     required List<double> speeds,
     required double selected,
@@ -1537,7 +1537,7 @@ class MaterialVideoProgressBar extends StatefulWidget {
   })  : colors = colors ?? ChewieProgressColors(),
         super(key: key);
 
-  final VideoتشغيلerController controller;
+  final VideoPlayerController controller;
   final ChewieProgressColors colors;
   final Function()? onDragStart;
   final Function()? onDragEnd;
@@ -1562,9 +1562,9 @@ class _MaterialVideoProgressBarState extends State<MaterialVideoProgressBar> {
     }
   }
 
-  bool _controllerWasتشغيلing = false;
+  bool _controllerWasPlaying = false;
 
-  VideoتشغيلerController get controller => widget.controller;
+  VideoPlayerController get controller => widget.controller;
 
   @override
   void initState() {
@@ -1668,9 +1668,9 @@ class _MaterialVideoProgressBarState extends State<MaterialVideoProgressBar> {
               if (widget.onDragStart != null) {
                 widget.onDragStart!();
               }
-              _controllerWasتشغيلing =
-                  controller.value.isInitialized && controller.value.isتشغيلing;
-              if (_controllerWasتشغيلing && controller.value.isInitialized) {
+              _controllerWasPlaying =
+                  controller.value.isInitialized && controller.value.isPlaying;
+              if (_controllerWasPlaying && controller.value.isInitialized) {
                 controller.pause();
               }
             } catch (e) {
@@ -1679,7 +1679,7 @@ class _MaterialVideoProgressBarState extends State<MaterialVideoProgressBar> {
           },
           onChangeEnd: (value) {
             try {
-              if (_controllerWasتشغيلing && controller.value.isInitialized) {
+              if (_controllerWasPlaying && controller.value.isInitialized) {
                 controller.play();
               }
               if (widget.onDragEnd != null) {
@@ -1712,7 +1712,7 @@ class _CustomTrackShape extends RoundedRectSliderTrackShape {
   }
 }
 
-class تشغيلerNotifier extends ChangeNotifier {
+class PlayerNotifier extends ChangeNotifier {
   bool _hideStuff = false;
   bool get hideStuff => _hideStuff;
   set hideStuff(bool value) {

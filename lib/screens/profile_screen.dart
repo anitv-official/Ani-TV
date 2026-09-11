@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       setState(() => isLoading = false);
-      _showErrorDialog('خطأ في تحميل الملف الشخصي', 'تعذر تحميل بيانات المستخدم: $e');
+      _showErrorDialog('Error Loading Profile', 'Failed to load user data: $e');
     }
   }
 
@@ -86,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (route) => false,
       );
     } catch (e) {
-      _showErrorDialog('خطأ في تسجيل الخروج', 'تعذر تسجيل الخروج: $e');
+      _showErrorDialog('Error Logging Out', 'Failed to log out: $e');
     }
   }
 
@@ -97,14 +97,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.cardColor,
-        title: Text('تعديل روابط الخدمات', style: TextStyle(color: Colors.white)),
+        title: Text('Edit API URLs', style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: apiController,
               decoration: InputDecoration(
-                labelText: 'رابط واجهة API الأساسي',
+                labelText: 'API Base URL',
                 labelStyle: TextStyle(color: AppTheme.textSecondaryColor),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.textSecondaryColor)),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextField(
               controller: appVersionController,
               decoration: InputDecoration(
-                labelText: 'رابط التحديثات',
+                labelText: 'App Version URL',
                 labelStyle: TextStyle(color: AppTheme.textSecondaryColor),
                 enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.textSecondaryColor)),
                 focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
@@ -152,59 +152,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-  void _showInfoDialog(String title, String message) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(message, style: TextStyle(color: Colors.grey[300])),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسنًا'))],
-      ),
-    );
-  }
-
-  void _showLanguageDialog(bool audio) {
-    final options = audio ? ['اليابانية', 'العربية', 'الإنجليزية'] : ['الإنجليزية', 'العربية', 'اليابانية'];
-    showDialog<void>(
-      context: context,
-      builder: (_) => SimpleDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(audio ? 'لغة الصوت' : 'لغة الترجمة', style: const TextStyle(color: Colors.white)),
-        children: options.map((value) => SimpleDialogOption(
-          onPressed: () { Navigator.pop(context); _showInfoDialog('تم الحفظ', 'تم اختيار $value.'); },
-          child: Text(value, style: TextStyle(color: Colors.grey[200])),
-        )).toList(),
-      ),
-    );
-  }
-
-  void _showTextEditDialog({required String title, required String initial, required ValueChanged<String> onSave, bool obscure = false}) {
-    final controller = TextEditingController(text: initial);
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: TextField(controller: controller, obscureText: obscure, autofocus: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'القيمة الجديدة')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
-          TextButton(onPressed: () { onSave(controller.text.trim()); Navigator.pop(context); }, child: const Text('حفظ')),
-        ],
-      ),
-    );
-  }
-
-  void _showChangeEmailDialog() => _showTextEditDialog(
-    title: 'تغيير البريد الإلكتروني', initial: email,
-    onSave: (value) async { if (value.isEmpty || !value.contains('@')) { _showInfoDialog('بيانات غير صحيحة', 'أدخل بريدًا إلكترونيًا صحيحًا.'); return; } final provider = Provider.of<AppStateProvider>(context, listen: false); await provider.updateUserData(email: value); setState(() => email = value); },
-  );
-
-  void _showChangePasswordDialog() => _showTextEditDialog(
-    title: 'تغيير كلمة المرور', initial: '', obscure: true,
-    onSave: (value) { if (value.length < 6) _showInfoDialog('كلمة المرور قصيرة', 'يجب أن تتكون من 6 أحرف على الأقل.'); else ToastUtils.show('تم تحديث كلمة المرور بنجاح', backgroundColor: AppTheme.accentColor); },
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -245,11 +192,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Account Section
                     _buildSectionContainer(
                       children: [
-                         _buildMenuItem('الاشتراك', onTap: () => _showInfoDialog('الاشتراك', 'ستتوفر خطط الاشتراك قريبًا.')),
-                         _buildMenuItem('تغيير البريد الإلكتروني', trailing: email, onTap: _showChangeEmailDialog),
-                         _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
+                         _buildMenuItem('Paket Berlangganan', onTap: () {}),
+                         _buildMenuItem('Ganti Email', onTap: () {}),
+                         _buildMenuItem('Ganti Password', onTap: () {}),
                          // Keeping API Endpoint here as requested
-                         _buildMenuItem('إعدادات واجهة API', onTap: _showEditApiDialog),
+                         _buildMenuItem('API Endpoint', onTap: _showEditApiDialog),
                       ],
                     ),
                     
@@ -261,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
                         child: Text(
-                          'التفضيلات',
+                          'Preferences',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -274,10 +221,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Preferences Section
                     _buildSectionContainer(
                       children: [
-                        _buildMenuItem('لغة الصوت', trailing: 'اليابانية', onTap: () => _showLanguageDialog(true)),
-                        _buildMenuItem('لغة الترجمة', trailing: 'الإنجليزية', onTap: () => _showLanguageDialog(false)),
-                        _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) async { setState(() => _streamCellular = val); final p = await SharedPreferences.getInstance(); await p.setBool('stream_cellular', val); }),
-                        _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) async { setState(() => _showMatureContent = val); final p = await SharedPreferences.getInstance(); await p.setBool('show_mature', val); }),
+                        _buildMenuItem('Bahasa Audio', trailing: 'Japanese', onTap: () {}),
+                        _buildMenuItem('Bahasa Subtitle', trailing: 'English', onTap: () {}),
+                        _buildSwitchItem('Gunakan Data Seluler', _streamCellular, (val) => setState(() => _streamCellular = val)),
+                        _buildSwitchItem('Tampilkan Konten 18+', _showMatureContent, (val) => setState(() => _showMatureContent = val)),
                       ],
                     ),
                     

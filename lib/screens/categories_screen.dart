@@ -75,7 +75,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'أنمي',
+                          'ANIME',
                           style: TextStyle(
                             color: _isAnimeSelected ? Colors.white : Colors.grey,
                             fontWeight: FontWeight.bold,
@@ -97,7 +97,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'مانغا',
+                          'KOMIK',
                           style: TextStyle(
                             color: !_isAnimeSelected ? Colors.white : Colors.grey,
                             fontWeight: FontWeight.bold,
