@@ -1,4 +1,4 @@
-# AniTV
+# <img src="docs/anitv-app-icon.png" width="42" alt="AniTV icon" /> AniTV
 
 تطبيق Android مبني باستخدام Flutter لمشاهدة الأنمي وقراءة المانجا والقصص المصورة في تجربة عربية بسيطة، مع دعم المفضلة والسجل والتنزيلات ومشغل الفيديو وتسجيل الحسابات.
 
@@ -37,6 +37,22 @@
 ## الخصوصية
 
 يمكن قراءة [سياسة الخصوصية الرسمية](https://anitv-manga-lord.vercel.app/privacy) لمعرفة كيفية التعامل مع بيانات الحساب والمفضلة والسجل والتنزيلات وخدمات الطرف الثالث.
+
+## Screenshots
+
+هذه لقطات حقيقية من تطبيق AniTV:
+
+| إنشاء حساب | الصفحة الرئيسية |
+| --- | --- |
+| <img src="docs/screenshots/screen-1.png" width="260" alt="شاشة إنشاء حساب AniTV" /> | <img src="docs/screenshots/screen-2.png" width="260" alt="الصفحة الرئيسية في AniTV" /> |
+
+| الاستكشاف | المفضلة |
+| --- | --- |
+| <img src="docs/screenshots/screen-3.png" width="260" alt="شاشة استكشاف الأنمي في AniTV" /> | <img src="docs/screenshots/screen-4.png" width="260" alt="شاشة المفضلة في AniTV" /> |
+
+| قائمة الحلقات |
+| --- |
+| <img src="docs/screenshots/screen-5.png" width="260" alt="قائمة حلقات الأنمي في AniTV" /> |
 
 ## البناء والاختبار
 
