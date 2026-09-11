@@ -10,7 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppVersionService {
-  static String _baseUrl = 'http://38.47.176.56:5000/api/app_version';
+  static String _baseUrl = 'https://api.github.com/repos/lo-oord/Ani-TV/releases/latest';
   static const String _prefsKeyAppVersionUrl = 'app_version_url';
   static bool _baseUrlLoaded = false;
 
@@ -51,13 +51,27 @@ class AppVersionService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final release = json.decode(response.body) as Map<String, dynamic>;
+        final assets = (release['assets'] as List<dynamic>? ?? [])
+            .whereType<Map<String, dynamic>>();
+        Map<String, dynamic>? apk;
+        for (final asset in assets) {
+          if (asset['name']?.toString().toLowerCase().endsWith('.apk') ?? false) {
+            apk = asset;
+            break;
+          }
+        }
+        return {
+          'version': (release['tag_name'] ?? release['name'] ?? '').toString().replaceFirst(RegExp(r'^v'), ''),
+          'download_url': apk?['browser_download_url']?.toString() ?? release['html_url']?.toString(),
+          'changelog': release['body']?.toString() ?? 'لا يوجد سجل تغييرات لهذا الإصدار.',
+          'release_date': release['published_at']?.toString(),
+          'android_compatibility': 'Android 5.0+',
+        };
       } else {
-        print('Failed to load app version: ${response.statusCode}');
         return null;
       }
-    } catch (e) {
-      print('Error checking app version: $e');
+    } catch (_) {
       return null;
     }
   }
