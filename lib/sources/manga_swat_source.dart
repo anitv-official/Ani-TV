@@ -136,19 +136,25 @@ class MangaSwatSource extends ContentSource {
       for (final raw in results) {
         if (raw is! Map) continue;
         final id = raw['id'];
-        final number = (raw['chapter'] ?? '').toString();
-        final title = (raw['title'] ?? 'الفصل $number').toString();
+        final rawNumber = (raw['chapter'] ?? '').toString();
+        final title = (raw['title'] ?? 'الفصل $rawNumber').toString();
+        final number = _chapterNumber('$rawNumber $title');
         chapters.add({
           'title': title,
           'url': 'swat://chapter/$id',
-          'number': int.tryParse(number.split('.').first) ?? chapters.length + 1,
+          'number': number ?? chapters.length + 1,
         });
       }
       next = data['next']?.toString();
       if (next == 'null') next = null;
     }
-    chapters.sort((a, b) => (b['number'] as int).compareTo(a['number'] as int));
+    chapters.sort((a, b) => (b['number'] as double).compareTo(a['number'] as double));
     return chapters;
+  }
+
+  double? _chapterNumber(String value) {
+    final match = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(value);
+    return match == null ? null : double.tryParse(match.group(1)!);
   }
 
   String _seriesUrl(dynamic id, String slug) {

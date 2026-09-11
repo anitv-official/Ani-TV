@@ -164,6 +164,13 @@ class OlympusSource extends ContentSource {
     };
   }
 
+  String _coverImage(String raw, String baseUrl) {
+    var value = HtmlParse.decode(raw).trim();
+    if (value.contains(',')) value = value.split(',').first.trim().split(' ').first;
+    value = value.replaceAll(RegExp(r'[\"\'()]'), '');
+    return value.isEmpty ? '' : HtmlParse.absUrl(baseUrl, value);
+  }
+
   List<Map<String, dynamic>> _parseSeriesList(String html) {
     // Current Team X markup uses `.bsx` cards inside `.manga-list`.
     final current = <Map<String, dynamic>>[];
@@ -181,7 +188,7 @@ class OlympusSource extends ContentSource {
             ? url.split('/').last.replaceAll('-', ' ')
             : rawTitle),
         url: url,
-        image: HtmlParse.absUrl(_base, match.group(3)!),
+        image: _coverImage(match.group(3)!, url),
         type: 'comic',
       ));
     }
@@ -223,7 +230,7 @@ class OlympusSource extends ContentSource {
             RegExp(r'(https://olympustaff\.com/images/manga/[^\s)"\]]+)'),
           ]) ??
           '';
-      items.add(item(title: HtmlParse.stripTags(title), url: url, image: image, type: 'comic'));
+      items.add(item(title: HtmlParse.stripTags(title), url: url, image: _coverImage(image, url), type: 'comic'));
     }
     if (items.isNotEmpty) return items;
     for (final match in RegExp(

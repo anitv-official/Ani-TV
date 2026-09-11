@@ -2,6 +2,7 @@ import 'anime3rb_source.dart';
 import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
 import 'manga_swat_source.dart';
+import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
 import 'source_base.dart';
@@ -17,6 +18,7 @@ class SourceRegistry {
     OlympusSource(),
     AzorafySource(),
     MangaSwatSource(),
+    HijalaSource(),
   ];
 
   static List<ContentSource> get animeSources =>
@@ -33,15 +35,15 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> searchAnime(String query) async {
-    return _merge(animeSources.map((s) => s.search(query)));
+    return _merge(animeSources.map((s) => s.search(query)), query: query);
   }
 
   static Future<List<Map<String, dynamic>>> searchManga(String query) async {
-    return _merge(mangaSources.map((s) => s.search(query)));
+    return _merge(mangaSources.map((s) => s.search(query)), query: query);
   }
 
   static Future<List<Map<String, dynamic>>> searchAll(String query) async {
-    return _merge(all.map((s) => s.search(query)));
+    return _merge(all.map((s) => s.search(query)), query: query);
   }
 
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) async {
@@ -78,7 +80,7 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> _merge(
-      Iterable<Future<List<Map<String, dynamic>>>> tasks) async {
+      Iterable<Future<List<Map<String, dynamic>>>> tasks, {String query = ''}) async {
     final results = await Future.wait(
       tasks.map((task) async {
         try {
@@ -92,11 +94,21 @@ class SourceRegistry {
     final seen = <String>{};
     for (final list in results) {
       for (final item in list) {
+        if (query.trim().isNotEmpty && !_matchesQuery(item, query)) continue;
         final key = '${item['url']}|${item['source_id']}|${item['title']}';
         if (seen.add(key)) merged.add(item);
       }
     }
     return merged;
+  }
+
+
+  static bool _matchesQuery(Map<String, dynamic> item, String query) {
+    final normalizedQuery = query.toLowerCase().trim();
+    final haystack = '${item['title'] ?? ''} ${item['url'] ?? ''}'.toLowerCase();
+    final terms = normalizedQuery.split(RegExp(r'\s+')).where((term) => term.length > 1).toList();
+    if (terms.isEmpty) return haystack.contains(normalizedQuery);
+    return terms.any(haystack.contains);
   }
 
   static Future<List<Map<String, dynamic>>> _cached(
