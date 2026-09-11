@@ -107,7 +107,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     } catch (e) {
       if (mounted) {
         setState(() => isLoading = false);
-        _showErrorDialog('Error Loading Content', 'Failed to load content: $e');
+        _showErrorDialog('Error جارٍ التحميل Content', 'Failed to load content: $e');
       }
     }
   }
@@ -126,7 +126,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   void _showUpdateSheet() async {
     final versionData = await AppVersionService.getAppVersion();
     final changelog = await AppVersionService.getChangelog();
-    
+
     // Android receives the common version field.
     final latestVersion = versionData?['version'];
 
@@ -172,7 +172,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                 _buildContentGrid(MediaQuery.of(context).size.width),
                 // Add extra padding at bottom to avoid content being hidden behind floating nav bar + ads
                 // Base 80 (Nav) + 50 (Ad) + Safe Area
-                SizedBox(height: 130 + MediaQuery.of(context).padding.bottom), 
+                SizedBox(height: 130 + MediaQuery.of(context).padding.bottom),
               ],
             ),
           ),
@@ -190,7 +190,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
     final item = featuredContent[_currentCarouselIndex]; // Use current index
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
-    final double heroHeight = (screenHeight * 0.45).clamp(200.0, 500.0); 
+    final double heroHeight = (screenHeight * 0.45).clamp(200.0, 500.0);
 
     return SizedBox(
       height: heroHeight,
@@ -223,7 +223,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               );
             }).toList(),
           ),
-          
+
           // Gradient Overlay
           IgnorePointer(
             child: Container(
@@ -242,7 +242,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               ),
             ),
           ),
-          
+
           // Top Gradient overlay for status bar and header
           Positioned(
             top: 0,
@@ -347,11 +347,11 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                           fontFamily: 'Roboto',
                           color: Colors.white,
                           shadows: [
-                            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 2)) 
+                            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 2))
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8), // Reduced from 16
 
                       // Actions Row
@@ -361,7 +361,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         children: [
                           // Favorites
                           _buildHeroActionItem(
-                            'assets/icons/favorite.svg', 
+                            'assets/icons/favorite.svg',
                             'المفضلة',
                             () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen())),
                           ),
@@ -369,7 +369,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                           // Play/Read Button
                           SizedBox(
                             width: 140, // Slightly smaller button
-                            height: 45, 
+                            height: 45,
                             child: ElevatedButton(
                               onPressed: () {
                                 if (item['type'] == 'anime') {
@@ -384,12 +384,12 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                               ),
                               child: Text(
-                                item['type'] == 'comic' ? 'Read' : 'Play', 
+                                item['type'] == 'comic' ? 'قراءة' : 'تشغيل',
                                 style: const TextStyle(
-                                  fontSize: 16, 
-                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
-                                  height: 1.2, 
+                                  height: 1.2,
                                 )
                               ),
                             ),
@@ -397,7 +397,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
                           // Categories
                            _buildHeroActionItem(
-                             'assets/icons/categories.svg', 
+                             'assets/icons/categories.svg',
                              'التصنيفات',
                              () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen())),
                            ),
@@ -446,7 +446,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   Widget _buildCategoryToggle() {
     return Padding(
       // Increased spacing to 20.0 for more separation
-      padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 12.0), 
+      padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 12.0),
       child: Container(
         height: 45,
         decoration: BoxDecoration(
@@ -481,9 +481,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     child: Container(
                       alignment: Alignment.center,
                       child: Text(
-                        'ANIME',
+                        'أنمي',
                         style: TextStyle(
-                          color: Colors.white, 
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -497,9 +497,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     child: Container(
                       alignment: Alignment.center,
                       child: Text(
-                        'KOMIK',
+                        'مانغا',
                         style: TextStyle(
-                          color: Colors.white, 
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -516,7 +516,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
   Widget _buildContentGrid(double maxWidth) {
     final items = _showAnime ? latestAnime : latestComics;
-    
+
     // Responsive grid count calculation
     int crossAxisCount = 3;
     if (maxWidth > 1200) {
@@ -527,9 +527,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       crossAxisCount = 4;
     }
 
-    // Adjust aspect ratio slightly for wider screens if needed, 
+    // Adjust aspect ratio slightly for wider screens if needed,
     // but usually 0.70 is fine for posters.
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Center(
@@ -540,7 +540,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             shrinkWrap: true,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.70, 
+              childAspectRatio: 0.70,
               crossAxisSpacing: 12,
               mainAxisSpacing: 16,
             ),

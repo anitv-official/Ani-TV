@@ -80,7 +80,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                found = true;
                break;
             } else if (genre.contains('manga') || genre.contains('japan')) {
-               data['type'] = 'Manga';
+               data['type'] = 'مانغا';
                found = true;
                break;
             }
@@ -107,7 +107,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                data['type'] = 'Manhua';
                found = true;
             } else if (url.contains('manga')) {
-               data['type'] = 'Manga';
+               data['type'] = 'مانغا';
                found = true;
             }
          }
@@ -122,7 +122,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                data['type'] = 'Manhua';
                found = true;
             } else if (title.contains('manga')) {
-               data['type'] = 'Manga';
+               data['type'] = 'مانغا';
                found = true;
             }
          }
@@ -130,7 +130,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
          // If type is present but maybe lowercase or unformatted, capitalize properly
          if (currentType.contains('manhwa')) data['type'] = 'Manhwa';
          else if (currentType.contains('manhua')) data['type'] = 'Manhua';
-         else if (currentType.contains('manga')) data['type'] = 'Manga';
+         else if (currentType.contains('manga')) data['type'] = 'مانغا';
       }
 
       setState(() {
@@ -182,7 +182,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           print('RewardedAd failed to load: $error');
 
           if (_adLoadAttempts < _maxAdLoadAttempts) {
-            print('Retrying to load ad... Attempt ${_adLoadAttempts + 1}');
+            print('إعادة المحاولةing to load ad... Attempt ${_adLoadAttempts + 1}');
             await Future.delayed(Duration(seconds: 2)); // Delay sebelum retry
             if (mounted) {
                await _loadRewardedAd(forceReload: true);
@@ -274,7 +274,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: _isLoading
-          ? const Center(child: CustomLoadingWidget(message: "Loading comic details...", size: 100))
+          ? const Center(child: CustomLoadingWidget(message: "جارٍ التحميل comic details...", size: 100))
           : _error != null
               ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.white)))
               : _comicData == null
@@ -426,7 +426,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => MangaReaderScreen(
+                            builder: (context) => مانغاReaderScreen(
                               url: firstChapter['url'],
                               comicImageUrl: comic['image_url'],
                               title: firstChapter['title'],
@@ -591,7 +591,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => MangaReaderScreen(
+                        builder: (context) => مانغاReaderScreen(
                           url: chapter['url'],
                           comicImageUrl: comic['image_url'],
                           title: title,
@@ -666,14 +666,14 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
   @override
   Widget build(BuildContext context) {
     final appStateProvider = Provider.of<AppStateProvider>(context);
-    final isFavorited = appStateProvider.favoriteComics.any((item) => item['url'] == widget.url);
+    final isFavorited = appStateProvider.favoriteمانغاs.any((item) => item['url'] == widget.url);
     
     return GestureDetector(
       onTap: () async {
          try {
             final provider = Provider.of<AppStateProvider>(context, listen: false);
             if (isFavorited) {
-               final items = provider.favoriteComics.where((x) => x['url'] == widget.url).toList();
+               final items = provider.favoriteمانغاs.where((x) => x['url'] == widget.url).toList();
                if(items.isNotEmpty) {
                  await provider.removeFromFavorites(items.first['id'], false);
                  ToastUtils.show('Removed from My List', backgroundColor: Colors.red);
@@ -742,13 +742,13 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
     var clean = text.trim();
     
     // 2. Replace multiple spaces/tabs with single space (excluding newlines for now)
-    clean = clean.replaceAll(RegExp(r'[ \t]+'), ' ');
+    clean = clean.replaceالكل(RegExp(r'[ \t]+'), ' ');
     
     // 3. Handle newlines. 
     //    If we have \n\n (or more), it's likely a paragraph break.
     //    If we have \n followed by spaces, it might be just bad formatting or a soft break.
     //    Let's normalize all newline sequences to \n first.
-    clean = clean.replaceAll(RegExp(r'\s*\n\s*'), '\n');
+    clean = clean.replaceالكل(RegExp(r'\s*\n\s*'), '\n');
     
     //    Now we have condensed newlines. "text\ntext" or "text\n\ntext".
     //    We can check if it looks like a list or specific break. 
@@ -757,9 +757,9 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
     
     //    Let's try: Replace single \n with space, keep double \n.
     //    BUT, we need to temporarily hide double newlines.
-    clean = clean.replaceAll('\n\n', '<PARAGRAPH_BREAK>');
-    clean = clean.replaceAll('\n', ' '); // Join single lines
-    clean = clean.replaceAll('<PARAGRAPH_BREAK>', '\n\n');
+    clean = clean.replaceالكل('\n\n', '<PARAGRAPH_BREAK>');
+    clean = clean.replaceالكل('\n', ' '); // Join single lines
+    clean = clean.replaceالكل('<PARAGRAPH_BREAK>', '\n\n');
     
     return clean.trim();
   }

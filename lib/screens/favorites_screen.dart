@@ -66,16 +66,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
-  Future<void> _removeFavorite(String id, bool isAnime) async {
+  Future<void> _removeFavorite(String id, bool isأنمي) async {
     try {
       final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-      await appStateProvider.removeFromFavorites(id, isAnime);
+      await appStateProvider.removeFromFavorites(id, isأنمي);
       
       setState(() {
-        if (isAnime) {
-          favoriteAnime = appStateProvider.favoriteAnime;
+        if (isأنمي) {
+          favoriteأنمي = appStateProvider.favoriteأنمي;
         } else {
-          favoriteComics = appStateProvider.favoriteComics;
+          favoriteمانغاs = appStateProvider.favoriteمانغاs;
         }
       });
 
@@ -91,8 +91,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     // Current items based on toggle
-    List<dynamic> items = _currentTabIndex == 0 ? favoriteAnime : favoriteComics;
-    final isAnime = _currentTabIndex == 0;
+    List<dynamic> items = _currentTabIndex == 0 ? favoriteأنمي : favoriteمانغاs;
+    final isأنمي = _currentTabIndex == 0;
 
     // Filter items if searching
     if (_searchQuery.isNotEmpty) {
@@ -193,7 +193,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildToggleItem(
-                      label: 'KOMIK', // Using "KOMIK" as requested in image, code uses "comic" internally
+                      label: 'KOMIK', // Using "مانغا" as requested in image, code uses "comic" internally
                       isActive: _currentTabIndex == 1, 
                       onTap: () => setState(() => _currentTabIndex = 1)
                     )
@@ -206,9 +206,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
             // Content
             Expanded(
-              child: isLoading
+              child: isجارٍ التحميل
                   ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
-                  : _buildContent(items, isAnime),
+                  : _buildContent(items, isأنمي),
             ),
           ],
         ),
@@ -237,9 +237,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Widget _buildContent(List<dynamic> items, bool isAnime) {
+  Widget _buildContent(List<dynamic> items, bool isأنمي) {
     if (items.isEmpty) {
-      return _buildEmptyState(isAnime);
+      return _buildEmptyState(isأنمي);
     }
 
     return LayoutBuilder(

@@ -47,7 +47,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         future: _animeDetailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CustomLoadingWidget(message: "Loading anime details...", size: 100));
+            return const Center(child: CustomLoadingWidget(message: "جارٍ التحميل anime details...", size: 100));
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: Colors.white)));
           } else if (!snapshot.hasData) {
@@ -132,7 +132,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             child: Icon(Icons.arrow_back, color: Colors.white, size: 28),
           ),
         ),
-        // Center Play Icon (Decoration)
+        // Center تشغيل Icon (Decoration)
         Positioned.fill(
           child: Center(
             child: SvgPicture.asset(
@@ -192,7 +192,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        // Genres as text or simple list? Reference image uses text description.
+        // التصنيفات as text or simple list? Reference image uses text description.
         // Let's use the synopsis as the main text block.
         _ExpandableDetails(anime: anime),
       ],
@@ -212,7 +212,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                       _showStreamBottomSheet(context, anime['episodes'][0], anime);
                    }
                 },
-                label: Text('Play', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: Text('تشغيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF393053),
                   foregroundColor: Colors.white,
@@ -231,7 +231,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                    }
                 },
                 icon: Icon(Icons.download, color: Colors.white),
-                label: Text('Download', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                label: Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey[800],
                    padding: EdgeInsets.symmetric(vertical: 12),
@@ -250,8 +250,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
              _buildIconAction(Icons.thumb_up_alt_outlined, 'Like', () {
                ToastUtils.show('Like functionality coming soon', backgroundColor: AppTheme.primaryColor);
              }),
-             _buildIconAction(Icons.share, 'Share', () {
-               ToastUtils.show('Share functionality coming soon', backgroundColor: AppTheme.primaryColor);
+             _buildIconAction(Icons.share, 'مشاركة', () {
+               ToastUtils.show('مشاركة functionality coming soon', backgroundColor: AppTheme.primaryColor);
              }),
              _buildIconAction(Icons.people, 'Watch Party', () {
                ToastUtils.show('Watch Party coming soon', backgroundColor: AppTheme.primaryColor);
@@ -427,7 +427,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          episode['title'] ?? 'Episode',
+                          episode['title'] ?? 'الحلقة',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -477,7 +477,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading streams...", size: 80),
+          child: CustomLoadingWidget(message: "جارٍ تحميل مصادر المشاهدة...", size: 80),
         ),
       ),
     );
@@ -528,8 +528,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                          if (streamUrl.isNotEmpty) 
                            ListTile(
                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
-                             title: const Text('Auto (Recommended)', style: TextStyle(color: Colors.white)),
-                             subtitle: const Text('Adaptive quality', style: TextStyle(color: Colors.grey)),
+                             title: const Text('تلقائي (موصى به)', style: TextStyle(color: Colors.white)),
+                             subtitle: const Text('جودة متكيفة', style: TextStyle(color: Colors.grey)),
                              onTap: () => _playVideo(context, streamUrl, 'Auto', streams, anime),
                            ),
                          
@@ -548,7 +548,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                             const Divider(color: Colors.grey),
                             ListTile(
                               leading: const Icon(Icons.open_in_browser, color: Colors.orange),
-                              title: const Text('Alternative Server', style: TextStyle(color: Colors.white)),
+                              title: const Text('خادم بديل', style: TextStyle(color: Colors.white)),
                               subtitle: const Text('Jika video tidak dapat diputar, gunakan opsi ini', style: TextStyle(color: Colors.grey)),
                               onTap: () async {
                                 Navigator.pop(context);
@@ -571,7 +571,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('Error loading streams: $e', backgroundColor: Colors.red);
+      ToastUtils.show('خطأ في تحميل مصادر المشاهدة: $e', backgroundColor: Colors.red);
     }
   }
 
@@ -585,7 +585,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           'image_url': anime['image_url'] ?? '',
           'url': widget.url,
           'episode_url': episodeData['url'], // Specific episode URL for direct playback
-          'episode': episodeData['title'] ?? 'Episode',
+          'episode': episodeData['title'] ?? 'الحلقة',
           'rating': anime['rating'],
           // For search screen compatibility
           'chapter': episodeData['title'] ?? 'Unknown', 
@@ -602,7 +602,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           MaterialPageRoute(
             builder: (context) => VideoPlayerScreen(
               url: url,
-              title: episodeData['title'] ?? 'Episode',
+              title: episodeData['title'] ?? 'الحلقة',
               episodeId: episodeData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
               directStreamUrls: (episodeData['direct_stream_urls'] as List?)
                   ?.map((e) => Map<String, String>.from(e))
@@ -625,7 +625,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading links...", size: 80),
+          child: CustomLoadingWidget(message: "جارٍ التحميل links...", size: 80),
         ),
       ),
     );
@@ -661,7 +661,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                    const Text(
-                     'Download Links',
+                     'تنزيل Links',
                      style: TextStyle(
                        color: Colors.white,
                        fontSize: 18,
@@ -683,7 +683,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                              collapsedIconColor: Colors.white,
                              iconColor: AppTheme.primaryColor,
                              title: Text(
-                               'Quality: $quality',
+                               'الجودة: $quality',
                                style: const TextStyle(color: Colors.white),
                              ),
                              children: links.map<Widget>((link) {
@@ -849,7 +849,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.anime['genres'] != null) ...[
-          const Text('Genres:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text('التصنيفات:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -875,7 +875,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
         _buildInfoRow('Status', widget.anime['status']),
         _buildInfoRow('Type', widget.anime['type']),
         _buildInfoRow('Duration', widget.anime['duration']),
-        _buildInfoRow('Japanese', widget.anime['japanese']),
+        _buildInfoRow('اليابانية', widget.anime['japanese']),
       ],
     );
   }

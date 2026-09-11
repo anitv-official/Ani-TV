@@ -120,7 +120,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         print(
             "Available quality options: ${_pixelDrainUrls.map((e) => e['quality']).toList()}");
         print("Selected URL: $_currentUrl");
-        print("Selected quality: $_selectedQuality");
+        print("Selected quality: $_selectedالجودة");
       });
     } else {
       print("No directStreamUrls available");
@@ -207,7 +207,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             _isChangingResolution = false;
             _isLoading = false;
           });
-          print('Quality change completed successfully');
+          print('الجودة change completed successfully');
         }
       } catch (e) {
         print('Error during quality change: $e');
@@ -236,7 +236,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             // Show error dialog if no fallback available
             CustomErrorDialog.show(
               context,
-              title: 'Quality Change Error',
+              title: 'الجودة Change Error',
               message:
                   'Failed to change video quality: $e\n\nNo alternative quality available.',
               onRetry: () => _changeVideoQuality(url, quality),
@@ -364,13 +364,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                // Placeholder for next episode logic
                // To implement this, we need to pass the full episode list to this screen
                // For now, show a toast or log
-               print('Next Episode clicked');
-               // ToastUtils.show('Next Episode not available in this demo');
+               print('Next الحلقة clicked');
+               // ToastUtils.show('Next الحلقة not available in this demo');
             },
             onShowEpisodes: () {
                // Placeholder for episodes list
-               print('Show Episodes clicked');
-               // ToastUtils.show('Episodes list not available in this demo');
+               print('Show الحلقةs clicked');
+               // ToastUtils.show('الحلقةs list not available in this demo');
             },
           ),
           placeholder: Center(
@@ -466,7 +466,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           });
           CustomErrorDialog.show(
             context,
-            title: 'Video Player Error',
+            title: 'Video تشغيلer Error',
             message: 'Failed to initialize video player: $e',
             onRetry: () => _initializePlayer(),
             onDismiss: () {
@@ -597,14 +597,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   void dispose() {
-    print('Disposing VideoPlayerScreen');
+    print('Disposing VideoتشغيلerScreen');
 
     // Cancel any pending quality change timer
     _qualityChangeTimer?.cancel();
     _qualityChangeTimer = null;
 
     // Only dispose controllers if they haven't been disposed already
-    if (_videoPlayerController != null || _chewieController != null) {
+    if (_videoتشغيلerController != null || _chewieController != null) {
       _disposeControllers();
     }
 
@@ -643,24 +643,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.space): () {
-             if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
-                if (_videoPlayerController!.value.isPlaying) {
-                  _videoPlayerController!.pause();
+             if (_videoتشغيلerController != null && _videoتشغيلerController!.value.isInitialized) {
+                if (_videoتشغيلerController!.value.isتشغيلing) {
+                  _videoتشغيلerController!.pause();
                 } else {
-                  _videoPlayerController!.play();
+                  _videoتشغيلerController!.play();
                 }
              }
         },
         const SingleActivator(LogicalKeyboardKey.arrowRight): () {
-            if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
-              final newPos = _videoPlayerController!.value.position + const Duration(seconds: 5);
-              _videoPlayerController!.seekTo(newPos);
+            if (_videoتشغيلerController != null && _videoتشغيلerController!.value.isInitialized) {
+              final newPos = _videoتشغيلerController!.value.position + const Duration(seconds: 5);
+              _videoتشغيلerController!.seekTo(newPos);
             }
         },
         const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
-            if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
-              final newPos = _videoPlayerController!.value.position - const Duration(seconds: 5);
-              _videoPlayerController!.seekTo(newPos);
+            if (_videoتشغيلerController != null && _videoتشغيلerController!.value.isInitialized) {
+              final newPos = _videoتشغيلerController!.value.position - const Duration(seconds: 5);
+              _videoتشغيلerController!.seekTo(newPos);
             }
         },
         const SingleActivator(LogicalKeyboardKey.escape): () {
@@ -708,13 +708,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     child: _buildVideoContent(),
                   ),
 
-                  // Loading overlay
-                  if (_isLoading)
+                  // جارٍ التحميل overlay
+                  if (_isجارٍ التحميل)
                     Container(
                       color: Colors.black.withOpacity(0.8),
                       child: Center(
-                        child: CustomLoadingWidget(
-                            message: _isChangingResolution ? "Switching Quality..." : "جارٍ التحميل...",
+                        child: Customجارٍ التحميلWidget(
+                            message: _isChangingResolution ? "Switching الجودة..." : "جارٍ التحميل...",
                             color: Colors.red,
                         ),
                       ),
@@ -735,7 +735,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       return Container(
         color: Colors.black,
         child: Center(
-          child: CustomLoadingWidget(
+          child: Customجارٍ التحميلWidget(
             message: 'Initializing...',
             color: Colors.red,
           ),
@@ -748,14 +748,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         fit: StackFit.expand,
         children: [
           // 1. Video Layer (Immersive, Under Notch)
-          if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized)
+          if (_videoتشغيلerController != null && _videoتشغيلerController!.value.isInitialized)
             SizedBox.expand(
               child: FittedBox(
                 fit: BoxFit.contain, // Maintain aspect ratio, fully visible
                 child: SizedBox(
-                   width: _videoPlayerController!.value.size.width,
-                   height: _videoPlayerController!.value.size.height,
-                   child: VideoPlayer(_videoPlayerController!),
+                   width: _videoتشغيلerController!.value.size.width,
+                   height: _videoتشغيلerController!.value.size.height,
+                   child: Videoتشغيلer(_videoتشغيلerController!),
                 ),
               ),
             ),
@@ -770,13 +770,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                Navigator.of(context).pop();
             },
             qualityOptions: _pixelDrainUrls,
-            selectedQuality: _selectedQuality,
-            onQualityChanged: _changeVideoQuality,
-            onNextEpisode: () {
+            selectedالجودة: _selectedالجودة,
+            onالجودةChanged: _changeVideoالجودة,
+            onNextالحلقة: () {
                // Placeholder
                print('Next Episode');
             },
-            onShowEpisodes: () {
+            onShowالحلقةs: () {
                // Placeholder
                print('Episodes List');
             },
@@ -832,7 +832,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                _initializePlayer();
+                _initializeتشغيلer();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

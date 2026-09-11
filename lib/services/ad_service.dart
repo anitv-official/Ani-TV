@@ -41,7 +41,7 @@ class AdService {
           print('RewardedAd failed to load: $error');
 
           if (_adLoadAttempts < _maxAdLoadAttempts) {
-            print('Retrying to load ad... Attempt ${_adLoadAttempts + 1}');
+            print('إعادة المحاولةing to load ad... Attempt ${_adLoadAttempts + 1}');
             await Future.delayed(Duration(seconds: 2));
             await loadRewardedAd(forceReload: true);
           } else {

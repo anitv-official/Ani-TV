@@ -175,7 +175,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       
       await appStateProvider.addToHistory(historyItem, false);
     } catch (e) {
-      _showErrorDialog('History Error', 'Failed to save to history: $e');
+      _showErrorDialog('السجل Error', 'Failed to save to history: $e');
     }
   }
 
@@ -194,7 +194,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       
       await appStateProvider.addToHistory(historyItem, false);
     } catch (e) {
-      _showErrorDialog('History Error', 'Failed to save to history: $e');
+      _showErrorDialog('السجل Error', 'Failed to save to history: $e');
     }
   }
 
@@ -377,7 +377,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
         backgroundColor: _isDarkMode ? Colors.black : Colors.white,
         body: Center(
           child: CustomLoadingWidget(
-            message: 'Loading chapter...',
+            message: 'جارٍ التحميل chapter...',
             color: AppTheme.primaryColor,
           ),
         ),
@@ -548,7 +548,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       );
     } else {
       ToastUtils.show(
-        'Tidak ada chapter selanjutnya',
+        'لا يوجد فصل تالٍ',
         backgroundColor: AppTheme.primaryColor,
       );
     }
@@ -568,7 +568,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       );
     } else {
       ToastUtils.show(
-        'Ini adalah chapter pertama',
+        'هذا هو الفصل الأول',
         backgroundColor: AppTheme.primaryColor,
       );
     }
@@ -621,7 +621,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(
-                    "Select Chapter",
+                    "اختيار الفصل",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -642,7 +642,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                       } else if (snapshot.hasError) {
                         return Center(
                           child: Text(
-                            'Failed to load chapters',
+                            'تعذر تحميل الفصول',
                             style: TextStyle(color: Colors.white54),
                           ),
                         );
@@ -651,7 +651,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                          if (chapters == null || chapters.isEmpty) {
                             return Center(
                               child: Text(
-                                'No chapters found',
+                                'لم يتم العثور على فصول',
                                 style: TextStyle(color: Colors.white54),
                               ),
                             );
@@ -737,7 +737,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                     setState(() => _isDarkMode = !_isDarkMode);
                     _savePreferences();
                   },
-                  tooltip: _isDarkMode ? 'Light Mode' : 'Dark Mode',
+                  tooltip: _isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن',
                 ),
               ],
             ),
@@ -755,7 +755,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                   IconButton(
                     icon: Icon(Icons.skip_previous, color: Colors.white),
                     onPressed: _navigateToPrevChapter,
-                    tooltip: 'Chapter Sebelumnya',
+                    tooltip: 'الفصل السابق',
                   )
                 else
                   // Widget kosong untuk menjaga layout tetap seimbang
@@ -763,14 +763,14 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                 IconButton(
                   icon: Icon(Icons.list, color: Colors.white),
                   onPressed: _navigateToChapterList,
-                  tooltip: 'Daftar Chapter',
+                  tooltip: 'قائمة الفصول',
                 ),
                 // Tombol next hanya ditampilkan jika ada chapter selanjutnya
                 if (_hasNextChapter)
                   IconButton(
                     icon: Icon(Icons.skip_next, color: Colors.white),
                     onPressed: _navigateToNextChapter,
-                    tooltip: 'Chapter Selanjutnya',
+                    tooltip: 'الفصل التالي',
                   )
                 else
                   // Widget kosong untuk menjaga layout tetap seimbang

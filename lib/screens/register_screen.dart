@@ -19,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _rememberMe = false; // "Remember me" on register screen as per design
+  bool _rememberMe = false; // "تذكرني" on register screen as per design
 
   @override
   void dispose() {
@@ -47,7 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       
       // Show success message
       ToastUtils.show(
-        'Registration successful! Please login.',
+        'تم إنشاء الحساب بنجاح! سجّل الدخول للمتابعة.',
         backgroundColor: Colors.green,
       );
       
@@ -116,7 +116,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
                 const Center(
                   child: Text(
-                    'Create an account',
+                    'إنشاء حساب',
                     style: TextStyle(
                       fontSize: 16,
                       color: AppTheme.textSecondaryColor,
@@ -133,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppTheme.surfaceColor,
-                    hintText: 'Email or username',
+                    hintText: 'البريد الإلكتروني أو اسم المستخدم',
                     hintStyle: TextStyle(color: AppTheme.textSecondaryColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -154,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter email';
+                    if (value == null || value.isEmpty) return 'أدخل البريد الإلكتروني';
                     return null;
                   },
                 ),
@@ -200,8 +200,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter password';
-                     if (value.length < 6) return 'Password must be at least 6 characters';
+                    if (value == null || value.isEmpty) return 'أدخل كلمة المرور';
+                     if (value.length < 6) return 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل';
                     return null;
                   },
                 ),
@@ -215,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: AppTheme.surfaceColor,
-                    hintText: 'Confirm Password',
+                    hintText: 'تأكيد كلمة المرور',
                     hintStyle: const TextStyle(color: AppTheme.textSecondaryColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -247,8 +247,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please confirm password';
-                    if (value != _passwordController.text) return 'Passwords do not match';
+                    if (value == null || value.isEmpty) return 'أكد كلمة المرور';
+                    if (value != _passwordController.text) return 'كلمة المرورs do not match';
                     return null;
                   },
                 ),
@@ -275,7 +275,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'Remember me',
+                      'تذكرني',
                       style: TextStyle(color: AppTheme.textSecondaryColor),
                     ),
                   ],
@@ -320,7 +320,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: RichText(
                       text: const TextSpan(
-                        text: "Already have an account? ",
+                        text: "لديك حساب بالفعل؟ ",
                         style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14),
                         children: [
                           TextSpan(
@@ -340,7 +340,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Social Login Section
                 const Center(
                   child: Text(
-                    'Or continue with',
+                    'أو المتابعة باستخدام',
                     style: TextStyle(color: AppTheme.textSecondaryColor),
                   ),
                 ),

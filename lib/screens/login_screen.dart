@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Welcome Text
                       const Center(
                         child: Text(
-                          'Welcome back!',
+                          'مرحبًا back!',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       const Center(
                         child: Text(
-                          'Login to your account',
+                          'تسجيل الدخول to your account',
                           style: TextStyle(
                             fontSize: 16,
                             color: AppTheme.textSecondaryColor,
@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: AppTheme.surfaceColor,
-                          hintText: 'Email or username',
+                          hintText: 'البريد الإلكتروني أو اسم المستخدم',
                           hintStyle: TextStyle(color: AppTheme.textSecondaryColor),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -168,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter email';
+                          if (value == null || value.isEmpty) return 'أدخل البريد الإلكتروني';
                           return null;
                         },
                       ),
@@ -214,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter password';
+                          if (value == null || value.isEmpty) return 'أدخل كلمة المرور';
                           return null;
                         },
                       ),
@@ -241,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(width: 8),
                           const Text(
-                            'Remember me',
+                            'تذكرني',
                             style: TextStyle(color: AppTheme.textSecondaryColor),
                           ),
                           const Spacer(),
@@ -316,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Social Login Section
                       const Center(
                         child: Text(
-                          'Or continue with',
+                          'أو المتابعة باستخدام',
                           style: TextStyle(color: AppTheme.textSecondaryColor),
                         ),
                       ),

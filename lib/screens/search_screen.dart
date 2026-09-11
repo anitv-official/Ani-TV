@@ -30,13 +30,13 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   bool _isLoading = false;
   bool _hasSearched = false;
   bool _isLoadingGenres = false;
-  
+
   // Search Filters
-  String _selectedFilter = 'All';
+  String _selectedFilter = 'الكل';
   int _selectedYear = DateTime.now().year;
-  String _selectedGenre = 'All';
+  String _selectedGenre = 'الكل';
   String _selectedChip = ''; // For generic chips in search
-  
+
   // Redesign States
   bool _isSearching = false;
   bool _showAnimeHistory = true; // Toggle between Anime and Komik history
@@ -54,20 +54,20 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize search state
     _isSearching = widget.autoFocus;
-    
+
     // Initialize AppStateProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AppStateProvider>(context, listen: false).initialize();
-      
+
       // Auto-focus if requested
       if (widget.autoFocus) {
         FocusScope.of(context).requestFocus(_searchFocusNode);
       }
     });
-    
+
     _loadGenres();
   }
 
@@ -115,7 +115,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
     try {
       List<dynamic> allResults = [];
-      
+
       if (genre['url'] != null) {
         final genreContent = await ApiService.fetchGenreContent(genre['url']);
         if (genreContent['content'] != null) {
@@ -140,7 +140,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'anime' || item['type'] == 'anime')
                 .toList();
-          } else if (_selectedFilter == 'Manga') {
+          } else if (_selectedFilter == 'مانغا') {
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'comic' || item['type'] == 'comic' || item['type'] == 'manga')
                 .toList();
@@ -153,7 +153,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Search Error', 'Failed to perform search: $e');
+        _showErrorDialog('خطأ في البحث', 'تعذر تنفيذ البحث: $e');
       }
     }
   }
@@ -169,7 +169,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     try {
       final animeResults = await ApiService.searchAnime(query);
       final comicResults = await ApiService.searchComics(query);
-      
+
       final allResults = [...animeResults, ...comicResults];
 
       if (mounted) {
@@ -180,7 +180,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'anime' || item['type'] == 'anime')
                 .toList();
-          } else if (_selectedFilter == 'Manga') {
+          } else if (_selectedFilter == 'مانغا') {
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'comic' || item['type'] == 'comic')
                 .toList();
@@ -193,7 +193,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showErrorDialog('Search Error', 'Failed to perform search: $e');
+        _showErrorDialog('خطأ في البحث', 'تعذر تنفيذ البحث: $e');
       }
     }
   }
@@ -267,20 +267,20 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           IconButton(
             icon: Icon(Icons.filter_list, color: Colors.white),
             onPressed: (){}, // لا توجد فلاتر متقدمة متاحة حاليًا
-            tooltip: 'Filter results',
+            tooltip: 'تصفية النتائج',
           ),
         ],
       );
     }
-    
+
     return AppBar(
       backgroundColor: AppTheme.backgroundColor,
       elevation: 0,
       title: Text(
-        'History', 
+        'السجل',
         style: TextStyle(
-            fontSize: 24, 
-            fontWeight: FontWeight.bold, 
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
             color: Colors.white
         ),
       ),
@@ -307,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
-            _showAnimeHistory ? 'Latest Watched' : 'Latest Read',
+            _showAnimeHistory ? 'آخر ما تمت مشاهدته' : 'آخر ما تمت قراءته',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -339,7 +339,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         children: [
           Expanded(
             child: _buildToggleItem(
-              label: 'ANIME',
+              label: 'أنمي',
               isActive: _showAnimeHistory,
               onTap: () => setState(() => _showAnimeHistory = true),
             ),
@@ -347,7 +347,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           SizedBox(width: 16),
           Expanded(
             child: _buildToggleItem(
-              label: 'KOMIK',
+              label: 'مانغا',
               isActive: !_showAnimeHistory,
               onTap: () => setState(() => _showAnimeHistory = false),
             ),
@@ -391,18 +391,18 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         final ep = item['episode'].toString();
         final match = RegExp(r'episode\s*(\d+)', caseSensitive: false).firstMatch(ep);
         if (match != null) {
-           typeLabel = 'Episode ${match.group(1)}';
+           typeLabel = 'الحلقة ${match.group(1)}';
         } else {
-           typeLabel = ep.toLowerCase().contains('episode') ? ep : 'Episode $ep';
+           typeLabel = ep.toLowerCase().contains('episode') ? ep : 'الحلقة $ep';
         }
       } else {
         targetScreen = AnimeDetailsScreen(url: item['url']);
       }
     } else if (item['type'] == 'comic' || item['type'] == 'manga') {
-      typeLabel = 'Manga';
+      typeLabel = 'مانغا';
       // Check if it's a specific chapter history (has 'chapter' key) or just a comic link
       if (item['chapter'] != null) {
-        targetScreen = MangaReaderScreen(
+        targetScreen = مانغاReaderScreen(
           url: item['url'],
           title: item['title'],
           chapterId: item['chapter'].toString(),
@@ -410,10 +410,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         );
         final ch = item['chapter'].toString();
         // Normalize: Remove existing 'chapter' text (case-insensitive) and force 'Chapter X' format
-        final cleanCh = ch.replaceAll(RegExp(r'chapter\s*', caseSensitive: false), '').trim();
+        final cleanCh = ch.replaceالكل(RegExp(r'chapter\s*', caseSensitive: false), '').trim();
         typeLabel = 'Chapter $cleanCh';
       } else {
-        targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
+        targetScreen = مانغاDetailsScreen(url: item['url'], type: item['type']);
       }
     }
 
@@ -432,7 +432,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 _showStreamBottomSheet(item);
              } else if (item['episode'] != null) {
                 // Feature: Fallback for legacy items (Try to find episode by name)
-                _fetchAndDirectPlay(item);
+                _fetchAndDirectتشغيل(item);
              } else if (targetScreen != null) {
                  Navigator.push(
                    context,
@@ -475,29 +475,29 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       child: Icon(Icons.image_not_supported, color: Colors.white54),
                     ),
             ),
-            
+
             SizedBox(width: 16),
-            
-            // Title & Subtitle Logic
+
+            // Title & الترجمة Logic
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12.0),
                 child: (() {
                   // Calculate Cleaned Title (Series Name)
                   final originalTitle = (item['title'] ?? 'Unknown Title').toString();
-                  // Remove "Chapter X" or "Episode X" from start or end
+                  // Remove "Chapter X" or "الحلقة X" from start or end
                   // Example: "Chapter 1 Job Change Log" -> "Job Change Log"
                   // Example: "Job Change Log Chapter 1" -> "Job Change Log"
-                  String cleanedTitle = originalTitle.replaceAll(RegExp(r'^(Episode|Chapter)\s*\d+\s*[-:]*\s*', caseSensitive: false), '');
-                  cleanedTitle = cleanedTitle.replaceAll(RegExp(r'\s*[-:]*\s*(Episode|Chapter)\s*\d+.*$', caseSensitive: false), '').trim();
-                  
+                  String cleanedTitle = originalTitle.replaceالكل(RegExp(r'^(Episode|Chapter)\s*\d+\s*[-:]*\s*', caseSensitive: false), '');
+                  cleanedTitle = cleanedTitle.replaceالكل(RegExp(r'\s*[-:]*\s*(Episode|Chapter)\s*\d+.*$', caseSensitive: false), '').trim();
+
                   final seriesTitle = cleanedTitle.isNotEmpty ? cleanedTitle : originalTitle;
 
                   // Determined Display Strings
                   String mainText = seriesTitle;
                   String subText = typeLabel;
 
-                  // Swap for Comics: Chapter on Top, Series on Bottom
+                  // Swap for مانغاs: Chapter on Top, Series on Bottom
                   if (item['type'] == 'comic' || item['type'] == 'manga') {
                     mainText = typeLabel;
                     subText = seriesTitle;
@@ -530,8 +530,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 })(),
               ),
             ),
-            
-            // Play Button Icon
+
+            // تشغيل Button Icon
             Container(
               margin: EdgeInsets.only(right: 16),
               width: 32,
@@ -552,7 +552,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildEmptyHistoryView() {
+  Widget _buildEmptyالسجلView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -665,9 +665,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildLoadingView() {
+  Widget _buildجارٍ التحميلView() {
     return Center(
-      child: CustomLoadingWidget(
+      child: Customجارٍ التحميلWidget(
         message: 'Searching...',
         size: 150,
       ),
@@ -706,16 +706,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             style: TextStyle(color: Colors.white54, fontSize: 16),
           ),
           SizedBox(height: 32),
-          _buildPopularSearches(),
+          _buildالأكثر مشاهدةSearches(),
         ],
       ),
     );
   }
-  
-  Widget _buildPopularSearches() {
+
+  Widget _buildالأكثر مشاهدةSearches() {
       // Reuse logic from previous implementation but simplified
-      if (_isLoadingGenres) return SizedBox();
-      
+      if (_isجارٍ التحميلالتصنيفات) return SizedBox();
+
       return Padding(
           padding: EdgeInsets.symmetric(horizontal: 20),
           child: Wrap(
@@ -754,12 +754,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       },
     );
   }
-  
+
   Widget _buildResultCard(dynamic item) {
     // Basic Grid Card for search results
      Widget? targetScreen;
     String category = item['category'] ?? 'anime'; // Default to anime if unknown
-    
+
     // Fallback logic if category is missing but type exists
     if (item['category'] == null) {
        String t = (item['type'] ?? '').toString().toLowerCase();
@@ -767,9 +767,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     }
 
     if (category == 'anime') {
-      targetScreen = AnimeDetailsScreen(url: item['url']);
+      targetScreen = أنميDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
-      targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
+      targetScreen = مانغاDetailsScreen(url: item['url'], type: item['type']);
     }
 
     return InkWell(
@@ -849,7 +849,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         ),
     );
   }
-  /* Direct Play Logic copied/adapted from AnimeDetailsScreen */
+  /* Direct تشغيل Logic copied/adapted from أنميDetailsScreen */
   Future<void> _showStreamBottomSheet(Map<String, dynamic> historyItem) async {
      // Show loading
     showModalBottomSheet(
@@ -862,7 +862,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading streams...", size: 80),
+          child: Customجارٍ التحميلWidget(message: "جارٍ تحميل مصادر المشاهدة...", size: 80),
         ),
       ),
     );
@@ -870,10 +870,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     try {
       // Load Ad
       await AdService.loadRewardedAd();
-      
+
       final episodeUrl = historyItem['episode_url'];
-      final streams = await ApiService.fetchEpisodeStreams(episodeUrl);
-      if (mounted) Navigator.pop(context); // Close loading
+      final streams = await ApiService.fetchالحلقةStreams(episodeUrl);
+      if (mounted) Navigator.pop(context); // إغلاق loading
 
       if (streams == null) {
         ToastUtils.show('No streams found', backgroundColor: Colors.orange);
@@ -912,14 +912,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                        shrinkWrap: true,
                        children: [
                          // Auto Option
-                         if (streamUrl.isNotEmpty) 
+                         if (streamUrl.isNotEmpty)
                            ListTile(
                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
                              title: const Text('Auto (Recommended)', style: TextStyle(color: Colors.white)),
                              subtitle: const Text('Adaptive quality', style: TextStyle(color: Colors.grey)),
                              onTap: () => _playVideo(context, streamUrl, 'Auto', streams, historyItem),
                            ),
-                         
+
                          // Direct Streams
                          ...directStreams.map((stream) {
                             final quality = stream['quality'] ?? 'Unknown';
@@ -957,19 +957,19 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         );
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Close loading
+      if (mounted) Navigator.pop(context); // إغلاق loading
       ToastUtils.show('Error loading streams: $e', backgroundColor: Colors.red);
     }
   }
 
   void _playVideo(BuildContext context, String url, String quality, Map<String, dynamic> episodeData, Map<String, dynamic> historyItem) {
-     Navigator.pop(context); // Close bottom sheet
-      
+     Navigator.pop(context); // إغلاق bottom sheet
+
      AdService.showRewardedAd(context, onReward: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => VideoPlayerScreen(
+            builder: (context) => VideoتشغيلerScreen(
               url: url,
               title: historyItem['episode'] ?? 'Episode',
               episodeId: DateTime.now().millisecondsSinceEpoch.toString(), // Dummy ID for history
@@ -979,30 +979,30 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             ),
           ),
         );
-     }, setLandscapeOrientation: true); 
+     }, setLandscapeOrientation: true);
   }
 
-  Future<void> _fetchAndDirectPlay(Map<String, dynamic> item) async {
+  Future<void> _fetchAndDirectتشغيل(Map<String, dynamic> item) async {
     // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CustomLoadingWidget(message: "Finding episode...", size: 100),
+        child: Customجارٍ التحميلWidget(message: "جارٍ البحث عن الحلقة...", size: 100),
       ),
     );
 
     try {
-      final animeDetails = await ApiService.fetchAnimeDetails(item['url']);
-      Navigator.pop(context); // Close loading
+      final animeDetails = await ApiService.fetchأنميDetails(item['url']);
+      Navigator.pop(context); // إغلاق loading
 
       if (animeDetails != null && animeDetails['episodes'] != null) {
          final episodes = animeDetails['episodes'] as List<dynamic>;
-         final targetEpisode = item['episode'].toString(); // "Episode 1"
-         
+         final targetالحلقة = item['episode'].toString(); // "الحلقة 1"
+
          // Try to find matching episode with flexible matching
          final episode = episodes.firstWhere(
-            (e) => _isSameEpisode(e['title'], targetEpisode),
+            (e) => _isSameالحلقة(e['title'], targetالحلقة),
             orElse: () => null,
          );
 
@@ -1012,12 +1012,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             updatedItem['episode_url'] = episode['url'];
             _showStreamBottomSheet(updatedItem);
          } else {
-            // Not found, try matching by index as fallback if targetEpisode contains a number
+            // Not found, try matching by index as fallback if targetالحلقة contains a number
             // ... (Simple navigation for now to avoid wrong episode)
             if (mounted) {
                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AnimeDetailsScreen(url: item['url'])),
+                  MaterialPageRoute(builder: (context) => أنميDetailsScreen(url: item['url'])),
                );
             }
          }
@@ -1029,29 +1029,29 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       if (mounted) {
          Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => AnimeDetailsScreen(url: item['url'])),
+            MaterialPageRoute(builder: (context) => أنميDetailsScreen(url: item['url'])),
          );
       }
     }
   }
 
-  bool _isSameEpisode(dynamic apiTitle, dynamic searchTitle) {
+  bool _isSameالحلقة(dynamic apiTitle, dynamic searchTitle) {
       if (apiTitle == null || searchTitle == null) return false;
       final t1 = apiTitle.toString().toLowerCase().trim();
       final t2 = searchTitle.toString().toLowerCase().trim();
-      
+
       // Exact match
       if (t1 == t2) return true;
-      
+
       // Check if one contains the other
       if (t1.contains(t2) || t2.contains(t1)) return true;
-      
-      // Check numeric match (e.g. "Episode 1" vs "1")
+
+      // Check numeric match (e.g. "الحلقة 1" vs "1")
       final n1 = RegExp(r'(\d+)').firstMatch(t1)?.group(1);
       final n2 = RegExp(r'(\d+)').firstMatch(t2)?.group(1);
-      
+
       if (n1 != null && n2 != null && n1 == n2) return true;
-      
+
       return false;
   }
 }
