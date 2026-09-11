@@ -497,6 +497,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
 
     final embedDomains = [
+      'video.vid3rb.com',
+      'vid3rb.com',
       'krakenfiles.com',
       'embedsito.com',
       'filemoon.sx',

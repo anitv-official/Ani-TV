@@ -19,7 +19,7 @@ class Anime3rbSource extends ContentSource {
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
     final html = await HtmlClient.getHtml(
-        '$_base/search?q=${Uri.encodeQueryComponent(query)}');
+        '$_base/titles/list?q=${Uri.encodeQueryComponent(query)}&page=1');
     final items = _parseCards(html);
     if (items.isNotEmpty) return items;
     return _parseGeneric(html, query);
@@ -122,6 +122,15 @@ class Anime3rbSource extends ContentSource {
     }
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
       add(media, 'مباشر');
+    }
+    // Anime3rb currently exposes the playable page through video.vid3rb.com.
+    // Keep this real, per-episode URL so AniTV's existing WebView/native
+    // player path can resolve the final media URL at playback time.
+    for (final match in RegExp(
+      r'https?://video\.vid3rb\.com/video/[A-Za-z0-9_-]+',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(0)!, 'Anime3rb • Vid3rb');
     }
     if (servers.isEmpty) add(url, 'صفحة الحلقة');
     return {
@@ -228,7 +237,12 @@ class Anime3rbSource extends ContentSource {
       caseSensitive: false,
     ).allMatches(html)) {
       final url = HtmlParse.absUrl(pageUrl, match.group(1)!);
-      if (!url.contains('anime3rb.com') || !seen.add(url)) continue;
+      final path = Uri.tryParse(url)?.path ?? '';
+      if (!url.contains('anime3rb.com') ||
+          !RegExp(r'^/episode/[^/]+/[^/]+/?$').hasMatch(path) ||
+          !seen.add(url)) {
+        continue;
+      }
       final text = HtmlParse.stripTags(match.group(2) ?? '');
       final decoded = Uri.decodeComponent(url);
       if (!decoded.contains('حلقة') &&
