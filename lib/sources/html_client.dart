@@ -98,8 +98,10 @@ class HtmlClient {
     final lower = body.toLowerCase();
     return lower.contains('just a moment') ||
         lower.contains('cf-mitigated') ||
-        lower.contains('challenge-platform') ||
         lower.contains('performing security verification') ||
+        // A complete page may contain Cloudflare's bootstrap script. Only
+        // reject small challenge documents, not full catalogue responses.
+        (lower.contains('challenge-platform') && body.length < 20000) ||
         (lower.contains('enable javascript and cookies to continue') &&
             body.length < 8000);
   }
