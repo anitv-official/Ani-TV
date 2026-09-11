@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'dart:async';
 import '../widgets/custom_controls.dart';
 import '../widgets/custom_error_dialog.dart';
@@ -492,67 +493,28 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
     print('Checking if URL is direct video: $url');
 
-    final videoExtensions = ['.mp4', '.m3u8', '.mov', '.mkv', '.avi', '.webm'];
-    if (videoExtensions.any((ext) => url.toLowerCase().contains(ext))) {
-      print('URL contains video extension, treating as direct video');
+    final lower = url.toLowerCase();
+    if (RegExp(r'\.(?:mp4|m3u8|mov|mkv|avi|webm)(?:\?|$)').hasMatch(lower) ||
+        lower.contains('pixeldrain.com/api/file')) {
       return true;
     }
-
-    final embedDomains = [
-      'video.vid3rb.com',
-      'vid3rb.com',
-      'krakenfiles.com',
-      'embedsito.com',
-      'filemoon.sx',
-      'youtube.com',
-      'youtu.be',
-      'vimeo.com',
-      'dailymotion.com',
-      'vidmoly.net',
-      'vidmoly.to',
-      'sibnet.ru',
-      'sendvid.com',
-      'mp4upload.com',
-      'uqload.',
-      'ok.ru',
-      'dood',
-      'streamtape',
-      'mixdrop',
-      'voe.sx',
-      'yourupload',
-      'listeamed',
-      'playerwish',
-      'vidhide',
-      'lulustream',
-    ];
-
-    if (embedDomains.any((domain) => url.toLowerCase().contains(domain))) {
-      print('URL contains embed domain, treating as non-direct video');
-      return false;
-    }
-
-    // Check if URL looks like a direct stream (contains common streaming indicators)
-    final streamingIndicators = ['pixeldrain.com', 'stream', 'video', 'play'];
-    if (streamingIndicators
-        .any((indicator) => url.toLowerCase().contains(indicator))) {
-      print('URL contains streaming indicator, treating as direct video');
-      return true;
-    }
-
-    print(
-        'URL does not match any criteria, treating as direct video by default');
-    return true;
+    return false;
   }
+
+  static const String _browserUserAgent =
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
   void _initializeWebView() {
     setState(() => _isLoading = true);
-    _webViewController = WebViewController()
+    final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
       ..enableZoom(false)
+      ..setUserAgent(_browserUserAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
+            if (!mounted) return;
             setState(() {
               _isLoading = false;
               _isInitialized = true;
@@ -560,23 +522,30 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           },
           onWebResourceError: (WebResourceError error) {
             print('WebView error: ${error.description}');
+            if (!mounted) return;
             setState(() {
               _isLoading = false;
               _isChangingResolution = false;
             });
-
-            if (mounted) {
-              CustomErrorDialog.show(
-                context,
-                title: 'WebView Error',
-                message: 'Failed to load video: ${error.description}',
-                onRetry: () => _initializeWebView(),
-              );
-            }
           },
         ),
-      )
-      ..loadRequest(Uri.parse(_currentUrl), headers: widget.headers);
+      );
+    final platform = controller.platform;
+    if (platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(false);
+      platform.setMediaPlaybackRequiresUserGesture(false);
+      final cookies = WebViewCookieManager();
+      if (cookies.platform is AndroidWebViewCookieManager) {
+        (cookies.platform as AndroidWebViewCookieManager)
+            .setAcceptThirdPartyCookies(platform, true);
+      }
+    }
+    final headers = {
+      'User-Agent': _browserUserAgent,
+      ...widget.headers,
+    };
+    controller.loadRequest(Uri.parse(_currentUrl), headers: headers);
+    _webViewController = controller;
   }
 
   Future<void> _loadLastPosition() async {

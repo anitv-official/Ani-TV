@@ -166,17 +166,17 @@ class RistoAnimeSource extends ContentSource {
       throw Exception('لم يتم العثور على خوادم تشغيل لهذه الحلقة');
     }
 
-    final direct = servers
-        .where((s) =>
-            s['url']!.contains('.mp4') ||
-            s['url']!.contains('.m3u8') ||
-            s['url']!.contains('pixeldrain.com/api/file'))
-        .toList();
+    final playUrl = servers.first['url']!;
     return {
       'source_id': id,
-      'stream_url': servers.first['url'],
-      'direct_stream_urls': direct.isNotEmpty ? direct : servers,
-      'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
+      'stream_url': playUrl,
+      'direct_stream_urls': [
+        {'quality': 'مشغل', 'url': playUrl},
+      ],
+      'headers': {
+        'Referer': watchUrl,
+        'User-Agent': HtmlClient.userAgent,
+      },
       'download_links': <String, dynamic>{},
     };
   }

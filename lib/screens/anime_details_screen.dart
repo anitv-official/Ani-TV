@@ -499,6 +499,23 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
       final List<dynamic> directStreams = streams['direct_stream_urls'] ?? [];
       final String streamUrl = streams['stream_url'] ?? '';
+      final sourceId = streams['source_id']?.toString() ?? '';
+      if (sourceId == 'risto' && streamUrl.isNotEmpty && context.mounted) {
+        _playVideo(
+          context,
+          streamUrl,
+          'مشغل',
+          {
+            ...streams,
+            'title': episode['title'] ?? streams['title'] ?? 'حلقة',
+            'url': episode['url'],
+            'id': episode['url'] ?? episode['id'],
+          },
+          anime,
+          popSheet: false,
+        );
+        return;
+      }
 
       if (context.mounted) {
         showModalBottomSheet(
@@ -537,32 +554,14 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                            ),
                          
                          // Direct Streams
-                         ...directStreams.map((stream) {
-                            final quality = stream['quality'] ?? 'Unknown';
-                            return ListTile(
-                              leading: const Icon(Icons.hd, color: AppTheme.primaryColor),
-                              title: Text(quality, style: const TextStyle(color: Colors.white)),
-                              onTap: () => _playVideo(context, stream['url'], quality, streams, anime),
-                            );
-                         }).toList(),
-
-                         // Alternative Option
-                         if (streamUrl.isNotEmpty) ...[
-                            const Divider(color: Colors.grey),
-                            ListTile(
-                              leading: const Icon(Icons.open_in_browser, color: Colors.orange),
-                              title: const Text('Alternative Server', style: TextStyle(color: Colors.white)),
-                              subtitle: const Text('Jika video tidak dapat diputar, gunakan opsi ini', style: TextStyle(color: Colors.grey)),
-                              onTap: () async {
-                                Navigator.pop(context);
-                                if (await canLaunchUrl(Uri.parse(streamUrl))) {
-                                  await launchUrl(Uri.parse(streamUrl), mode: LaunchMode.externalApplication);
-                                } else {
-                                  ToastUtils.show('Could not launch url', backgroundColor: Colors.red);
-                                }
-                              },
-                            ),
-                         ],
+                          ...directStreams.map((stream) {
+                             final quality = stream['quality'] ?? 'Unknown';
+                             return ListTile(
+                               leading: const Icon(Icons.hd, color: AppTheme.primaryColor),
+                               title: Text(quality, style: const TextStyle(color: Colors.white)),
+                               onTap: () => _playVideo(context, stream['url'], quality, streams, anime),
+                             );
+                          }).toList(),
                        ],
                      ),
                    ),
@@ -578,8 +577,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     }
   }
 
-  void _playVideo(BuildContext context, String url, String quality, Map<String, dynamic> episodeData, Map<String, dynamic> anime) {
-     Navigator.pop(context); // Close bottom sheet
+  void _playVideo(BuildContext context, String url, String quality, Map<String, dynamic> episodeData, Map<String, dynamic> anime, {bool popSheet = true}) {
+     if (popSheet && context.mounted && Navigator.of(context).canPop()) {
+       Navigator.pop(context);
+     }
      
      // Add to History
      try {
