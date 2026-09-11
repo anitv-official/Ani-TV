@@ -28,8 +28,8 @@ class Anime3rbSource extends ContentSource {
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
     final urls = page <= 1
-        ? ['$_base/', '$_base/animes', '$_base/episodes']
-        : ['$_base/page/$page/', '$_base/animes/page/$page/'];
+        ? ['$_base/titles/list', '$_base/titles/list/tv', '$_base/']
+        : ['$_base/titles/list?page=$page', '$_base/titles/list/tv?page=$page'];
     for (final url in urls) {
       try {
         final html = await HtmlClient.getHtml(url);
@@ -129,6 +129,20 @@ class Anime3rbSource extends ContentSource {
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {
+    final modern = <Map<String, dynamic>>[];
+    final modernSeen = <String>{};
+    final modernPattern = RegExp(
+      r'<a[^>]+href=[\"\'](https?://anime3rb\.com/titles/[^\"\']+)[\"\'][\s\S]{0,500}?<img[^>]+(?:src|data-src)=[\"\']([^\"\']+)[\"\'][\s\S]{0,350}?(?:alt=[\"\']([^\"\']+)[\"\']|<h2[^>]*>([\s\S]*?)</h2>)',
+      caseSensitive: false,
+    );
+    for (final match in modernPattern.allMatches(html)) {
+      final url = match.group(1)!;
+      if (!modernSeen.add(url)) continue;
+      final rawTitle = match.group(3) ?? match.group(4) ?? url.split('/').last;
+      modern.add(item(title: HtmlParse.stripTags(rawTitle), url: url,
+          image: HtmlParse.absUrl(_base, match.group(2)!), type: 'anime'));
+    }
+    if (modern.isNotEmpty) return modern;
     final items = <Map<String, dynamic>>[];
     final seen = <String>{};
     final pattern = RegExp(

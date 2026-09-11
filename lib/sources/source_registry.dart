@@ -72,7 +72,7 @@ class SourceRegistry {
     final results = await Future.wait(
       tasks.map((task) async {
         try {
-          return await task;
+          return await task.timeout(const Duration(seconds: 12));
         } catch (_) {
           return <Map<String, dynamic>>[];
         }

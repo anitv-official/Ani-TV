@@ -147,6 +147,19 @@ class OlympusSource extends ContentSource {
   }
 
   List<Map<String, dynamic>> _parseSeriesList(String html) {
+    final modern = <Map<String, dynamic>>[];
+    final modernSeen = <String>{};
+    final modernPattern = RegExp(
+      r'<a[^>]+href=[\"\'](https://olympustaff\.com/series/[^\"\']+)[\"\'][\s\S]{0,650}?<img[^>]+src=[\"\']([^\"\']+)[\"\'][\s\S]{0,250}?(?:title=[\"\']([^\"\']+)[\"\']|class=[\"\'][^\"\']*tt[^>]*>[\s\S]*?([^<]+))',
+      caseSensitive: false,
+    );
+    for (final match in modernPattern.allMatches(html)) {
+      final url = match.group(1)!;
+      if (!modernSeen.add(url)) continue;
+      final title = HtmlParse.stripTags(match.group(3) ?? match.group(4) ?? url.split('/').last.replaceAll('-', ' '));
+      modern.add(item(title: title, url: url, image: match.group(2)!, type: 'comic'));
+    }
+    if (modern.isNotEmpty) return modern;
     final items = <Map<String, dynamic>>[];
     final seen = <String>{};
     final md = RegExp(

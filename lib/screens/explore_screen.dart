@@ -45,9 +45,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _loadData() async {
     try {
-      // Load content
-      final latestAnimeData = await _fetchAllLatestAnime();
-      final latestComicsData = await _fetchAllLatestComics();
+      final loaded = await Future.wait([
+        _fetchAllLatestAnime(),
+        _fetchAllLatestComics(),
+      ]);
+      final latestAnimeData = loaded[0];
+      final latestComicsData = loaded[1];
 
       if (mounted) {
         setState(() {
@@ -69,7 +72,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<List<dynamic>> _fetchAllLatestAnime() async {
     List<dynamic> all = [];
     Set<String> seen = {};
-    for (int page = 1; page <= 5; page++) {
+    for (int page = 1; page <= 2; page++) {
       final items = await ApiService.fetchLatestAnime(page: page);
       if (items.isEmpty) break;
       for (final item in items) {
@@ -86,7 +89,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<List<dynamic>> _fetchAllLatestComics() async {
     List<dynamic> all = [];
     Set<String> seen = {};
-    for (int page = 1; page <= 5; page++) {
+    for (int page = 1; page <= 2; page++) {
       final items = await ApiService.fetchLatestComics(page: page);
       if (items.isEmpty) break;
       for (final item in items) {

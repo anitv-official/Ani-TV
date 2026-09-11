@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class HtmlClient {
-  static const Duration timeout = Duration(seconds: 25);
+  static const Duration timeout = Duration(seconds: 10);
+  static const Duration readerTimeout = Duration(seconds: 8);
+  static const Duration cacheDuration = Duration(minutes: 3);
+  static final Map<String, _CachedHtml> _cache = {};
   static const String userAgent =
       'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
@@ -15,14 +18,24 @@ class HtmlClient {
   };
 
   static Future<String> getHtml(String url, {bool useReaderFallback = true}) async {
+    final cached = _cache[url];
+    if (cached != null && DateTime.now().difference(cached.createdAt) < cacheDuration) {
+      return cached.body;
+    }
     final direct = await _tryGet(url);
-    if (direct != null && !_isBlocked(direct)) return _unwrap(direct);
+    if (direct != null && !_isBlocked(direct)) {
+      final body = _unwrap(direct);
+      _cache[url] = _CachedHtml(body);
+      return body;
+    }
     if (!useReaderFallback) {
       throw Exception('تعذر تحميل المحتوى');
     }
-    final reader = await _tryGet(_readerUrl(url));
+    final reader = await _tryGet(_readerUrl(url), timeoutOverride: readerTimeout);
     if (reader != null && !_isBlocked(reader) && reader.length > 200) {
-      return _unwrap(reader);
+      final body = _unwrap(reader);
+      _cache[url] = _CachedHtml(body);
+      return body;
     }
     throw Exception('تعذر تحميل المحتوى');
   }
@@ -30,7 +43,7 @@ class HtmlClient {
   static Future<dynamic> getJson(String url, {Map<String, String>? headers}) async {
     final response = await http
         .get(Uri.parse(url), headers: {..._headers, ...?headers})
-        .timeout(timeout);
+        .timeout(timeoutOverride ?? timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('تعذر تحميل المحتوى');
     }
@@ -55,10 +68,10 @@ class HtmlClient {
     }
   }
 
-  static Future<String?> _tryGet(String url) async {
+  static Future<String?> _tryGet(String url, {Duration? timeoutOverride}) async {
     try {
       final response =
-          await http.get(Uri.parse(url), headers: _headers).timeout(timeout);
+          await http.get(Uri.parse(url), headers: _headers).timeout(timeoutOverride ?? timeout);
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
       return utf8.decode(response.bodyBytes, allowMalformed: true);
     } catch (_) {
@@ -91,11 +104,19 @@ class HtmlClient {
             body.length < 8000);
   }
 
+  static void clearCache() => _cache.clear();
+
   static String _readerUrl(String url) {
     final uri = Uri.parse(url);
     final httpUrl = uri.replace(scheme: 'http').toString();
     return 'https://r.jina.ai/$httpUrl';
   }
+}
+
+class _CachedHtml {
+  final String body;
+  final DateTime createdAt = DateTime.now();
+  _CachedHtml(this.body);
 }
 
 class HtmlParse {

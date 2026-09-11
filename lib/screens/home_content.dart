@@ -66,9 +66,14 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   Future<void> _loadContent() async {
     setState(() => isLoading = true);
     try {
-      final anime = await ApiService.fetchLatestAnime();
-      final comics = await ApiService.fetchLatestComics();
-      final topAnime = await ApiService.fetchTopAnime();
+      final loaded = await Future.wait([
+        ApiService.fetchLatestAnime(),
+        ApiService.fetchLatestComics(),
+        ApiService.fetchTopAnime(),
+      ]);
+      final anime = loaded[0] as List<dynamic>;
+      final comics = loaded[1] as List<dynamic>;
+      final topAnime = loaded[2] as List<dynamic>;
 
       if (mounted) {
         setState(() {
