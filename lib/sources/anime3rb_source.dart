@@ -132,7 +132,7 @@ class Anime3rbSource extends ContentSource {
     final modern = <Map<String, dynamic>>[];
     final modernSeen = <String>{};
     final modernPattern = RegExp(
-      r'<a[^>]+href=[\"\'](https?://anime3rb\.com/titles/[^\"\']+)[\"\'][\s\S]{0,500}?<img[^>]+(?:src|data-src)=[\"\']([^\"\']+)[\"\'][\s\S]{0,350}?(?:alt=[\"\']([^\"\']+)[\"\']|<h2[^>]*>([\s\S]*?)</h2>)',
+      r'''<a[^>]+href=[\"'](https?://anime3rb\.com/titles/[^\"']+)[\"'][\s\S]{0,500}?<img[^>]+(?:src|data-src)=[\"']([^\"']+)[\"'][\s\S]{0,350}?(?:alt=[\"']([^\"']+)[\"']|<h2[^>]*>([\s\S]*?)</h2>)''',
       caseSensitive: false,
     );
     for (final match in modernPattern.allMatches(html)) {

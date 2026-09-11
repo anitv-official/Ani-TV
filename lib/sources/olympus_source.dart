@@ -150,7 +150,7 @@ class OlympusSource extends ContentSource {
     final modern = <Map<String, dynamic>>[];
     final modernSeen = <String>{};
     final modernPattern = RegExp(
-      r'<a[^>]+href=[\"\'](https://olympustaff\.com/series/[^\"\']+)[\"\'][\s\S]{0,650}?<img[^>]+src=[\"\']([^\"\']+)[\"\'][\s\S]{0,250}?(?:title=[\"\']([^\"\']+)[\"\']|class=[\"\'][^\"\']*tt[^>]*>[\s\S]*?([^<]+))',
+      r'''<a[^>]+href=[\"'](https://olympustaff\.com/series/[^\"']+)[\"'][\s\S]{0,650}?<img[^>]+src=[\"']([^\"']+)[\"'][\s\S]{0,250}?(?:title=[\"']([^\"']+)[\"']|class=[\"'][^\"']*tt[^>]*>[\s\S]*?([^<]+))''',
       caseSensitive: false,
     );
     for (final match in modernPattern.allMatches(html)) {
