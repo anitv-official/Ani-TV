@@ -610,6 +610,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               directStreamUrls: (episodeData['direct_stream_urls'] as List?)
                   ?.map((e) => Map<String, String>.from(e))
                   .toList() ?? [],
+              headers: (episodeData['headers'] as Map?)
+                  ?.map((key, value) => MapEntry(key.toString(), value.toString())) ?? {},
             ),
           ),
         );

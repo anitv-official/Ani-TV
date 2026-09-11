@@ -94,48 +94,30 @@ class Anime3rbSource extends ContentSource {
   @override
   Future<Map<String, dynamic>> streams(String url) async {
     final html = await HtmlClient.getHtml(url);
-    final servers = <Map<String, String>>[];
-    final seen = <String>{};
-    void add(String raw, [String quality = 'خادم']) {
-      final resolved = HtmlParse.absUrl(url, raw);
-      if (resolved.isEmpty || !seen.add(resolved)) return;
-      servers.add({'quality': quality, 'url': resolved});
-    }
-
-    for (final match in RegExp(
-      r'<iframe[^>]+src=["' "'" r']([^"' "'" r']+)["' "'" r']',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(1)!, 'مشغل');
-    }
-    for (final match in RegExp(
-      r'data-(?:src|url|embed)=["' "'" r']([^"' "'" r']+)["' "'" r']',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(1)!);
-    }
-    for (final match in RegExp(
-      r'https?://[^\s"<>]+(?:ok\.ru|dood|mp4upload|vidmoly|uqload|streamtape|filemoon|voe|mixdrop|yourupload|goload|sbfull|sbplay|krakenfiles|pixeldrain)[^\s"<>]*',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      add(match.group(0)!);
-    }
-    for (final media in SourceUtils.extractMediaUrls(html, url)) {
-      add(media, 'مباشر');
-    }
-    // Anime3rb currently exposes the playable page through video.vid3rb.com.
-    // Keep this real, per-episode URL so AniTV's existing WebView/native
-    // player path can resolve the final media URL at playback time.
+    // Anime3rb's current player is a single Vid3rb page. Do not expose every
+    // iframe/data-url from the page: those are legacy/auxiliary servers and
+    // cannot be played reliably by AniTV's native controller.
+    final links = <String>{};
     for (final match in RegExp(
       r'https?://video\.vid3rb\.com/video/[A-Za-z0-9_-]+',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(0)!, 'Anime3rb • Vid3rb');
+      links.add(match.group(0)!);
     }
-    if (servers.isEmpty) add(url, 'صفحة الحلقة');
+    if (links.isEmpty) {
+      throw Exception('Anime3rb: لم يتم العثور على رابط Vid3rb صالح للحلقة');
+    }
+    final servers = links
+        .map((link) => <String, String>{
+              'quality': 'Anime3rb • Vid3rb',
+              'url': link,
+            })
+        .toList();
     return {
+      'source_id': id,
       'stream_url': servers.first['url'],
       'direct_stream_urls': servers,
+      'headers': {'Referer': '$url', 'User-Agent': HtmlClient.userAgent},
       'download_links': <String, dynamic>{},
     };
   }

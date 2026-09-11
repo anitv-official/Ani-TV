@@ -17,12 +17,14 @@ class VideoPlayerScreen extends StatefulWidget {
   final String title;
   final String episodeId;
   final List<Map<String, String>> directStreamUrls;
+  final Map<String, String> headers;
 
   VideoPlayerScreen({
     required this.url,
     required this.title,
     required this.episodeId,
     this.directStreamUrls = const [],
+    this.headers = const {},
   });
 
   @override
@@ -557,7 +559,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(_currentUrl));
+      ..loadRequest(Uri.parse(_currentUrl), headers: widget.headers);
   }
 
   Future<void> _loadLastPosition() async {

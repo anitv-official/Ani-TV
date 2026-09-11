@@ -183,10 +183,17 @@ class ApiService {
   }
 
   static Future<dynamic> fetchEpisodeStreams(String url) async {
+    final source = SourceRegistry.sourceFor(url);
     try {
       final sourced = await SourceRegistry.streams(url);
       if (sourced != null) return sourced;
     } catch (_) {}
+    // Anime3rb has its own Vid3rb playback flow. Falling through to the
+    // legacy backend here reintroduces obsolete servers and makes the UI
+    // offer links that are unrelated to the selected episode.
+    if (source?.id == 'anime3rb') {
+      throw ApiException('تعذر استخراج رابط تشغيل Anime3rb لهذه الحلقة');
+    }
     try {
       final response = await _makeRequest(
         '/episode-streams',
