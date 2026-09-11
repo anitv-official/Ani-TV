@@ -10,10 +10,8 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'manga_reader_screen.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
-import '../services/ad_service.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
   final String url;
@@ -30,10 +28,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   Map<String, dynamic>? _comicData;
   bool _isLoading = true;
   String? _error;
-  RewardedAd? _rewardedAd;
-  bool _isAdLoading = false;
-  int _adLoadAttempts = 0;
-  static const int _maxAdLoadAttempts = 3;
   
   bool _isChapterSearching = false;
   final TextEditingController _chapterSearchController = TextEditingController();
@@ -42,7 +36,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   void initState() {
     super.initState();
     _loadComicData();
-    _loadRewardedAd();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Provider.of<AppStateProvider>(context, listen: false).initialize();
     });
@@ -50,7 +43,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   
   @override
   void dispose() {
-    _rewardedAd?.dispose();
     _chapterSearchController.dispose();
     super.dispose();
   }
@@ -172,130 +164,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: ${folder.path}')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('تعذر تنزيل الفصل: $e')));
-    }
-  }
-
-  Future<void> _loadRewardedAd({bool forceReload = false}) async {
-    // Check global support first
-    if (!AdService.isMobileAdsSupported) return;
-    
-    if (_isAdLoading && !forceReload) return;
-
-    setState(() {
-      _isAdLoading = true;
-      _adLoadAttempts++;
-    });
-
-    await RewardedAd.load(
-      adUnitId:
-          'ca-app-pub-7591838535085655/4184612382', // Ganti dengan ID produksi
-      request: AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (RewardedAd ad) {
-          if (!mounted) {
-            ad.dispose();
-            return;
-          }
-          setState(() {
-            _rewardedAd = ad;
-            _isAdLoading = false;
-            _adLoadAttempts = 0;
-          });
-          print('RewardedAd loaded successfully');
-        },
-        onAdFailedToLoad: (LoadAdError error) async {
-          if (!mounted) return;
-          setState(() {
-            _rewardedAd = null;
-            _isAdLoading = false;
-          });
-          print('RewardedAd failed to load: $error');
-
-          if (_adLoadAttempts < _maxAdLoadAttempts) {
-            print('Retrying to load ad... Attempt ${_adLoadAttempts + 1}');
-            await Future.delayed(Duration(seconds: 2)); // Delay sebelum retry
-            if (mounted) {
-               await _loadRewardedAd(forceReload: true);
-            }
-          } else {
-            if (mounted) {
-              setState(() {
-                _adLoadAttempts = 0;
-              });
-            }
-          }
-        },
-      ),
-    );
-  }
-
-  Future<void> _showRewardedAd(
-      BuildContext context, VoidCallback onReward) async {
-    
-    // Bypass ads on unsupported platforms
-    if (!AdService.isMobileAdsSupported) {
-      onReward();
-      return;
-    }
-
-    // Pastikan iklan dimuat ulang setiap kali showRewardedAd dipanggil
-    if (_rewardedAd == null || _isAdLoading) {
-      try {
-        await _loadRewardedAd(forceReload: true);
-      } catch (e) {
-        print('Error loading rewarded ad: $e');
-        onReward();
-        return;
-      }
-    }
-
-    if (_rewardedAd == null) {
-      print('Rewarded ad is null, proceeding without ad');
-      onReward();
-      return;
-    }
-
-    // Set portrait orientation before showing ad for manga
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-
-    _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (RewardedAd ad) async {
-        ad.dispose();
-        setState(() {
-          _rewardedAd = null;
-        });
-        // Keep portrait orientation after ad for manga reader
-        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        _loadRewardedAd(forceReload: true);
-      },
-      onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) async {
-        ad.dispose();
-        setState(() {
-          _rewardedAd = null;
-        });
-        print('RewardedAd failed to show: $error');
-        // Keep portrait orientation after ad failure for manga reader
-        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-        onReward(); // Lanjutkan ke konten meskipun iklan gagal
-        _loadRewardedAd(forceReload: true);
-      },
-    );
-
-    try {
-      await _rewardedAd!.show(
-        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-          onReward();
-        },
-      );
-    } catch (e) {
-      print('Error showing rewarded ad: $e');
-      // Keep portrait orientation on error for manga reader
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      onReward();
     }
   }
 
@@ -452,7 +320,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                    final chapters = comic['chapters'] as List<dynamic>? ?? [];
                    if (chapters.isNotEmpty) {
                       final firstChapter = chapters.last; // Assuming list is descending
-                       _showRewardedAd(context, () {
+                 (() {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -623,7 +491,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             
             return GestureDetector(
               onTap: () {
-                 _showRewardedAd(context, () {
+                 (() {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -635,7 +503,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                         ),
                       ),
                     );
-                 });
+                 })();
               },
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

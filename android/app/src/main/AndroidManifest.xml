@@ -17,11 +17,6 @@
         android:icon="@mipmap/launcher_icon"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true">
-        
-        <!-- Tambahkan meta-data untuk AdMob App ID di sini -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-7591838535085655~9508273019"/>
 
         <activity
             android:name=".MainActivity"

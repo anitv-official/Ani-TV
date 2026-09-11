@@ -8,7 +8,6 @@ import '../providers/app_state_provider.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'manga_reader_screen.dart';
-import '../services/ad_service.dart';
 import 'video_player_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
@@ -889,8 +888,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
 
     try {
-      // Load Ad
-      await AdService.loadRewardedAd();
 
       final episodeUrl = historyItem['episode_url'];
       final streams = await ApiService.fetchEpisodeStreams(episodeUrl);
@@ -977,8 +974,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
      if (popSheet && context.mounted && Navigator.of(context).canPop()) {
        Navigator.pop(context);
      }
-
-     AdService.showRewardedAd(context, onReward: () {
+     (() {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -994,7 +990,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             ),
           ),
         );
-     }, setLandscapeOrientation: true);
+     })();
   }
 
   Future<void> _fetchAndDirectPlay(Map<String, dynamic> item) async {

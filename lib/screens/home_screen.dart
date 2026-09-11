@@ -5,12 +5,10 @@ import '../widgets/custom_bottom_nav_bar.dart';
 import '../widgets/custom_side_nav_bar.dart';
 import '../widgets/update_bottom_sheet.dart';
 import '../services/app_version_service.dart';
-import '../services/ad_service.dart';
 import 'home_content.dart';
 import 'explore_screen.dart';
 import 'favorites_screen.dart';
 import 'profile_screen.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -61,11 +59,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     // Check for app updates logic moved here
     _checkForAppUpdate();
-    
-    // Load Ad
-    AdService.loadBottomNavBanner(onLoaded: () {
-      if (mounted) setState(() {});
-    });
 
     // Initialize pages
     _pages = [
@@ -199,21 +192,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                   // A late-loaded banner must grow above the navigation bar,
-                   // not move the navigation bar upward.
-                   if (AdService.bottomNavBanner != null)
-                    Container(
-                      width: double.infinity,
-                      color: Colors.black,
-                      padding: const EdgeInsets.only(top: 4),
-                      alignment: Alignment.center,
-                      child: SizedBox(
-                        width: AdService.bottomNavBanner!.size.width.toDouble(),
-                        height: AdService.bottomNavBanner!.size.height.toDouble(),
-                        child: AdWidget(ad: AdService.bottomNavBanner!),
-                      ),
-                    ),
-                   CustomBottomNavBar(
+                  CustomBottomNavBar(
                     currentIndex: _currentNavIndex,
                     onTap: _handleNavigation,
                   ),

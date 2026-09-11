@@ -113,9 +113,21 @@ class RistoAnimeSource extends ContentSource {
     final servers = <Map<String, String>>[];
     final seen = <String>{};
 
-    void add(String raw, [String quality = 'خادم']) {
+    Future<void> add(String raw, [String quality = 'خادم']) async {
       var resolved = HtmlParse.absUrl(url, raw);
       if (resolved.isEmpty || !seen.add(resolved)) return;
+      if (!_isDirectMedia(resolved)) {
+        try {
+          final embedded = await HtmlClient.getHtml(resolved);
+          for (final media in SourceUtils.extractMediaUrls(embedded, resolved)) {
+            if (_isDirectMedia(media)) {
+              resolved = media;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+      if (!_isDirectMedia(resolved)) return;
       if (resolved.contains('facebook.com') ||
           resolved.contains('twitter.com') ||
           resolved.contains('x.com') ||
@@ -131,35 +143,35 @@ class RistoAnimeSource extends ContentSource {
       r'''data-watch=["']([^"']+)["']''',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(1)!, 'سيرفر $index');
+      await add(match.group(1)!, 'سيرفر $index');
       index++;
     }
     for (final match in RegExp(
       r'''<iframe[^>]+src=["']([^"']+)["']''',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(1)!, 'مشغل');
+      await add(match.group(1)!, 'مشغل');
     }
     for (final match in RegExp(
       r'''data-(?:src|url|embed|link)=["']([^"']+)["']''',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(1)!);
+      await add(match.group(1)!);
     }
     for (final match in RegExp(
-      r'https?://[^\s"<>]+(?:ok\.ru|dood|mp4upload|vidmoly|uqload|streamtape|filemoon|voe|mixdrop|yourupload|goload|sbfull|sbplay|krakenfiles|pixeldrain|vudeo|lulustream|vidhide|sibnet|sendvid|listeamed|playerwish)[^\s"<>]*',
+      r'https?://[^\s"<>]+(?:\.mp4|\.m3u8)[^\s"<>]*',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(0)!);
+      await add(match.group(0)!);
     }
     for (final match in RegExp(
       r'https?://[^\s"<>]+\.(?:mp4|m3u8)[^\s"<>]*',
       caseSensitive: false,
     ).allMatches(html)) {
-      add(match.group(0)!, 'مباشر');
+      await add(match.group(0)!, 'مباشر');
     }
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
-      add(media, 'مباشر');
+      await add(media, 'مباشر');
     }
 
     if (servers.isEmpty) {
@@ -179,6 +191,12 @@ class RistoAnimeSource extends ContentSource {
       },
       'download_links': <String, dynamic>{},
     };
+  }
+
+  bool _isDirectMedia(String value) {
+    final lower = value.toLowerCase();
+    return RegExp(r'\.(?:mp4|m3u8|mov|webm)(?:[?#].*)?$').hasMatch(lower) ||
+        lower.contains('pixeldrain.com/api/file');
   }
 
   Future<List<Map<String, dynamic>>> _searchViaWp(String query) async {

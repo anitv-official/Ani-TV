@@ -9,7 +9,6 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
-import '../services/ad_service.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
 
@@ -264,7 +263,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       ],
     );
   }
-  
+
   Widget _buildIconAction(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -280,7 +279,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
   Widget _buildEpisodesList(BuildContext context, Map<String, dynamic> anime) {
     final episodes = anime['episodes'] as List<dynamic>? ?? [];
-    
+
     // Filter episodes
     final filteredEpisodes = episodes.where((ep) {
       if (_episodeSearchQuery.isEmpty) return true;
@@ -288,7 +287,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       final query = _episodeSearchQuery.toLowerCase();
       // Check title or episode number/index
       final index = episodes.indexOf(ep);
-      final epNum = '${index + 1}'; 
+      final epNum = '${index + 1}';
       return title.contains(query) || epNum.contains(query);
     }).toList();
 
@@ -407,7 +406,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             final episode = filteredEpisodes[index];
             // Must find original index for display
             final originalIndex = episodes.indexOf(episode);
-            
+
             return GestureDetector(
               onTap: () => _showStreamBottomSheet(context, episode, anime),
               child: Row(
@@ -486,9 +485,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     );
 
     try {
-      // Load Ad
-      await AdService.loadRewardedAd();
-      
+
       final streams = await ApiService.fetchEpisodeStreams(episode['url']);
       if (context.mounted) Navigator.pop(context); // Close loading
 
@@ -545,14 +542,14 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                        shrinkWrap: true,
                        children: [
                          // Auto Option
-                         if (streamUrl.isNotEmpty) 
+                         if (streamUrl.isNotEmpty)
                            ListTile(
                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
                              title: const Text('Auto (Recommended)', style: TextStyle(color: Colors.white)),
                              subtitle: const Text('Adaptive quality', style: TextStyle(color: Colors.grey)),
                              onTap: () => _playVideo(context, streamUrl, 'Auto', streams, anime),
                            ),
-                         
+
                          // Direct Streams
                           ...directStreams.map((stream) {
                              final quality = stream['quality'] ?? 'Unknown';
@@ -581,7 +578,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
      if (popSheet && context.mounted && Navigator.of(context).canPop()) {
        Navigator.pop(context);
      }
-     
+
      // Add to History
      try {
        final historyItem = {
@@ -592,15 +589,14 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           'episode': episodeData['title'] ?? 'Episode',
           'rating': anime['rating'],
           // For search screen compatibility
-          'chapter': episodeData['title'] ?? 'Unknown', 
+          'chapter': episodeData['title'] ?? 'Unknown',
           'date': DateTime.now().toString(),
        };
        Provider.of<AppStateProvider>(context, listen: false).addToHistory(historyItem, true);
      } catch (e) {
        print('Error adding to history: $e');
      }
-     
-     AdService.showRewardedAd(context, onReward: () {
+     (() {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -616,7 +612,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             ),
           ),
         );
-     }, setLandscapeOrientation: true); 
+     })();
   }
 
   Future<void> _showDownloadBottomSheet(BuildContext context, Map<String, dynamic> episode) async {
@@ -682,7 +678,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                        itemBuilder: (context, index) {
                          final quality = downloadLinks.keys.elementAt(index);
                          final links = downloadLinks[quality] as List<dynamic>? ?? [];
-                         
+
                          return Theme(
                            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                            child: ExpansionTile(
@@ -750,7 +746,7 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
   Widget build(BuildContext context) {
     final appStateProvider = Provider.of<AppStateProvider>(context);
     final isFavorited = appStateProvider.favoriteAnime.any((item) => item['url'] == widget.url);
-    
+
     return GestureDetector(
       onTap: () async {
          try {

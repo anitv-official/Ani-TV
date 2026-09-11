@@ -133,10 +133,27 @@ class Anime3rbSource extends ContentSource {
     if (servers.isEmpty) {
       throw Exception('Anime3rb: لم يتم العثور على رابط تشغيل صالح للحلقة');
     }
-    final vid3rb = servers
-        .where((s) => s['url']!.toLowerCase().contains('vid3rb'))
-        .toList();
-    final playUrl = (vid3rb.isNotEmpty ? vid3rb : servers).first['url']!;
+    String? playUrl;
+    for (final server in servers) {
+      final candidate = server['url']!;
+      if (_isDirectMedia(candidate)) {
+        playUrl = candidate;
+        break;
+      }
+      try {
+        final embedded = await HtmlClient.getHtml(candidate);
+        final media = SourceUtils.extractMediaUrls(embedded, candidate)
+            .where(_isDirectMedia)
+            .toList();
+        if (media.isNotEmpty) {
+          playUrl = media.first;
+          break;
+        }
+      } catch (_) {}
+    }
+    if (playUrl == null) {
+      throw Exception('Anime3rb: لم يتم العثور على ملف فيديو مباشر؛ تم تجاهل صفحات المشغل والصور');
+    }
     return {
       'source_id': id,
       'stream_url': playUrl,
@@ -146,6 +163,12 @@ class Anime3rbSource extends ContentSource {
       'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
       'download_links': <String, dynamic>{},
     };
+  }
+
+  bool _isDirectMedia(String value) {
+    final lower = value.toLowerCase();
+    return RegExp(r'\.(?:mp4|m3u8|mov|webm)(?:[?#].*)?$').hasMatch(lower) ||
+        lower.contains('pixeldrain.com/api/file');
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {

@@ -5,7 +5,6 @@ import 'home_screen.dart';
 import 'landing_screen.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
-import '../services/ad_service.dart';
 import '../providers/app_state_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -19,15 +18,10 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  
-  // AdService will handle ads
 
   @override
   void initState() {
     super.initState();
-
-    // Load interstitial ad first
-    AdService.loadInterstitialAd();
 
     // Setup animation
     _controller = AnimationController(
@@ -114,18 +108,9 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-
-  void _showInterstitialAd(List<dynamic>? anime, List<dynamic>? comics,
-      List<dynamic>? featuredContent) {
-    AdService.showInterstitialAd(
-      onAdDismissed: () => _navigateToHome(anime, comics, featuredContent),
-    );
-  }
-
   void _navigateWithPreloadedData(List<dynamic>? anime, List<dynamic>? comics,
       List<dynamic>? featuredContent) {
-    // Show interstitial ad before navigation
-    _showInterstitialAd(anime, comics, featuredContent);
+    _navigateToHome(anime, comics, featuredContent);
   }
 
   void _navigateToHome(List<dynamic>? anime, List<dynamic>? comics,

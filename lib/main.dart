@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
-import 'services/ad_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:flutter/services.dart';
@@ -24,39 +22,6 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
     systemNavigationBarDividerColor: Colors.transparent,
   ));
-
-  // Initialize AdMob SDK only on supported platforms
-  if (AdService.isMobileAdsSupported) {
-    await MobileAds.instance.initialize();
-
-    // Initialize UMP (User Messaging Platform) for GDPR/CCPA compliance
-    ConsentInformation.instance.requestConsentInfoUpdate(
-      ConsentRequestParameters(),
-      () async {
-        if (await ConsentInformation.instance.isConsentFormAvailable()) {
-          ConsentForm.loadConsentForm(
-            (ConsentForm consentForm) async {
-              consentForm.show(
-                (formError) {
-                  // Handle error if consent form fails to show
-                  print('Consent form error: $formError');
-                },
-              );
-            },
-            (formError) {
-              // Handle error if consent form fails to load
-              print('Consent form load error: $formError');
-            },
-          );
-        }
-      },
-      (formError) {
-        // Handle error if consent info update fails
-        print('Consent info update error: $formError');
-      },
-    );
-  }
-
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return Material(
       color: AppTheme.backgroundColor,
