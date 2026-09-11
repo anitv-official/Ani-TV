@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:appwrite/enums.dart' as enums;
 
 /// Shared Appwrite client for AniTV authentication and future Appwrite services.
 class AppwriteService {
@@ -47,6 +48,24 @@ class AppwriteService {
     required String password,
   }) async {
     await account.createEmailPasswordSession(email: email, password: password);
+    return account.get();
+  }
+
+  Future<models.User> loginWithGoogle() async {
+    const callback = 'appwrite-callback-6aa4295900094d600163://auth/success';
+    const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
+    final redirectedUrl = await account.createOAuth2Token(
+      provider: enums.OAuthProvider.google,
+      success: callback,
+      failure: failure,
+    );
+    final uri = Uri.parse(redirectedUrl.toString());
+    final userId = uri.queryParameters['userId'];
+    final secret = uri.queryParameters['secret'];
+    if (userId == null || secret == null || userId.isEmpty || secret.isEmpty) {
+      throw StateError('Google sign-in was cancelled or did not complete.');
+    }
+    await account.createSession(userId: userId, secret: secret);
     return account.get();
   }
 
