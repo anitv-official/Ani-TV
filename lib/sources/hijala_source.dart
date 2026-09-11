@@ -136,11 +136,19 @@ class HijalaSource extends ContentSource {
   }
 
   String _coverImage(String html, String baseUrl) {
-    final raw = HtmlParse.meta(html, 'og:image') ?? HtmlParse.firstMatch(html, [
-          RegExp("""<img[^>]+(?:data-src|data-lazy-src|src)=[\"']([^\"']+)""", caseSensitive: false),
-          RegExp(r'!\[[^\]]*\]\((https?://[^)\s]+)', caseSensitive: false),
-        ]) ?? '';
-    return raw.isEmpty ? '' : HtmlParse.absUrl(baseUrl, raw);
+    final candidates = <String?>[
+      HtmlParse.meta(html, 'og:image'),
+      HtmlParse.firstMatch(html, [RegExp(r'''<img[^>]+data-src=["']([^"']+)["']''', caseSensitive: false)]),
+      HtmlParse.firstMatch(html, [RegExp(r'''<img[^>]+data-lazy-src=["']([^"']+)["']''', caseSensitive: false)]),
+      HtmlParse.firstMatch(html, [RegExp(r'''<img[^>]+data-original=["']([^"']+)["']''', caseSensitive: false)]),
+      HtmlParse.firstMatch(html, [RegExp(r'''<img[^>]+src=["'](https?://[^"']+)["']''', caseSensitive: false)]),
+      HtmlParse.firstMatch(html, [RegExp(r'!\[[^\]]*\]\((https?://[^)\s]+)', caseSensitive: false)]),
+    ];
+    for (final raw in candidates) {
+      if (raw == null || raw.isEmpty || raw.startsWith('data:') || _isNoiseImage(raw.toLowerCase())) continue;
+      return HtmlParse.absUrl(baseUrl, raw);
+    }
+    return '';
   }
 
   String _nearbyCover(String html, String url) {

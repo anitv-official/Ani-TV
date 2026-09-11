@@ -424,6 +424,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(.07)),
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
       ),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
@@ -440,14 +442,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.grey[200],
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Row(children: [
+              Icon(_menuIcon(title), color: AppTheme.primaryColor, size: 21),
+              const SizedBox(width: 12),
+              Text(title, style: TextStyle(color: Colors.grey[200], fontSize: 16, fontWeight: FontWeight.w500)),
+            ]),
             Row(
               children: [
                 if (trailing != null) ...[
@@ -471,6 +470,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  IconData _menuIcon(String title) {
+    if (title.contains('مصادر')) return Icons.hub_outlined;
+    if (title.contains('تنزيل')) return Icons.download_for_offline_outlined;
+    if (title.contains('كلمة')) return Icons.lock_outline;
+    if (title.contains('اسم')) return Icons.edit_outlined;
+    if (title.contains('خصوصية')) return Icons.privacy_tip_outlined;
+    if (title.contains('حول')) return Icons.info_outline;
+    if (title.contains('بيانات')) return Icons.person_outline;
+    return Icons.chevron_left;
   }
 
   Widget _buildSwitchItem(String title, bool value, Function(bool) onChanged) {

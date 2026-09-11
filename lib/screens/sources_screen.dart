@@ -222,12 +222,23 @@ class SourceSummary extends StatelessWidget {
               child: Container(
                 width: 150,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(14)),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Text(sources[index].kind == 'anime' ? 'أنمي' : 'مانجا', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [AppTheme.surfaceColor, AppTheme.surfaceColor.withOpacity(.72)]),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.primaryColor.withOpacity(.18)),
+                ),
+                child: Row(children: [
+                  CircleAvatar(
+                    radius: 19,
+                    backgroundColor: AppTheme.primaryColor.withOpacity(.16),
+                    child: Icon(sources[index].kind == 'anime' ? Icons.movie_filter_outlined : Icons.menu_book_outlined, color: AppTheme.primaryColor, size: 20),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(sources[index].kind == 'anime' ? 'أنمي' : 'مانجا', style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                  ])),
                 ]),
               ),
             ),

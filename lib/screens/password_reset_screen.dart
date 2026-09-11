@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/toast_utils.dart';
 
 class PasswordResetScreen extends StatefulWidget {
   final String userId;
@@ -36,10 +37,10 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
         password: _password.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تغيير كلمة المرور بنجاح')));
+      ToastUtils.show('تم تغيير كلمة المرور بنجاح', backgroundColor: Colors.green);
       Navigator.of(context).pop();
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
+      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

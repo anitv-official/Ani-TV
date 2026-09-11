@@ -207,33 +207,59 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       return Center(child: _buildLoadingView());
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadContent,
-      color: AppTheme.primaryColor,
-      strokeWidth: 3,
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                _buildHeroSection(MediaQuery.of(context).size.width, screenHeight),
-                SourceSummary(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SourcesScreen()),
-                  ),
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadContent,
+          color: AppTheme.primaryColor,
+          strokeWidth: 3,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    _buildHeroSection(MediaQuery.of(context).size.width, screenHeight),
+                    SourceSummary(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SourcesScreen()),
+                      ),
+                    ),
+                    _buildCategoryToggle(),
+                    _buildContentGrid(MediaQuery.of(context).size.width),
+                    SizedBox(height: 130 + MediaQuery.of(context).padding.bottom),
+                  ],
                 ),
-                _buildCategoryToggle(),
-                _buildContentGrid(MediaQuery.of(context).size.width),
-                // Add extra padding at bottom to avoid content being hidden behind floating nav bar + ads
-                // Base 80 (Nav) + 50 (Ad) + Safe Area
-                SizedBox(height: 130 + MediaQuery.of(context).padding.bottom), 
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
+        Positioned(top: 78, left: 16, right: 16, child: _buildFloatingSearch()),
+      ],
+    );
+  }
+
+  Widget _buildFloatingSearch() {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(.68),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withOpacity(.34), width: 1.3),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, offset: Offset(0, 5))],
+        ),
+        child: Row(children: [
+          const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
+          const SizedBox(width: 10),
+          Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.78), fontSize: 15)),
+          const Spacer(),
+          Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
+        ]),
       ),
     );
   }
@@ -462,31 +488,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                   ),
                 ),
               ],
-            ),
-          ),
-          Positioned(
-            top: 78,
-            left: 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-              child: Container(
-                height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.12),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.white.withOpacity(.34), width: 1.3),
-                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 4))],
-                ),
-                child: Row(children: [
-                  const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
-                  const SizedBox(width: 10),
-                  Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 15)),
-                  const Spacer(),
-                  Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
-                ]),
-              ),
             ),
           ),
         ],

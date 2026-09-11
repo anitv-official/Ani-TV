@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/app_state_provider.dart';
-import '../services/appwrite_service.dart';
 import '../widgets/auth_branding.dart';
 import '../theme/app_theme.dart';
+import '../utils/toast_utils.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
@@ -65,9 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error, registering: false))),
-      );
+      ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -76,35 +74,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _forgotPassword() async {
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل بريدك الإلكتروني أولًا')));
+      ToastUtils.show('أدخل بريدك الإلكتروني أولًا', backgroundColor: Colors.red);
       return;
     }
     setState(() => _isLoading = true);
     try {
       await context.read<AppStateProvider>().sendPasswordRecovery(email);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال رابط استعادة كلمة المرور إلى بريدك')));
+      if (mounted) ToastUtils.show('تم إرسال رابط استعادة كلمة المرور إلى بريدك', backgroundColor: Colors.green);
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loginWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      await AppwriteService.instance.loginWithGoogle();
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        (_) => false,
-      );
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى.')),
-        );
-      }
+      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -187,19 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                     child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('تسجيل الدخول', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  height: 54,
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _loginWithGoogle,
-                    icon: Image.asset('assets/icons/google_plus.png', width: 22, height: 22),
-                    label: const Text('Sign in with Google', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.white24),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

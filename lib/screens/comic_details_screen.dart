@@ -9,6 +9,7 @@ import '../providers/app_state_provider.dart';
 import 'manga_reader_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
+import '../widgets/download_action_button.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
   final String url;
@@ -140,9 +141,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
     }
   }
 
-  Future<void> _downloadChapter(Map<String, dynamic> chapter) async {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(const SnackBar(content: Text('جارٍ تنزيل الفصل...')));
+  Future<bool> _downloadChapter(Map<String, dynamic> chapter) async {
+    ToastUtils.show('جارٍ تنزيل الفصل...', backgroundColor: Colors.green);
     try {
       final data = await ApiService.fetchChapterImages(chapter['url'].toString());
       final images = (data['images'] as List?)?.whereType<Map>().toList() ?? [];
@@ -154,9 +154,11 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         coverUrl: _comicData?['image_url']?.toString() ?? '',
         sourceId: _comicData?['source_id']?.toString() ?? '',
       );
-      messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: $folder')));
+      ToastUtils.show('تم حفظ الفصل داخل: $folder', backgroundColor: Colors.green);
+      return true;
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('تعذر تنزيل الفصل: $e')));
+      ToastUtils.show('تعذر تنزيل الفصل: $e', backgroundColor: Colors.red);
+      return false;
     }
   }
 
@@ -551,10 +553,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'تنزيل الفصل',
-                    icon: Icon(Icons.download_for_offline_outlined, color: Colors.grey[400], size: 20),
-                    onPressed: () => _downloadChapter(Map<String, dynamic>.from(chapter as Map)),
+                  DownloadActionButton(
+                    size: 20,
+                    onDownload: () => _downloadChapter(Map<String, dynamic>.from(chapter as Map)),
                   ),
                 ],
               ),

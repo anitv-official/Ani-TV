@@ -52,9 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error, registering: true))),
-      );
+      ToastUtils.show(authErrorMessage(error, registering: true), backgroundColor: Colors.red);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

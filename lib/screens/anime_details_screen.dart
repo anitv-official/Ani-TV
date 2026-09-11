@@ -14,6 +14,7 @@ import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
+import '../widgets/download_action_button.dart';
 
 class AnimeDetailsScreen extends StatefulWidget {
   final String url;
@@ -231,9 +232,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     }
   }
 
-  Future<void> _downloadAnimeEpisodeInternal(Map<String, dynamic> link, Map<String, dynamic> episode) async {
+  Future<bool> _downloadAnimeEpisodeInternal(Map<String, dynamic> link, Map<String, dynamic> episode) async {
     final url = link['url']?.toString() ?? '';
-    if (url.isEmpty) return;
+    if (url.isEmpty) return false;
     try {
       final anime = await _animeDetailsFuture;
       await DownloadService.saveAnimeEpisode(
@@ -244,8 +245,32 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         sourceId: anime['source_id']?.toString() ?? '',
       );
       if (mounted) ToastUtils.show('تم حفظ الحلقة في التنزيلات', backgroundColor: AppTheme.accentColor);
+      return true;
     } catch (error) {
       if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Colors.red);
+      return false;
+    }
+  }
+
+  Future<bool> _downloadEpisodeFromButton(BuildContext context, Map<String, dynamic> episode) async {
+    try {
+      final streams = await ApiService.fetchEpisodeStreams(episode['url']);
+      final groups = streams?['download_links'] as Map<String, dynamic>?;
+      final firstGroup = groups?.values.firstWhere(
+            (value) => value is List && value.isNotEmpty,
+            orElse: () => const [],
+          ) as List?;
+      if (firstGroup == null || firstGroup.isEmpty) {
+        if (context.mounted) ToastUtils.show('لا يوجد رابط تنزيل لهذه الحلقة', backgroundColor: Colors.red);
+        return false;
+      }
+      return await _downloadAnimeEpisodeInternal(
+        Map<String, dynamic>.from(firstGroup.first as Map),
+        episode,
+      );
+    } catch (e) {
+      if (context.mounted) ToastUtils.show('تعذر تنزيل الحلقة: $e', backgroundColor: Colors.red);
+      return false;
     }
   }
 
@@ -495,9 +520,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.download_for_offline_outlined, color: Colors.grey[400], size: 24),
-                    onPressed: () => _showDownloadBottomSheet(context, episode),
+                  DownloadActionButton(
+                    onDownload: () => _downloadEpisodeFromButton(context, episode),
                   ),
                 ],
               ),

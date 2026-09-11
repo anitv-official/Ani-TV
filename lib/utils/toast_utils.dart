@@ -1,46 +1,50 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 class ToastUtils {
   static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
-  static void show(String msg, {
+  static void show(
+    String msg, {
     Color? backgroundColor,
     Color? textColor,
-    ToastGravity gravity = ToastGravity.BOTTOM,
+    Object? gravity,
   }) {
-    if (kIsWeb) {
-      final messenger = scaffoldMessengerKey.currentState;
-      if (messenger != null) {
-        messenger.clearSnackBars();
-            messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              msg,
-              style: TextStyle(color: textColor ?? Colors.white),
-            ),
-            backgroundColor: (backgroundColor ?? Colors.grey[800])!.withOpacity(0.92),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-            width: 400, // Limit width on desktop
-            margin: const EdgeInsets.only(left: 24, right: 24, bottom: 300),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    final messenger = scaffoldMessengerKey.currentState;
+    if (messenger == null) return;
+    final color = backgroundColor ?? Colors.blueGrey;
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                color == Colors.red || color.value == Colors.red.value
+                    ? Icons.error_outline
+                    : color == Colors.green || color.value == Colors.green.value
+                        ? Icons.check_circle_outline
+                        : Icons.info_outline,
+                color: textColor ?? Colors.white,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  msg,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: textColor ?? Colors.white, fontSize: 14),
+                ),
+              ),
+            ],
           ),
-        );
-      }
-    } else {
-      // Use Native Toast for Mobile
-      Fluttertoast.showToast(
-        msg: msg,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: gravity,
-        timeInSecForIosWeb: 1,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        fontSize: 16.0,
+          backgroundColor: color.withOpacity(.96),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 280),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 12,
+        ),
       );
-    }
   }
 }
