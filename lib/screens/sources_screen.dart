@@ -149,8 +149,14 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
           }
           if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
-              child: Text('لا يوجد محتوى متاح من هذا المصدر حاليًا',
-                  style: const TextStyle(color: Colors.white70)),
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(mainAxisSize: MainAxisSize.min, children: const [
+                  Icon(Icons.inventory_2_outlined, color: Colors.white38, size: 48),
+                  SizedBox(height: 14),
+                  Text('لا يوجد محتوى متاح من هذا المصدر حاليًا', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
+                ]),
+              ),
             );
           }
           final items = snapshot.data!;
@@ -160,8 +166,11 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: items.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 16, childAspectRatio: .58,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width >= 600 ? 4 : 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 18,
+                childAspectRatio: MediaQuery.of(context).size.width >= 600 ? .68 : .62,
               ),
               itemBuilder: (context, index) {
                 final item = items[index];
@@ -184,7 +193,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.25, fontWeight: FontWeight.w500)),
                   ]),
                 );
               },

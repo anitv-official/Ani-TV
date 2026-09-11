@@ -142,6 +142,8 @@ class AppTheme {
 
   // Dark theme (Netflix inspired)
   static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    visualDensity: VisualDensity.standard,
     primaryColor: primaryColor,
     colorScheme: ColorScheme.dark(
       primary: primaryColor,
@@ -154,6 +156,8 @@ class AppTheme {
     appBarTheme: AppBarTheme(
       backgroundColor: backgroundColor,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
       iconTheme: IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(
         color: Colors.white,
@@ -176,6 +180,36 @@ class AppTheme {
       unselectedItemColor: textSecondaryColor,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: surfaceColor,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLarge)),
+      titleTextStyle: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+      contentTextStyle: TextStyle(color: textSecondaryColor, fontSize: 14, height: 1.45),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: surfaceColor,
+      modalBackgroundColor: surfaceColor,
+      showDragHandle: true,
+      dragHandleColor: Colors.white38,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXLarge))),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMedium)),
+      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
+    ),
+    dividerTheme: DividerThemeData(color: Colors.white.withOpacity(.08), thickness: 1, space: 1),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+      },
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: primaryColor,

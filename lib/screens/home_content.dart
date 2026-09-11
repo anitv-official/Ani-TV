@@ -645,13 +645,23 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              item['image_url'] ?? '',
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorBuilder: (_,__,___) => Container(color: Colors.grey[800]),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                              border: Border.all(color: Colors.white.withOpacity(.08)),
+                              boxShadow: AppTheme.subtleShadow,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                              child: Image.network(
+                                item['image_url'] ?? '',
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: AppTheme.cardColor,
+                                  child: const Center(child: Icon(Icons.image_not_supported_outlined, color: Colors.white30)),
+                                ),
+                              ),
                             ),
                           ),
                           // Type Badge
@@ -691,7 +701,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 13,
+                          height: 1.25,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),

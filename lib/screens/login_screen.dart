@@ -131,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
+                  textDirection: TextDirection.ltr,
                   textInputAction: TextInputAction.next,
                   style: const TextStyle(color: Colors.white),
                   decoration: _decoration('البريد الإلكتروني'),
@@ -156,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   title: const Text('تذكر البريد الإلكتروني', style: TextStyle(color: AppTheme.textSecondaryColor)),
                 ),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.centerRight,
                   child: TextButton(onPressed: _isLoading ? null : _forgotPassword, child: const Text('نسيت كلمة المرور؟')),
                 ),
                 const SizedBox(height: 18),

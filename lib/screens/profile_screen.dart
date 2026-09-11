@@ -342,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
                         child: Text(
                           'التفضيلات',
                           style: TextStyle(
@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
                         child: Text('حول التطبيق', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                       ),
                     ),
