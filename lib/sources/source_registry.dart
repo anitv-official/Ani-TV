@@ -3,6 +3,7 @@ import 'anime4up_source.dart';
 import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
 import 'manga_swat_source.dart';
+import 'manga_slayer_source.dart';
 import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
@@ -20,6 +21,7 @@ class SourceRegistry {
     OlympusSource(),
     AzorafySource(),
     MangaSwatSource(),
+    MangaSlayerSource(),
     HijalaSource(),
   ];
 
