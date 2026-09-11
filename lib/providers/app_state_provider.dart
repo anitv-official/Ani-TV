@@ -30,7 +30,11 @@ class AppStateProvider extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   
   // Initialize from SharedPreferences
+  bool _initialized = false;
+
   Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
     await _loadUserData();
     await _loadFavorites();
     await _loadHistory();
@@ -41,12 +45,16 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      _username = _isLoggedIn ? (prefs.getString('username') ?? '') : '';
-      _email = _isLoggedIn ? (prefs.getString('email') ?? '') : '';
+      _username = _isLoggedIn ? (prefs.getString('username') ?? '').trim() : '';
+      _email = _isLoggedIn ? (prefs.getString('email') ?? '').trim() : '';
+      if (_isLoggedIn && _username.isEmpty && _email.isEmpty) {
+        _isLoggedIn = false;
+        await prefs.setBool('isLoggedIn', false);
+      }
       _isDarkMode = prefs.getBool('dark_mode') ?? true;
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to load user data: $e');
+      _setErrorMessage('تعذر تحميل بيانات الحساب. حاول مرة أخرى.');
     }
   }
   
@@ -81,7 +89,7 @@ class AppStateProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to update user data: $e');
+      _setErrorMessage('تعذر حفظ بيانات الحساب. حاول مرة أخرى.');
     }
   }
   
@@ -98,7 +106,7 @@ class AppStateProvider extends ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      _setErrorMessage('Failed to logout: $e');
+      _setErrorMessage('تعذر تسجيل الخروج. حاول مرة أخرى.');
     }
   }
   

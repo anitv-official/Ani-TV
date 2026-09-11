@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:ui'; // For ClipRect and BackdropFilter
 
 class CustomBottomNavBar extends StatelessWidget {
@@ -51,7 +50,6 @@ class CustomBottomNavBar extends StatelessWidget {
                         : double.infinity,
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
                       _buildNavItem(1, Icons.search_rounded, Icons.search, 'بحث'),
@@ -72,18 +70,23 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget _buildNavItem(int index, IconData inactiveIcon, IconData activeIcon, String label) {
     final isActive = currentIndex == index;
     
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(isActive ? activeIcon : inactiveIcon, size: 24, color: isActive ? const Color(0xFFE53935) : Colors.white70),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 10, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-          ],
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(isActive ? activeIcon : inactiveIcon, size: 24, color: isActive ? const Color(0xFFE53935) : Colors.white70),
+              const SizedBox(height: 2),
+              Flexible(
+                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                  style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 10, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+              ),
+            ],
+          ),
         ),
       ),
     );

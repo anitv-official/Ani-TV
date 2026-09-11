@@ -28,8 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _apiBaseUrl = '';
   String _appVersionUrl = '';
   
-  // Dummy states for the UI mockup
-  bool _streamCellular = true;
+  bool _streamCellular = false;
   bool _showMatureContent = false;
 
   @override
@@ -40,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     _loadUserData();
     _loadApiConfig();
+    _loadPreferences();
   }
 
   Future<void> _loadUserData() async {
@@ -57,8 +57,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       setState(() => isLoading = false);
-      _showErrorDialog('خطأ في تحميل الملف الشخصي', 'تعذر تحميل بيانات المستخدم: $e');
+      _showErrorDialog('خطأ في تحميل الملف الشخصي', 'تعذر تحميل بيانات المستخدم. حاول مرة أخرى.');
     }
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _streamCellular = prefs.getBool('stream_cellular') ?? false;
+      _showMatureContent = prefs.getBool('show_mature_content') ?? false;
+    });
+  }
+
+  Future<void> _savePreference(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
   }
 
   Future<void> _loadApiConfig() async {
@@ -89,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         (route) => false,
       );
     } catch (e) {
-      _showErrorDialog('خطأ في تسجيل الخروج', 'تعذر تسجيل الخروج: $e');
+      _showErrorDialog('خطأ في تسجيل الخروج', 'تعذر تسجيل الخروج. حاول مرة أخرى.');
     }
   }
 
@@ -191,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showChangePasswordDialog() => _showEditValueDialog(
     title: 'تغيير كلمة المرور', initial: '', obscure: true,
-    onSave: (value) { if (value.length < 6) { _showInfoDialog('كلمة المرور قصيرة', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'); } else { ToastUtils.show('تم تحديث كلمة المرور بنجاح', backgroundColor: AppTheme.accentColor); } },
+    onSave: (value) { if (value.length < 6) { _showInfoDialog('كلمة المرور قصيرة', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'); } else { _showInfoDialog('تغيير كلمة المرور', 'لا يمكن تغيير كلمة المرور من هذا الإصدار لأن المصادقة الحالية لا توفر هذه العملية.'); } },
   );
 
   @override
@@ -275,8 +289,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         _buildMenuItem('لغة الصوت', trailing: 'اليابانية', onTap: () => _showInfoDialog('لغة الصوت', 'اختيار اللغة محفوظ محليًا.')),
                         _buildMenuItem('لغة الترجمة', trailing: 'الإنجليزية', onTap: () => _showInfoDialog('لغة الترجمة', 'اختيار اللغة محفوظ محليًا.')),
-                        _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) => setState(() => _streamCellular = val)),
-                        _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) => setState(() => _showMatureContent = val)),
+                        _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
+                        _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
                       ],
                     ),
                     

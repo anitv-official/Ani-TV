@@ -50,9 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
         final prefs = await SharedPreferences.getInstance();
-        final username = _emailController.text.trim().split('@').first;
+        final identity = _emailController.text.trim();
+        final username = identity.contains('@') ? identity.split('@').first : identity;
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('username', username);
+        if (identity.contains('@')) await prefs.setString('email', identity);
         if (_rememberMe) {
           await prefs.setString('email', _emailController.text.trim());
         } else {
@@ -174,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter email';
+                          if (value == null || value.isEmpty) return 'أدخل البريد الإلكتروني أو اسم المستخدم';
                           return null;
                         },
                       ),
