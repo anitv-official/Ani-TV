@@ -507,7 +507,23 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       'youtube.com',
       'youtu.be',
       'vimeo.com',
-      'dailymotion.com'
+      'dailymotion.com',
+      'vidmoly.net',
+      'vidmoly.to',
+      'sibnet.ru',
+      'sendvid.com',
+      'mp4upload.com',
+      'uqload.',
+      'ok.ru',
+      'dood',
+      'streamtape',
+      'mixdrop',
+      'voe.sx',
+      'yourupload',
+      'listeamed',
+      'playerwish',
+      'vidhide',
+      'lulustream',
     ];
 
     if (embedDomains.any((domain) => url.toLowerCase().contains(domain))) {
@@ -531,6 +547,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void _initializeWebView() {
     setState(() => _isLoading = true);
     _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
       ..enableZoom(false)
       ..setNavigationDelegate(

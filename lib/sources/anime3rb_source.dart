@@ -94,30 +94,54 @@ class Anime3rbSource extends ContentSource {
   @override
   Future<Map<String, dynamic>> streams(String url) async {
     final html = await HtmlClient.getHtml(url);
-    // Anime3rb's current player is a single Vid3rb page. Do not expose every
-    // iframe/data-url from the page: those are legacy/auxiliary servers and
-    // cannot be played reliably by AniTV's native controller.
-    final links = <String>{};
+    final servers = <Map<String, String>>[];
+    final seen = <String>{};
+
+    void add(String raw, [String quality = 'خادم']) {
+      final resolved = HtmlParse.absUrl(url, raw);
+      if (resolved.isEmpty || !seen.add(resolved)) return;
+      final host = HtmlParse.hostOf(resolved);
+      if (host.contains('anime3rb.com') ||
+          host.contains('facebook.com') ||
+          host.contains('twitter.com')) {
+        return;
+      }
+      servers.add({'quality': quality, 'url': resolved});
+    }
+
     for (final match in RegExp(
-      r'https?://video\.vid3rb\.com/video/[A-Za-z0-9_-]+',
+      r'https?://(?:video\.)?vid3rb\.com/(?:video|embed|e)/[A-Za-z0-9_-]+',
       caseSensitive: false,
     ).allMatches(html)) {
-      links.add(match.group(0)!);
+      add(match.group(0)!, 'Anime3rb • Vid3rb');
     }
-    if (links.isEmpty) {
-      throw Exception('Anime3rb: لم يتم العثور على رابط Vid3rb صالح للحلقة');
+    for (final match in RegExp(
+      r'''<iframe[^>]+src=["']([^"']+)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(1)!, 'مشغل');
     }
-    final servers = links
-        .map((link) => <String, String>{
-              'quality': 'Anime3rb • Vid3rb',
-              'url': link,
-            })
+    for (final match in RegExp(
+      r'''data-(?:src|url|embed|link|video)=["']([^"']+)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(1)!);
+    }
+    for (final media in SourceUtils.extractMediaUrls(html, url)) {
+      add(media, 'مباشر');
+    }
+    if (servers.isEmpty) {
+      throw Exception('Anime3rb: لم يتم العثور على رابط تشغيل صالح للحلقة');
+    }
+    final vid3rb = servers
+        .where((s) => s['url']!.toLowerCase().contains('vid3rb'))
         .toList();
+    final playable = vid3rb.isNotEmpty ? vid3rb : servers;
     return {
       'source_id': id,
-      'stream_url': servers.first['url'],
-      'direct_stream_urls': servers,
-      'headers': {'Referer': '$url', 'User-Agent': HtmlClient.userAgent},
+      'stream_url': playable.first['url'],
+      'direct_stream_urls': playable,
+      'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
       'download_links': <String, dynamic>{},
     };
   }
@@ -214,32 +238,43 @@ class Anime3rbSource extends ContentSource {
   List<Map<String, dynamic>> _parseEpisodes(String html, String pageUrl) {
     final episodes = <Map<String, dynamic>>[];
     final seen = <String>{};
-    for (final match in RegExp(
-      r'<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)</a>',
-      caseSensitive: false,
-    ).allMatches(html)) {
-      final url = HtmlParse.absUrl(pageUrl, match.group(1)!);
+
+    void addEpisode(String rawUrl, String text) {
+      final url = HtmlParse.absUrl(pageUrl, rawUrl).split('#').first;
       final path = Uri.tryParse(url)?.path ?? '';
-      if (!url.contains('anime3rb.com') ||
-          !RegExp(r'^/episode/[^/]+/[^/]+/?$').hasMatch(path) ||
-          !seen.add(url)) {
-        continue;
+      if (!url.contains('anime3rb.com') || !seen.add(url) || url == pageUrl) {
+        return;
       }
-      final text = HtmlParse.stripTags(match.group(2) ?? '');
+      final isEpisodePath = RegExp(
+        r'^/episode/[^/]+/[^/]+/?$',
+        caseSensitive: false,
+      ).hasMatch(path);
       final decoded = Uri.decodeComponent(url);
-      if (!decoded.contains('حلقة') &&
-          !decoded.toLowerCase().contains('episode') &&
-          !text.contains('حلقة') &&
-          !RegExp(r'\d+').hasMatch(text)) {
-        continue;
+      final looksLikeEpisode = decoded.contains('حلقة') ||
+          decoded.toLowerCase().contains('episode') ||
+          text.contains('حلقة') ||
+          text.toLowerCase().contains('episode') ||
+          RegExp(r'\d+').hasMatch(text);
+      if (!isEpisodePath && !(path.contains('/episode/') && looksLikeEpisode)) {
+        return;
       }
-      if (url == pageUrl) continue;
+      if (!looksLikeEpisode && !isEpisodePath) return;
       final number = SourceUtils.episodeNumber('$text $decoded');
       episodes.add({
         'title': SourceUtils.episodeTitle(text.isEmpty ? decoded : text, number),
         'url': url,
         'number': number ?? episodes.length + 1,
       });
+    }
+
+    for (final match in RegExp(
+      r'''<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      addEpisode(match.group(1)!, HtmlParse.stripTags(match.group(2) ?? ''));
+    }
+    for (final link in HtmlParse.markdownLinks(html)) {
+      addEpisode(link['url'] ?? '', link['title'] ?? '');
     }
     episodes.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     return episodes;

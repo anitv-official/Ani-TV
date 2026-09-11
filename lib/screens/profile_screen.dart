@@ -8,9 +8,6 @@ import 'landing_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 import '../utils/toast_utils.dart';
-import '../services/api_service.dart';
-import '../services/app_version_service.dart';
-import 'splash_screen.dart';
 import '../sources/source_registry.dart';
 import 'sources_screen.dart';
 
@@ -25,9 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoggedIn = false;
   bool isDarkMode = true; // Default to dark as per design
   bool isLoading = true;
-  String _apiBaseUrl = '';
-  String _appVersionUrl = '';
-
   bool _streamCellular = false;
   bool _showMatureContent = false;
   bool _notificationsEnabled = true;
@@ -39,7 +33,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Provider.of<AppStateProvider>(context, listen: false).initialize();
     });
     _loadUserData();
-    _loadApiConfig();
     _loadPreferences();
   }
 
@@ -77,13 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.setBool(key, value);
   }
 
-  Future<void> _loadApiConfig() async {
-    setState(() {
-      _apiBaseUrl = ApiService.getBaseUrl();
-      _appVersionUrl = AppVersionService.getBaseUrl();
-    });
-  }
-
   void _showErrorDialog(String title, String message) {
     CustomErrorDialog.show(
       context,
@@ -109,69 +95,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showEditApiDialog() {
-    final apiController = TextEditingController(text: _apiBaseUrl);
-    final appVersionController = TextEditingController(text: _appVersionUrl);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text('تعديل روابط الخدمات', style: TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: apiController,
-              decoration: InputDecoration(
-                labelText: 'رابط واجهة API الأساسي',
-                labelStyle: TextStyle(color: AppTheme.textSecondaryColor),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.textSecondaryColor)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
-              ),
-              style: TextStyle(color: Colors.white),
-            ),
-            SizedBox(height: 12),
-            TextField(
-              controller: appVersionController,
-              decoration: InputDecoration(
-                labelText: 'رابط التحديثات',
-                labelStyle: TextStyle(color: AppTheme.textSecondaryColor),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.textSecondaryColor)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.primaryColor)),
-              ),
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء', style: TextStyle(color: AppTheme.textSecondaryColor)),
-          ),
-          TextButton(
-            onPressed: () async {
-              final apiUrl = apiController.text.trim();
-              final verUrl = appVersionController.text.trim();
-              if (apiUrl.isNotEmpty) await ApiService.setBaseUrl(apiUrl);
-              if (verUrl.isNotEmpty) await AppVersionService.setBaseUrl(verUrl);
-              setState(() {
-                _apiBaseUrl = ApiService.getBaseUrl();
-                _appVersionUrl = AppVersionService.getBaseUrl();
-              });
-              ApiService.clearCache();
-              Navigator.pop(context);
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => SplashScreen()),
-                (route) => false,
-              );
-            },
-            child: Text('حفظ', style: TextStyle(color: AppTheme.primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showSourcesDialog() {
     showDialog<void>(
       context: context,
@@ -194,10 +117,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: const TextStyle(color: Colors.white))),
               ]),
             )),
-            const SizedBox(height: 16),
-            const Text('واجهة API الاحتياطية', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            SelectableText(_apiBaseUrl.isEmpty ? 'جارٍ التحميل...' : _apiBaseUrl, style: TextStyle(color: Colors.grey[300])),
           ],
         ),
         actions: [

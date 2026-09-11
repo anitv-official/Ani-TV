@@ -7,7 +7,7 @@ import 'risto_anime_source.dart';
 import 'source_base.dart';
 
 class SourceRegistry {
-  static const Duration _sourceTimeout = Duration(seconds: 7);
+  static const Duration _sourceTimeout = Duration(seconds: 12);
   static const Duration _cacheDuration = Duration(minutes: 3);
   static final Map<String, _RegistryCache> _cache = {};
   static final List<ContentSource> all = [

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class HtmlClient {
-  static const Duration timeout = Duration(seconds: 6);
-  static const Duration readerTimeout = Duration(seconds: 6);
+  static const Duration timeout = Duration(seconds: 12);
+  static const Duration readerTimeout = Duration(seconds: 12);
   static const Duration cacheDuration = Duration(minutes: 3);
   static final Map<String, _CachedHtml> _cache = {};
   static const String userAgent =

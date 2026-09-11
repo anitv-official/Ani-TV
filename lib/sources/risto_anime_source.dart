@@ -3,6 +3,7 @@ import 'source_base.dart';
 
 class RistoAnimeSource extends ContentSource {
   static const String _base = 'https://ristoanime.me';
+  static const String _logoMarker = 'dfhsfdhsf';
 
   @override
   String get id => 'risto';
@@ -14,7 +15,11 @@ class RistoAnimeSource extends ContentSource {
   String get kind => 'anime';
 
   @override
-  List<String> get hosts => ['ristoanime.me'];
+  List<String> get hosts => [
+        'ristoanime.me',
+        'www.ristoanime.me',
+        'ristoanime.co',
+      ];
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
@@ -27,7 +32,8 @@ class RistoAnimeSource extends ContentSource {
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    final html = await HtmlClient.getHtml('$_base/series/page/$page/');
+    final url = page <= 1 ? '$_base/series/' : '$_base/series/page/$page/';
+    final html = await HtmlClient.getHtml(url);
     final cards = _parseMovieItems(html);
     if (cards.isNotEmpty) return cards;
     return _searchViaWp('');
@@ -47,11 +53,7 @@ class RistoAnimeSource extends ContentSource {
           ]) ??
           'بدون عنوان',
     );
-    final image = HtmlParse.meta(html, 'og:image') ??
-        HtmlParse.firstMatch(html, [
-              RegExp(r'class="poster"[^>]*url\(([^)]+)\)', caseSensitive: false),
-            ]) ??
-            '';
+    final image = _detailsCover(html, url);
     final description = HtmlParse.stripTags(
       HtmlParse.meta(html, 'og:description') ??
           HtmlParse.firstMatch(html, [
@@ -95,34 +97,57 @@ class RistoAnimeSource extends ContentSource {
 
   @override
   Future<Map<String, dynamic>> streams(String url) async {
-    final html = await HtmlClient.getHtml(url);
+    final watchUrl = _watchPageUrl(url);
+    String html;
+    try {
+      html = await HtmlClient.getHtml(watchUrl);
+    } catch (_) {
+      html = await HtmlClient.getHtml(url);
+    }
+    if (!_hasWatchServers(html)) {
+      try {
+        html = await HtmlClient.getHtml(_watchQueryUrl(url));
+      } catch (_) {}
+    }
+
     final servers = <Map<String, String>>[];
     final seen = <String>{};
 
     void add(String raw, [String quality = 'خادم']) {
-      final resolved = HtmlParse.absUrl(url, raw);
-      if (resolved.isEmpty || seen.contains(resolved)) return;
-      if (resolved.contains('facebook.com') || resolved.contains('twitter.com')) {
+      var resolved = HtmlParse.absUrl(url, raw);
+      if (resolved.isEmpty || !seen.add(resolved)) return;
+      if (resolved.contains('facebook.com') ||
+          resolved.contains('twitter.com') ||
+          resolved.contains('x.com') ||
+          resolved.contains('ristoanime.me') ||
+          resolved.contains('ristoanime.co')) {
         return;
       }
-      seen.add(resolved);
       servers.add({'quality': quality, 'url': resolved});
     }
 
+    var index = 1;
     for (final match in RegExp(
-      r'<iframe[^>]+src=["' "'" r']([^"' "'" r']+)["' "'" r']',
+      r'''data-watch=["']([^"']+)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(1)!, 'سيرفر $index');
+      index++;
+    }
+    for (final match in RegExp(
+      r'''<iframe[^>]+src=["']([^"']+)["']''',
       caseSensitive: false,
     ).allMatches(html)) {
       add(match.group(1)!, 'مشغل');
     }
     for (final match in RegExp(
-      r'data-(?:src|url|embed|link)=["' "'" r']([^"' "'" r']+)["' "'" r']',
+      r'''data-(?:src|url|embed|link)=["']([^"']+)["']''',
       caseSensitive: false,
     ).allMatches(html)) {
       add(match.group(1)!);
     }
     for (final match in RegExp(
-      r'https?://[^\s"<>]+(?:ok\.ru|dood|mp4upload|vidmoly|uqload|streamtape|filemoon|voe|mixdrop|yourupload|goload|sbfull|sbplay|krakenfiles|pixeldrain|vudeo|lulustream|vidhide)[^\s"<>]*',
+      r'https?://[^\s"<>]+(?:ok\.ru|dood|mp4upload|vidmoly|uqload|streamtape|filemoon|voe|mixdrop|yourupload|goload|sbfull|sbplay|krakenfiles|pixeldrain|vudeo|lulustream|vidhide|sibnet|sendvid|listeamed|playerwish)[^\s"<>]*',
       caseSensitive: false,
     ).allMatches(html)) {
       add(match.group(0)!);
@@ -133,23 +158,25 @@ class RistoAnimeSource extends ContentSource {
     ).allMatches(html)) {
       add(match.group(0)!, 'مباشر');
     }
-
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
       add(media, 'مباشر');
     }
+
     if (servers.isEmpty) {
-      add(url, 'صفحة الحلقة');
+      throw Exception('لم يتم العثور على خوادم تشغيل لهذه الحلقة');
     }
 
     final direct = servers
         .where((s) =>
             s['url']!.contains('.mp4') ||
             s['url']!.contains('.m3u8') ||
-            s['url']!.contains('pixeldrain'))
+            s['url']!.contains('pixeldrain.com/api/file'))
         .toList();
     return {
+      'source_id': id,
       'stream_url': servers.first['url'],
       'direct_stream_urls': direct.isNotEmpty ? direct : servers,
+      'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
       'download_links': <String, dynamic>{},
     };
   }
@@ -176,6 +203,7 @@ class RistoAnimeSource extends ContentSource {
                 '')
             .toString();
       }
+      if (_isLogo(image)) image = '';
       items.add(item(title: title, url: link, image: image, type: 'anime'));
     }
     return _dedupeSeries(items);
@@ -190,7 +218,14 @@ class RistoAnimeSource extends ContentSource {
     );
     for (final match in pattern.allMatches(html)) {
       final url = HtmlParse.absUrl(_base, match.group(1)!);
-      if (url.contains('/page/') || url.contains('/feed') || !seen.add(url)) {
+      final pathParts =
+          Uri.tryParse(url)?.pathSegments.where((p) => p.isNotEmpty).toList() ??
+              [];
+      if (url.contains('/page/') ||
+          url.contains('/feed') ||
+          !url.contains('/series/') ||
+          pathParts.length < 2 ||
+          !seen.add(url)) {
         continue;
       }
       final block = match.group(2) ?? '';
@@ -201,11 +236,15 @@ class RistoAnimeSource extends ContentSource {
             '',
       );
       if (title.isEmpty) continue;
-      final image = HtmlParse.firstMatch(block, [
+      var image = HtmlParse.firstMatch(block, [
             RegExp(r'url\(([^)]+)\)', caseSensitive: false),
-            RegExp(r'src="([^"]+)"', caseSensitive: false),
+            RegExp(r'''(?:src|data-src)=["']([^"']+)["']''',
+                caseSensitive: false),
           ]) ??
           '';
+      image = image.replaceAll("'", '').replaceAll('"', '').trim();
+      if (_isLogo(image)) image = '';
+      if (image.isNotEmpty) image = HtmlParse.absUrl(_base, image);
       final genre = HtmlParse.firstMatch(
           block, [RegExp(r'class="genre"[^>]*>([^<]+)<', caseSensitive: false)]);
       final rating =
@@ -213,7 +252,7 @@ class RistoAnimeSource extends ContentSource {
       items.add(item(
         title: title,
         url: url,
-        image: image.replaceAll("'", '').replaceAll('"', ''),
+        image: image,
         type: 'anime',
         genres: genre == null || genre.isEmpty ? [] : [genre],
         rating: rating,
@@ -279,16 +318,24 @@ class RistoAnimeSource extends ContentSource {
 
   void _parseEpisodesFromHtml(
       String html, Map<String, Map<String, dynamic>> collected) {
+    final listBlock = RegExp(
+      r'class="EpisodesList"[^>]*>([\s\S]*?)</div>',
+      caseSensitive: false,
+    ).firstMatch(html);
+    final haystack = listBlock?.group(1) ?? html;
     final pattern = RegExp(
-      r'<a[^>]+href="(https://ristoanime\.me/[^"]+)"[^>]*>([\s\S]*?)</a>',
+      r'''<a[^>]+href=["'](https?://(?:www\.)?ristoanime\.(?:me|co)/[^"']+)["'][^>]*>([\s\S]*?)</a>''',
       caseSensitive: false,
     );
-    for (final match in pattern.allMatches(html)) {
+    for (final match in pattern.allMatches(haystack)) {
       final url = match.group(1)!;
       if (url.contains('/series/') ||
           url.contains('/page/') ||
           url.contains('/feed') ||
-          url.contains('/movies')) {
+          url.contains('/movies') ||
+          url.contains('/genre') ||
+          url.contains('/category') ||
+          url.contains('/watch')) {
         continue;
       }
       final text = HtmlParse.stripTags(match.group(2) ?? '');
@@ -299,15 +346,69 @@ class RistoAnimeSource extends ContentSource {
           !text.toLowerCase().contains('episode')) {
         continue;
       }
-      if (collected.containsKey(url)) continue;
+      final normalized = url.split('?').first;
+      if (collected.containsKey(normalized)) continue;
       final number = SourceUtils.episodeNumber('$text $decodedUrl');
-      collected[url] = {
+      collected[normalized] = {
         'title': text.isNotEmpty
             ? SourceUtils.episodeTitle(text, number)
             : SourceUtils.episodeTitle(decodedUrl, number),
-        'url': url,
+        'url': normalized,
         'number': number ?? collected.length + 1,
       };
     }
+  }
+
+  String _detailsCover(String html, String pageUrl) {
+    final candidates = <String>[
+      HtmlParse.firstMatch(html, [
+            RegExp(
+                r'class="InnerPoster"[\s\S]*?<img[^>]+src="([^"]+)"',
+                caseSensitive: false),
+          ]) ??
+          '',
+      HtmlParse.firstMatch(html, [
+            RegExp(r'class="BG"[^>]*url\(([^)]+)\)', caseSensitive: false),
+          ]) ??
+          '',
+      HtmlParse.firstMatch(html, [
+            RegExp(
+                r'class="singleCover"[\s\S]{0,400}?url\(([^)]+)\)',
+                caseSensitive: false),
+          ]) ??
+          '',
+      HtmlParse.meta(html, 'og:image') ?? '',
+    ];
+    for (var raw in candidates) {
+      raw = raw.replaceAll("'", '').replaceAll('"', '').trim();
+      if (raw.isEmpty || _isLogo(raw)) continue;
+      return HtmlParse.absUrl(pageUrl, raw);
+    }
+    return '';
+  }
+
+  bool _isLogo(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains(_logoMarker) ||
+        lower.contains('header-logo') ||
+        lower.contains('/logo') ||
+        lower.endsWith('logo.png');
+  }
+
+  bool _hasWatchServers(String html) {
+    return html.contains('data-watch=') || html.contains('id="watch"');
+  }
+
+  String _watchPageUrl(String url) {
+    final uri = Uri.parse(url);
+    final path = uri.path.endsWith('/')
+        ? '${uri.path}watch/'
+        : '${uri.path}/watch/';
+    return uri.replace(path: path, query: '').toString();
+  }
+
+  String _watchQueryUrl(String url) {
+    final uri = Uri.parse(url);
+    return uri.replace(queryParameters: {'watch': '1'}).toString();
   }
 }
