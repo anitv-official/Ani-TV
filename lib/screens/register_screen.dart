@@ -1,384 +1,143 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'login_screen.dart';
-import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
-import '../utils/toast_utils.dart';
 import '../services/appwrite_service.dart';
+import '../theme/app_theme.dart';
+import '../utils/toast_utils.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({Key? key}) : super(key: key);
+
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  
+  final _confirmController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _rememberMe = false; // "Remember me" on register screen as per design
+  bool _obscureConfirm = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      try {
-        final email = _emailController.text.trim();
-        final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-        await appStateProvider.register(
-          email: email,
-          password: _passwordController.text,
-          name: email.split('@').first,
-        );
-        ToastUtils.show('تم إنشاء الحساب وتسجيل الدخول بنجاح.', backgroundColor: Colors.green);
-        if (mounted) Navigator.pop(context);
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(authErrorMessage(error, registering: true))),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-      }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _isLoading = true);
+    try {
+      final email = _emailController.text.trim();
+      await context.read<AppStateProvider>().register(
+        email: email,
+        password: _passwordController.text,
+        name: email.split('@').first,
+      );
+      if (!mounted) return;
+      ToastUtils.show('تم إنشاء الحساب وتسجيل الدخول بنجاح.', backgroundColor: Colors.green);
+      Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authErrorMessage(error, registering: true))),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  InputDecoration _decoration(String hint, {Widget? suffix}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: AppTheme.textSecondaryColor),
+      filled: true,
+      fillColor: AppTheme.surfaceColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      suffixIcon: suffix,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.errorColor)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Top part background
-      body: Column(
-        children: [
-          // Top Bar with Back Button
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-          ),
-          
-          // Main Content Container
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                color: AppTheme.backgroundColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(40),
-                  topRight: Radius.circular(40),
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Removed local Back Button
-
-                
-                // Singup Text (Using "إنشاء الحساب" as per correction plan, though image said Singup)
-                const Center(
-                  child: Text(
-                    'إنشاء الحساب',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.backgroundColor,
+        title: const Text('إنشاء حساب'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop()),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 18, 24, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('إنشاء حساب جديد', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                const Center(
-                  child: Text(
-                    'Create an account',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondaryColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // Email Field
+                const Text('أنشئ حسابك للمتابعة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 16)),
+                const SizedBox(height: 32),
                 TextFormField(
                   controller: _emailController,
-                  style: const TextStyle(color: Colors.white),
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    isDense: false,
-                    filled: true,
-                    fillColor: AppTheme.surfaceColor,
-                    hintText: 'Email or username',
-                    hintStyle: TextStyle(color: AppTheme.textSecondaryColor),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.errorColor, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  ),
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _decoration('البريد الإلكتروني'),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter email';
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty || !email.contains('@')) return 'أدخل بريدًا إلكترونيًا صحيحًا';
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Password Field
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.next,
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    isDense: false,
-                    filled: true,
-                    fillColor: AppTheme.surfaceColor,
-                    hintText: 'كلمة المرور',
-                    hintStyle: const TextStyle(color: AppTheme.textSecondaryColor),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.errorColor, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter password';
-                     if (value.length < 6) return 'Password must be at least 6 characters';
-                    return null;
-                  },
+                  decoration: _decoration('كلمة المرور', suffix: IconButton(icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: AppTheme.textSecondaryColor), onPressed: () => setState(() => _obscurePassword = !_obscurePassword))),
+                  validator: (value) => (value == null || value.length < 8) ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل' : null,
                 ),
                 const SizedBox(height: 16),
-
-                // Confirm Password Field
                 TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirmPassword,
+                  controller: _confirmController,
+                  obscureText: _obscureConfirm,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _register(),
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    isDense: false,
-                    filled: true,
-                    fillColor: AppTheme.surfaceColor,
-                    hintText: 'Confirm Password',
-                    hintStyle: const TextStyle(color: AppTheme.textSecondaryColor),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: AppTheme.errorColor, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                        color: AppTheme.textSecondaryColor,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please confirm password';
-                    if (value != _passwordController.text) return 'Passwords do not match';
-                    return null;
-                  },
+                  decoration: _decoration('تأكيد كلمة المرور', suffix: IconButton(icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, color: AppTheme.textSecondaryColor), onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm))),
+                  validator: (value) => value != _passwordController.text ? 'كلمتا المرور غير متطابقتين' : null,
                 ),
-                const SizedBox(height: 16),
-
-                // Remember Me
-                Row(
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Checkbox(
-                        value: _rememberMe,
-                        shape: const CircleBorder(),
-                        activeColor: Colors.white,
-                        checkColor: Colors.black,
-                        side: BorderSide(color: AppTheme.textSecondaryColor, width: 2),
-                        onChanged: (value) {
-                          setState(() {
-                            _rememberMe = value!;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Remember me',
-                      style: TextStyle(color: AppTheme.textSecondaryColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Signup Button
+                const SizedBox(height: 26),
                 SizedBox(
-                  width: double.infinity,
-                  height: 56,
+                  height: 54,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor, // Red color
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'إنشاء الحساب',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('إنشاء الحساب', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Login Link
-                 Center(
-                  child: GestureDetector(
-                    onTap: () {
-                       Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    },
-                    child: RichText(
-                      text: const TextSpan(
-                        text: "Already have an account? ",
-                        style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14),
-                        children: [
-                          TextSpan(
-                            text: 'سجّل الدخول هنا',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 48),
-
-                // Social Login Section
-                const Center(
-                  child: Text(
-                    'Or continue with',
-                    style: TextStyle(color: AppTheme.textSecondaryColor),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Social Icons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildSocialIcon('assets/icons/facebook.png'),
-                    const SizedBox(width: 24),
-                    Container(
-                      height: 30, 
-                      width: 1, 
-                      color: AppTheme.textSecondaryColor.withOpacity(0.5)
-                    ),
-                   const SizedBox(width: 24),
-                    _buildSocialIcon('assets/icons/google_plus.png'),
-                  ],
+                TextButton(
+                  onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  child: const Text('لديك حساب؟ تسجيل الدخول', style: TextStyle(color: Colors.white, fontSize: 15)),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    ), // Expanded
-  ], // Main Column children
-), // Main Column
-); // Scaffold
-}
-  
-  Widget _buildSocialIcon(String assetPath) {
-    return InkWell(
-      onTap: () {
-        // تسجيل الدخول الاجتماعي غير متاح حاليًا
-      },
-      child: Image.asset(
-        assetPath,
-        width: 48,
-        height: 48,
       ),
     );
   }

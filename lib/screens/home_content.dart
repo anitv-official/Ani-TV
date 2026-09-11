@@ -290,9 +290,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                       ),
                       Row(
                         children: [
-                          GestureDetector(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen(autoFocus: true))),
-                            child: Icon(Icons.search, color: Colors.white, size: 24),
+                          IconButton(
+                            tooltip: 'بحث',
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+                            icon: const Icon(Icons.search, color: Colors.white, size: 24),
                           ),
                           SizedBox(width: 16),
                           GestureDetector(

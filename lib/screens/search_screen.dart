@@ -299,8 +299,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       ),
       actions: [
         IconButton(
-          icon: Icon(Icons.search, size: 28, color: Colors.white),
-          onPressed: _toggleSearchMode,
+          tooltip: 'بحث',
+          icon: const Icon(Icons.search, size: 28, color: Colors.white),
+          onPressed: () {
+            if (!_isSearching) {
+              setState(() => _isSearching = true);
+              Future.delayed(const Duration(milliseconds: 100), () {
+                if (mounted) FocusScope.of(context).requestFocus(_searchFocusNode);
+              });
+            }
+          },
         ),
         SizedBox(width: 8),
       ],
