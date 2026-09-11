@@ -500,7 +500,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       final List<dynamic> directStreams = streams['direct_stream_urls'] ?? [];
       final String streamUrl = streams['stream_url'] ?? '';
       final sourceId = streams['source_id']?.toString() ?? '';
-      if (sourceId == 'risto' && streamUrl.isNotEmpty && context.mounted) {
+      if (_isInAppSource(sourceId) && streamUrl.isNotEmpty && context.mounted) {
         _playVideo(
           context,
           streamUrl,
@@ -717,6 +717,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (context.mounted) Navigator.pop(context); // Close loading
       ToastUtils.show('Error loading links: $e', backgroundColor: Colors.red);
     }
+  }
+
+  bool _isInAppSource(String sourceId) {
+    return sourceId == 'risto' || sourceId == 'anime3rb';
   }
 
   Future<void> _launchUrl(String url) async {

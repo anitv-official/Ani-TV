@@ -136,11 +136,13 @@ class Anime3rbSource extends ContentSource {
     final vid3rb = servers
         .where((s) => s['url']!.toLowerCase().contains('vid3rb'))
         .toList();
-    final playable = vid3rb.isNotEmpty ? vid3rb : servers;
+    final playUrl = (vid3rb.isNotEmpty ? vid3rb : servers).first['url']!;
     return {
       'source_id': id,
-      'stream_url': playable.first['url'],
-      'direct_stream_urls': playable,
+      'stream_url': playUrl,
+      'direct_stream_urls': [
+        {'quality': 'مشغل', 'url': playUrl},
+      ],
       'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
       'download_links': <String, dynamic>{},
     };
