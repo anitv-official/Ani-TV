@@ -63,7 +63,7 @@ class AnimeSlayerSource extends ContentSource {
     );
     final image = HtmlParse.meta(html, 'og:image') ??
         HtmlParse.firstMatch(html, [
-          RegExp(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)',
+          RegExp(r'''<img[^>]+(?:src|data-src)=["']([^"']+)''',
               caseSensitive: false),
         ]) ??
         '';
@@ -77,7 +77,7 @@ class AnimeSlayerSource extends ContentSource {
     );
     final genres = HtmlParse.all(
       html,
-      RegExp(r'href=["\'][^"\']*(?:genre|category)[^"\']*["\'][^>]*>([^<]+)<',
+      RegExp(r'''href=["'][^"']*(?:genre|category)[^"']*["'][^>]*>([^<]+)<''',
           caseSensitive: false),
     );
     final episodes = _parseEpisodes(html, url);
