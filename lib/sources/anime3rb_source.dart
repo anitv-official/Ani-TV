@@ -130,6 +130,12 @@ class Anime3rbSource extends ContentSource {
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
       add(media, 'مباشر');
     }
+    for (final match in RegExp(
+      r'''(?:file|src|source|url)\s*[:=]\s*["']([^"']+\.(?:mp4|m3u8)(?:\?[^"']*)?)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(1)!, 'مباشر');
+    }
     // Anime3rb periodically moves the actual file behind a player page. Keep
     // the external player as a usable fallback instead of reporting that the
     // episode has no link; the video screen can open it in its WebView.
@@ -151,9 +157,11 @@ class Anime3rbSource extends ContentSource {
       }
       try {
         final embedded = await HtmlClient.getHtml(candidate);
-        final media = SourceUtils.extractMediaUrls(embedded, candidate)
-            .where(_isDirectMedia)
-            .toList();
+        final media = <String>[
+          ...SourceUtils.extractMediaUrls(embedded, candidate),
+          ...RegExp(r'''(?:file|src|source|url)\s*[:=]\s*["']([^"']+\.(?:mp4|m3u8)(?:\?[^"']*)?)["']''', caseSensitive: false)
+              .allMatches(embedded).map((m) => HtmlParse.absUrl(candidate, m.group(1)!)),
+        ].where(_isDirectMedia).toList();
         if (media.isNotEmpty) {
           playUrl = media.first;
           break;
@@ -169,12 +177,19 @@ class Anime3rbSource extends ContentSource {
     return {
       'source_id': id,
       'stream_url': playUrl,
-      'direct_stream_urls': [
-        {'quality': 'مشغل', 'url': playUrl},
-      ],
+      'direct_stream_urls': servers.where((s) => _isDirectMedia(s['url']!)).map((s) => {'quality': s['quality'] ?? 'مباشر', 'url': s['url']!}).toList(),
       'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
-      'download_links': <String, dynamic>{},
+      'download_links': _downloadLinks(servers),
     };
+  }
+
+  Map<String, dynamic> _downloadLinks(List<Map<String, String>> servers) {
+    final links = <String, dynamic>{};
+    for (final server in servers) {
+      if (!_isDirectMedia(server['url']!)) continue;
+      (links['مباشر'] ??= <Map<String, dynamic>>[]).add({'host': server['quality'] ?? 'Anime3rb', 'url': server['url']});
+    }
+    return links;
   }
 
   bool _isDirectMedia(String value) {

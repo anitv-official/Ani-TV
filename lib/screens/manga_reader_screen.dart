@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
 import 'dart:convert';
+import 'dart:io';
 import '../services/api_service.dart';
 
 import '../utils/toast_utils.dart';
@@ -343,11 +344,13 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       // Pastikan URL gambar sudah dibersihkan dari spasi
       final cleanImageUrl = _pages[i].trim();
       // Preload gambar menggunakan CachedNetworkImageProvider
-      precacheImage(
-        CachedNetworkImageProvider(
+      final provider = cleanImageUrl.startsWith('/') || cleanImageUrl.startsWith('file://')
+          ? FileImage(File(cleanImageUrl.replaceFirst('file://', '')))
+          : CachedNetworkImageProvider(
           cleanImageUrl,
           cacheKey: 'manga_${_chapterId}_$i',
-        ),
+        );
+      precacheImage(provider, context,
         context,
         onError: (exception, stackTrace) {
           // Tangani error saat preload
@@ -503,6 +506,15 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     // Gunakan Custom ZoomableImage untuk interaksi zoom yang lebih baik
     // Gunakan Custom ZoomableImage untuk interaksi zoom yang lebih baik
     // Use standard CachedNetworkImage, as global zoom is handled by parent InteractiveViewer
+    if (imageUrl.startsWith('/') || imageUrl.startsWith('file://')) {
+      return Image.file(
+        File(imageUrl.replaceFirst('file://', '')),
+        fit: BoxFit.fitWidth,
+        width: double.infinity,
+        alignment: Alignment.topCenter,
+        errorBuilder: (_, __, ___) => const SizedBox(height: 120, child: Center(child: Text('تعذر فتح الصفحة', style: TextStyle(color: Colors.white)))),
+      );
+    }
     return CachedNetworkImage(
       imageUrl: imageUrl,
       cacheKey: 'manga_${_chapterId}_$index',
@@ -800,5 +812,4 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     super.dispose();
   }
 }
-
 

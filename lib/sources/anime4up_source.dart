@@ -73,6 +73,17 @@ class Anime4UpSource extends ContentSource {
     candidates.addAll(SourceUtils.extractMediaUrls(html, url));
     final seen = <String>{};
     final servers = candidates.where((value) => value.isNotEmpty && seen.add(value) && !_isNoise(value)).toList();
+    for (final candidate in List<String>.from(servers)) {
+      if (_isDirect(candidate)) continue;
+      try {
+        final embedded = await HtmlClient.getHtml(candidate);
+        servers.addAll([
+          ...SourceUtils.extractMediaUrls(embedded, candidate),
+          ...RegExp(r'''(?:file|src|source|url)\s*[:=]\s*["']([^"']+\.(?:mp4|m3u8)(?:\?[^"']*)?)["']''', caseSensitive: false)
+              .allMatches(embedded).map((m) => HtmlParse.absUrl(candidate, m.group(1)!)),
+        ].where(_isDirect).where(seen.add));
+      } catch (_) {}
+    }
     if (servers.isEmpty) throw Exception('لم يتم العثور على خادم تشغيل لهذه الحلقة');
     String playUrl = servers.first;
     for (final candidate in servers) {
@@ -81,9 +92,11 @@ class Anime4UpSource extends ContentSource {
     return {
       'source_id': id,
       'stream_url': playUrl,
-      'direct_stream_urls': [{'quality': 'مشغل Anime4Up', 'url': playUrl}],
+      'direct_stream_urls': servers.where(_isDirect).map((url) => {'quality': 'مباشر', 'url': url}).toList(),
       'headers': {'Referer': url, 'User-Agent': HtmlClient.userAgent},
-      'download_links': <String, dynamic>{},
+      'download_links': {
+        if (servers.any(_isDirect)) 'مباشر': servers.where(_isDirect).map((url) => {'host': 'Anime4Up', 'url': url}).toList(),
+      },
     };
   }
 

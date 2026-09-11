@@ -151,6 +151,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         mangaTitle: _comicData?['title']?.toString() ?? 'مانجا',
         chapterTitle: chapter['title']?.toString() ?? 'فصل',
         imageUrls: images.map((image) => image['url']?.toString() ?? '').where((url) => url.isNotEmpty).toList(),
+        coverUrl: _comicData?['image_url']?.toString() ?? '',
+        sourceId: _comicData?['source_id']?.toString() ?? '',
       );
       messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: $folder')));
     } catch (e) {

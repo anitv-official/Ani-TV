@@ -224,10 +224,24 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     if (url.isEmpty) return;
     try {
       final anime = await _animeDetailsFuture;
+      final sent = await DownloadService.sendToAdm(url, title: '${anime['title'] ?? 'أنمي'} - ${episode['title'] ?? 'حلقة'}');
+      if (mounted) ToastUtils.show(sent ? 'تم إرسال الرابط إلى ADM' : 'لم يتم العثور على تطبيق ADM. ثبّته أولًا ثم أعد المحاولة.', backgroundColor: sent ? AppTheme.accentColor : Colors.red);
+    } catch (error) {
+      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Colors.red);
+    }
+  }
+
+  Future<void> _downloadAnimeEpisodeInternal(Map<String, dynamic> link, Map<String, dynamic> episode) async {
+    final url = link['url']?.toString() ?? '';
+    if (url.isEmpty) return;
+    try {
+      final anime = await _animeDetailsFuture;
       await DownloadService.saveAnimeEpisode(
         animeTitle: anime['title']?.toString() ?? 'أنمي',
         episodeTitle: episode['title']?.toString() ?? 'حلقة',
         url: url,
+        coverUrl: anime['image_url']?.toString() ?? '',
+        sourceId: anime['source_id']?.toString() ?? '',
       );
       if (mounted) ToastUtils.show('تم حفظ الحلقة في التنزيلات', backgroundColor: AppTheme.accentColor);
     } catch (error) {
@@ -723,6 +737,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                    style: TextStyle(color: Colors.grey[300]),
                                  ),
                                  onTap: () => _downloadAnimeEpisode(Map<String, dynamic>.from(link as Map), episode),
+                                 trailing: IconButton(
+                                   icon: const Icon(Icons.save_alt, color: Colors.white70),
+                                   tooltip: 'تنزيل داخل التطبيق',
+                                   onPressed: () => _downloadAnimeEpisodeInternal(Map<String, dynamic>.from(link as Map), episode),
+                                 ),
                                );
                              }).toList(),
                            ),

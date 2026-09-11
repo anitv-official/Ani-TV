@@ -212,15 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _pingAppwrite() async {
-    try {
-      await context.read<AppStateProvider>().pingAppwrite();
-      if (mounted) _showInfoDialog('اتصال Appwrite', 'الاتصال ناجح والمشروع متاح.');
-    } catch (error) {
-      if (mounted) _showInfoDialog('تعذر الاتصال', authErrorMessage(error, registering: false));
-    }
-  }
-
   void _showEditNameDialog() {
     _showEditValueDialog(
       title: 'تعديل الاسم الظاهر',
@@ -296,7 +287,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildMenuItem('بيانات الحساب', trailing: email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
                           _buildMenuItem('تعديل الاسم الظاهر', onTap: _showEditNameDialog),
                           _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
-                          _buildMenuItem('اختبار اتصال Appwrite', onTap: _pingAppwrite),
                           _buildMenuItem('المصادر', onTap: _showSourcesDialog),
                         ],
                       ),

@@ -179,17 +179,18 @@ class RistoAnimeSource extends ContentSource {
     }
 
     final playUrl = servers.first['url']!;
+    final directLinks = servers.where((server) => _isDirectMedia(server['url']!)).toList();
     return {
       'source_id': id,
       'stream_url': playUrl,
-      'direct_stream_urls': [
-        {'quality': 'مشغل', 'url': playUrl},
-      ],
+      'direct_stream_urls': directLinks.map((s) => {'quality': s['quality'] ?? 'مباشر', 'url': s['url']!}).toList(),
       'headers': {
         'Referer': watchUrl,
         'User-Agent': HtmlClient.userAgent,
       },
-      'download_links': <String, dynamic>{},
+      'download_links': {
+        if (directLinks.isNotEmpty) 'مباشر': directLinks.map((s) => {'host': s['quality'] ?? 'Risto Anime', 'url': s['url']!}).toList(),
+      },
     };
   }
 

@@ -315,8 +315,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         }
 
         print('Initializing video player with URL: $_currentUrl');
-        _videoPlayerController =
-            VideoPlayerController.networkUrl(Uri.parse(_currentUrl));
+        _videoPlayerController = _currentUrl.startsWith('/')
+            ? VideoPlayerController.file(File(_currentUrl))
+            : VideoPlayerController.networkUrl(Uri.parse(_currentUrl));
 
         // Add timeout for initialization
         await _videoPlayerController!.initialize().timeout(
@@ -494,7 +495,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     print('Checking if URL is direct video: $url');
 
     final lower = url.toLowerCase();
-    if (RegExp(r'\.(?:mp4|m3u8|mov|mkv|avi|webm)(?:\?|$)').hasMatch(lower) ||
+    if (url.startsWith('/') || RegExp(r'\.(?:mp4|m3u8|mov|mkv|avi|webm)(?:\?|$)').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file')) {
       return true;
     }

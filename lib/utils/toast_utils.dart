@@ -15,16 +15,18 @@ class ToastUtils {
       final messenger = scaffoldMessengerKey.currentState;
       if (messenger != null) {
         messenger.clearSnackBars();
-        messenger.showSnackBar(
+            messenger.showSnackBar(
           SnackBar(
             content: Text(
               msg,
               style: TextStyle(color: textColor ?? Colors.white),
             ),
-            backgroundColor: backgroundColor ?? Colors.grey[800],
+            backgroundColor: (backgroundColor ?? Colors.grey[800])!.withOpacity(0.92),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
             width: 400, // Limit width on desktop
+            margin: const EdgeInsets.only(left: 24, right: 24, bottom: 300),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
