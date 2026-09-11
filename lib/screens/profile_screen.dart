@@ -8,6 +8,7 @@ import '../screens/home_screen.dart';
 import '../providers/app_state_provider.dart';
 import 'favorites_screen.dart';
 import 'login_screen.dart';
+import 'register_screen.dart';
 import '../utils/toast_utils.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
@@ -21,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String username = '';
   String email = '';
+  bool isLoggedIn = false;
   bool isDarkMode = true; // Default to dark as per design
   bool isLoading = true;
   String _apiBaseUrl = '';
@@ -49,6 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         username = appStateProvider.username;
         email = appStateProvider.email;
+        isLoggedIn = appStateProvider.isLoggedIn;
         isDarkMode = appStateProvider.isDarkMode;
         isLoading = false;
       });
@@ -227,16 +230,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     
                     const SizedBox(height: 40),
                     
-                    // Account Section
-                    _buildSectionContainer(
-                      children: [
-                         _buildMenuItem('الاشتراك', onTap: () => _showInfoDialog('الاشتراك', 'ستتوفر خطط الاشتراك قريبًا.')),
-                         _buildMenuItem('تغيير البريد الإلكتروني', trailing: email, onTap: _showChangeEmailDialog),
-                         _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
-                         // Keeping API Endpoint here as requested
-                         _buildMenuItem('إعدادات واجهة API', onTap: _showEditApiDialog),
-                      ],
-                    ),
+                    if (!isLoggedIn)
+                      _buildSectionContainer(
+                        children: [
+                          const ListTile(
+                            leading: Icon(Icons.person_outline, color: Colors.white70),
+                            title: Text('زائر', style: TextStyle(color: Colors.white)),
+                            subtitle: Text('سجّل الدخول للوصول إلى ملفك الشخصي', style: TextStyle(color: Colors.white60)),
+                          ),
+                          _buildMenuItem('تسجيل الدخول', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),
+                          _buildMenuItem('إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
+                        ],
+                      )
+                    else
+                      _buildSectionContainer(
+                        children: [
+                          _buildMenuItem('الاشتراك', onTap: () => _showInfoDialog('الاشتراك', 'ستتوفر خطط الاشتراك قريبًا.')),
+                          _buildMenuItem('تغيير البريد الإلكتروني', trailing: email, onTap: _showChangeEmailDialog),
+                          _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
+                          _buildMenuItem('إعدادات واجهة API', onTap: _showEditApiDialog),
+                        ],
+                      ),
                     
                     const SizedBox(height: 24),
                     
@@ -268,10 +282,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     
                     const SizedBox(height: 40),
                     
-                    // Sign Out Button
+                    // Account action
                     Center(
                       child: ElevatedButton(
-                        onPressed: _showLogoutDialog,
+                        onPressed: isLoggedIn
+                            ? _showLogoutDialog
+                            : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE53935), // merah
                           elevation: 0,
@@ -283,8 +299,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             borderRadius: BorderRadius.circular(999), // pill shape
                           ),
                         ),
-                        child: const Text(
-                          'تسجيل الخروج',
+                        child: Text(
+                          isLoggedIn ? 'تسجيل الخروج' : 'تسجيل الدخول',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,

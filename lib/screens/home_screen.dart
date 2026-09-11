@@ -201,10 +201,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                   CustomBottomNavBar(
-                    currentIndex: _currentNavIndex,
-                    onTap: _handleNavigation,
-                  ),
+                   // A late-loaded banner must grow above the navigation bar,
+                   // not move the navigation bar upward.
                    if (AdService.bottomNavBanner != null)
                     Container(
                       width: double.infinity,
@@ -225,6 +223,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     ),
+                   CustomBottomNavBar(
+                    currentIndex: _currentNavIndex,
+                    onTap: _handleNavigation,
+                  ),
                 ],
               ),
       ),

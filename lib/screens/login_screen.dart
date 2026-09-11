@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loadSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('email');
-    if (savedEmail != null && savedEmail.isNotEmpty) {
+    if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
       setState(() {
         _emailController.text = savedEmail;
         _rememberMe = true;
@@ -46,33 +46,39 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
-      // Simulate login delay
-      await Future.delayed(Duration(seconds: 2));
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      await prefs.setString('username', _emailController.text.split('@')[0]);
-      
-      if (_rememberMe) {
-        await prefs.setString('email', _emailController.text);
-      } else {
-        await prefs.remove('email');
-      }
-      
-      final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-      await appStateProvider.updateUserData(
-        username: _emailController.text.split('@')[0],
-        email: _emailController.text,
-        isLoggedIn: true,
-      );
-      
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-          (route) => false,
+      try {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        final prefs = await SharedPreferences.getInstance();
+        final username = _emailController.text.trim().split('@').first;
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('username', username);
+        if (_rememberMe) {
+          await prefs.setString('email', _emailController.text.trim());
+        } else {
+          await prefs.remove('email');
+        }
+        final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+        await appStateProvider.updateUserData(
+          username: username,
+          email: _emailController.text.trim(),
+          isLoggedIn: true,
         );
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => HomeScreen()),
+            (route) => false,
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }

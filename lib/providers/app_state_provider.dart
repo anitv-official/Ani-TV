@@ -3,9 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 class AppStateProvider extends ChangeNotifier {
-  // User data
-  String _username = 'Guest User';
-  String _email = 'guest@example.com';
+  // User data is empty until a real authenticated user is available.
+  String _username = '';
+  String _email = '';
   bool _isLoggedIn = false;
   bool _isDarkMode = true;
   
@@ -40,9 +40,9 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _username = prefs.getString('username') ?? 'Guest User';
-      _email = prefs.getString('email') ?? 'guest@example.com';
       _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+      _username = _isLoggedIn ? (prefs.getString('username') ?? '') : '';
+      _email = _isLoggedIn ? (prefs.getString('email') ?? '') : '';
       _isDarkMode = prefs.getBool('dark_mode') ?? true;
       notifyListeners();
     } catch (e) {
@@ -92,8 +92,8 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.remove('email');
       await prefs.remove('isLoggedIn');
       
-      _username = 'Guest User';
-      _email = 'guest@example.com';
+      _username = '';
+      _email = '';
       _isLoggedIn = false;
       
       notifyListeners();

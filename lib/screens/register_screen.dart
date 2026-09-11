@@ -32,30 +32,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
-      // Simulate registration delay
-      await Future.delayed(Duration(seconds: 2));
-      
-      // Save user data to AppStateProvider
-      // Note: "الاسم" is not in the form, extracting derived name from email or leaving empty for now
-      final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-      await appStateProvider.updateUserData(
-        username: _emailController.text.split('@')[0], 
-        email: _emailController.text,
-        isLoggedIn: false, // User needs to login after registration
-      );
-      
-      // Show success message
-      ToastUtils.show(
-        'Registration successful! Please login.',
-        backgroundColor: Colors.green,
-      );
-      
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+      try {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        final email = _emailController.text.trim();
+        final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+        await appStateProvider.updateUserData(
+          username: email.split('@').first,
+          email: email,
+          isLoggedIn: false,
         );
+        ToastUtils.show(
+          'تم إنشاء الحساب بنجاح. يرجى تسجيل الدخول.',
+          backgroundColor: Colors.green,
+        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
