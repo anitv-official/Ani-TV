@@ -18,28 +18,25 @@ class OlympusSource extends ContentSource {
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
+    final direct = await HtmlClient.getHtml(
+      '$_base/search?keyword=${Uri.encodeQueryComponent(query)}',
+    );
+    final searched = _parseSeriesList(direct);
+    // Keep a catalogue fallback for installations where the search endpoint
+    // returns an empty page or changes its markup.
+    final all = searched.isNotEmpty
+        ? searched
+        : _parseSeriesList(await HtmlClient.getHtml('$_base/series'));
     final slug = HtmlParse.slugify(query);
-    final tried = <Map<String, dynamic>>[];
-    try {
-      final direct = await details('$_base/series/$slug');
-      tried.add(item(
-        title: direct['title']?.toString() ?? query,
-        url: direct['url']?.toString() ?? '$_base/series/$slug',
-        image: direct['image_url']?.toString() ?? '',
-        type: direct['type']?.toString() ?? 'comic',
-        genres: direct['genres'] as List? ?? [],
-        description: direct['description']?.toString() ?? '',
-      ));
-    } catch (_) {}
-    final html = await HtmlClient.getHtml('$_base/series');
-    final all = _parseSeriesList(html);
-    final q = query.toLowerCase();
-    final filtered = all
-        .where((item) =>
-            (item['title'] ?? '').toString().toLowerCase().contains(q) ||
-            (item['url'] ?? '').toString().toLowerCase().contains(slug))
-        .toList();
-    final merged = [...tried, ...filtered];
+    final q = query.toLowerCase().trim();
+    final filtered = searched.isNotEmpty
+        ? all
+        : all.where((entry) {
+            final title = (entry['title'] ?? '').toString().toLowerCase();
+            final url = (entry['url'] ?? '').toString().toLowerCase();
+            return title.contains(q) || url.contains(slug);
+          }).toList();
+    final merged = [...filtered];
     final seen = <String>{};
     return merged.where((e) => seen.add((e['url'] ?? '').toString())).toList();
   }
@@ -91,7 +88,28 @@ class OlympusSource extends ContentSource {
           RegExp(r'النوع:.*?>([^<]+)<'),
         ]) ??
         'comic';
-    final chapters = _parseChapters(html, url);
+    final chapterPages = <String>{url};
+    chapterPages.addAll(_chapterPageUrls(html, url));
+    final chapterHtml = <String>[html];
+    final visited = <String>{url};
+    while (chapterPages.isNotEmpty) {
+      final page = chapterPages.first;
+      chapterPages.remove(page);
+      if (!visited.add(page)) continue;
+      final pageHtml = await HtmlClient.getHtml(page);
+      chapterHtml.add(pageHtml);
+      chapterPages.addAll(_chapterPageUrls(pageHtml, url)
+          .where((next) => !visited.contains(next)));
+    }
+    final chapters = <Map<String, dynamic>>[];
+    for (final pageHtml in chapterHtml) {
+      chapters.addAll(_parseChapters(pageHtml, url));
+    }
+    final uniqueChapters = <String, Map<String, dynamic>>{
+      for (final chapter in chapters) chapter['url'].toString(): chapter,
+    }.values.toList()
+      ..sort((a, b) =>
+          (b['number'] as double).compareTo(a['number'] as double));
     return {
       ...item(
         title: title,
@@ -106,7 +124,7 @@ class OlympusSource extends ContentSource {
         description: description,
       ),
       'synopsis': description,
-      'chapters': chapters,
+      'chapters': uniqueChapters,
     };
   }
 
@@ -279,5 +297,18 @@ class OlympusSource extends ContentSource {
     chapters.sort((a, b) =>
         (b['number'] as double).compareTo(a['number'] as double));
     return chapters;
+  }
+
+  Set<String> _chapterPageUrls(String html, String seriesUrl) {
+    final pages = <String>{};
+    final slug = Uri.parse(seriesUrl).path.replaceAll(RegExp(r'/$'), '');
+    for (final match in RegExp(
+      r'''href=["']([^"']*page=\d+[^"']*)["']''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      final url = HtmlParse.absUrl(_base, match.group(1)!);
+      if (url.contains(slug)) pages.add(url);
+    }
+    return pages;
   }
 }

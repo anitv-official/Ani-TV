@@ -19,7 +19,7 @@ class AzorafySource extends ContentSource {
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
     final html = await HtmlClient.getHtml(
-        '$_base/?s=${Uri.encodeQueryComponent(query)}');
+        '$_base/series/?searchTerm=${Uri.encodeQueryComponent(query)}');
     return _parseCards(html);
   }
 
@@ -40,12 +40,8 @@ class AzorafySource extends ContentSource {
           ]) ??
           'بدون عنوان',
     );
-    final image = HtmlParse.meta(html, 'og:image') ??
-        HtmlParse.firstMatch(html, [
-              RegExp(r'<img[^>]+src="(https://storage\.azorafly\.com/[^"]+)"',
-                  caseSensitive: false)
-            ]) ??
-            '';
+    // og:image is often a generated social preview; prefer the actual cover.
+    final image = _coverImage(html);
     final description = HtmlParse.stripTags(
       HtmlParse.meta(html, 'og:description') ?? '',
     );
@@ -82,7 +78,7 @@ class AzorafySource extends ContentSource {
     final images = <Map<String, dynamic>>[];
     final seen = <String>{};
     for (final match in RegExp(
-      r'<img[^>]+src="(https://storage\.azorafly\.com/upload/series/[^"]+)"',
+      r'<img[^>]+(?:src|data-src|data-lazy-src|data-original)="(https://storage\.azorafly\.com/upload/series/[^"]+)"',
       caseSensitive: false,
     ).allMatches(html)) {
       final src = match.group(1)!;
@@ -107,6 +103,17 @@ class AzorafySource extends ContentSource {
       'images': images,
       'chapter_number': SourceUtils.chapterNumber(url) ?? 0,
     };
+  }
+
+  String _coverImage(String html) {
+    final storage = HtmlParse.firstMatch(html, [
+      RegExp(
+        r'<img[^>]+(?:src|data-src|data-lazy-src)="(https://storage\.azorafly\.com/[^" ]+)"',
+        caseSensitive: false,
+      ),
+    ]);
+    if (storage != null && !storage.contains('/featured/')) return storage;
+    return storage ?? HtmlParse.meta(html, 'og:image') ?? '';
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {
