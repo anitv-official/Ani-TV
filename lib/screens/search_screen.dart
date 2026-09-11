@@ -967,7 +967,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   bool _isInAppSource(String sourceId) {
-    return sourceId == 'risto' || sourceId == 'anime3rb';
+    return sourceId == 'risto' || sourceId == 'anime3rb' || sourceId == 'anime4up';
   }
 
   void _playVideo(BuildContext context, String url, String quality, Map<String, dynamic> episodeData, Map<String, dynamic> historyItem, {bool popSheet = true}) {

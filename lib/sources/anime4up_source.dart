@@ -2,7 +2,11 @@ import 'html_client.dart';
 import 'source_base.dart';
 
 class Anime4UpSource extends ContentSource {
-  static const String _base = 'https://www.anime4up.bond';
+  // The .bond host is now only a landing page. The catalogue and episode
+  // pages are served from the current WordPress host, while the list page is
+  // also available through the rotating 4b gateway.
+  static const String _base = 'https://w1.anime4up.rest';
+  static const String _catalogBase = 'https://4b.1i2cqoi.shop';
 
   @override String get id => 'anime4up';
   @override String get name => 'Anime4Up';
@@ -13,6 +17,7 @@ class Anime4UpSource extends ContentSource {
   Future<List<Map<String, dynamic>>> search(String query) async {
     final urls = [
       '$_base/?search_param=animes&s=${Uri.encodeQueryComponent(query)}',
+      '$_catalogBase/?search_param=animes&s=${Uri.encodeQueryComponent(query)}',
       '$_base/?s=${Uri.encodeQueryComponent(query)}',
     ];
     for (final url in urls) {
@@ -27,8 +32,8 @@ class Anime4UpSource extends ContentSource {
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
     final urls = page <= 1
-        ? ['$_base/', '$_base/قائمة-الانمي/']
-        : ['$_base/قائمة-الانمي/page/$page/', '$_base/page/$page/'];
+        ? ['$_catalogBase/قائمة-الانمي/', '$_base/قائمة-الانمي/', '$_base/home8/']
+        : ['$_catalogBase/قائمة-الانمي/page/$page/', '$_base/قائمة-الانمي/page/$page/', '$_base/page/$page/'];
     for (final url in urls) {
       try {
         final items = _parseCards(await HtmlClient.getHtml(url));
@@ -69,7 +74,7 @@ class Anime4UpSource extends ContentSource {
       }
     }
     collect(RegExp(r'''<iframe[^>]+src=["']([^"']+)["']''', caseSensitive: false));
-    collect(RegExp(r'''data-(?:src|url|embed|link|video)=["']([^"']+)["']''', caseSensitive: false));
+    collect(RegExp(r'''data-(?:src|url|embed|link|video|watch)=["']([^"']+)["']''', caseSensitive: false));
     candidates.addAll(SourceUtils.extractMediaUrls(html, url));
     final seen = <String>{};
     final servers = candidates.where((value) => value.isNotEmpty && seen.add(value) && !_isNoise(value)).toList();
@@ -103,22 +108,21 @@ class Anime4UpSource extends ContentSource {
   List<Map<String, dynamic>> _parseCards(String html) {
     final items = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final pattern = RegExp(r'''<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]{0,1800}?)</a>''', caseSensitive: false);
+    // Current Anime4up cards use .anime-card-themex and keep the poster in
+    // data-image. Restrict parsing to /anime/ links so gateway/navigation
+    // links cannot be displayed as anime titles.
+    final pattern = RegExp(r'''<div[^>]+class=["'][^"']*anime-card-themex[^"']*["'][\s\S]{0,2600}?data-image=["']([^"']+)["'][\s\S]{0,700}?<a[^>]+href=["']([^"']*/anime/[^"']+)["'][^>]*(?:aria-label=["']([^"']+)["']|>[\s\S]*?<h3[^>]*>[\s\S]*?<a[^>]*>([\s\S]*?)</a>)''', caseSensitive: false);
     for (final match in pattern.allMatches(html)) {
-      final url = HtmlParse.absUrl(_base, match.group(1)!);
-      if (!hosts.any((host) => url.contains(host)) || _isUtility(url) || !seen.add(url)) continue;
-      final block = match.group(2)!;
-      final image = HtmlParse.firstMatch(block, [RegExp(r'''(?:src|data-src|data-lazy-src)=["']([^"']+)["']''', caseSensitive: false)]) ?? '';
-      final title = HtmlParse.stripTags(HtmlParse.firstMatch(block, [
-        RegExp(r'<h[1-5][^>]*>([\s\S]*?)</h[1-5]>', caseSensitive: false),
-        RegExp(r'''(?:alt|title)=["']([^"']+)["']''', caseSensitive: false),
-      ]) ?? '');
+      final url = HtmlParse.absUrl(_base, match.group(2)!);
+      if (!hosts.any((host) => url.contains(host)) || !url.contains('/anime/') || !seen.add(url)) continue;
+      final image = HtmlParse.absUrl(url, match.group(1)!);
+      final title = HtmlParse.stripTags(match.group(3) ?? match.group(4) ?? '');
       if (title.isEmpty || image.toLowerCase().contains('logo')) continue;
       items.add(item(title: title, url: url, image: HtmlParse.absUrl(url, image), type: 'anime'));
     }
     for (final link in HtmlParse.markdownLinks(html)) {
       final url = link['url'] ?? '';
-      if (!hosts.any((host) => url.contains(host)) || _isUtility(url) || !seen.add(url)) continue;
+      if (!hosts.any((host) => url.contains(host)) || !url.contains('/anime/') || !seen.add(url)) continue;
       items.add(item(title: link['title'] ?? url, url: url, type: 'anime'));
     }
     return items;

@@ -101,7 +101,8 @@ class Anime3rbSource extends ContentSource {
       final resolved = HtmlParse.absUrl(url, raw);
       if (resolved.isEmpty || !seen.add(resolved)) return;
       final host = HtmlParse.hostOf(resolved);
-      if (host.contains('anime3rb.com') ||
+      final path = Uri.tryParse(resolved)?.path.toLowerCase() ?? '';
+      if ((host.contains('anime3rb.com') && !path.startsWith('/embed/')) ||
           host.contains('facebook.com') ||
           host.contains('twitter.com')) {
         return;
@@ -144,6 +145,14 @@ class Anime3rbSource extends ContentSource {
       caseSensitive: false,
     ).allMatches(html)) {
       add(match.group(1)!, 'مشغل خارجي');
+    }
+    // The current page emits a signed internal /embed/<uuid> player rather
+    // than an iframe. It must be retained and opened by the video WebView.
+    for (final match in RegExp(
+      r'''(?:https?:\/\/anime3rb\.com)?\/embed\/[A-Za-z0-9-]+(?:\?[^"'\s<]+)?''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      add(match.group(0)!, 'Anime3rb • مشغل');
     }
     if (servers.isEmpty) {
       throw Exception('Anime3rb: لم يتم العثور على رابط تشغيل صالح للحلقة');
