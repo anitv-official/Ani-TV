@@ -1,6 +1,5 @@
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'dart:math';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
+import '../services/content_link_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
@@ -211,7 +211,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<void> _shareAnime(String title) async {
-    await Share.share('$title\n${widget.url}', subject: title);
+    await ContentLinkService.share(type: 'anime', title: title, sourceUrl: widget.url);
   }
 
   Future<void> _copyAnimeLink() async {

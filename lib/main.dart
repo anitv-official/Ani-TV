@@ -4,6 +4,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/password_reset_screen.dart';
+import 'screens/anime_details_screen.dart';
+import 'screens/comic_details_screen.dart';
+import 'screens/manga_reader_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -67,6 +70,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   static const _deepLinkChannel = MethodChannel('com.anitv.app/deeplink');
   String? _lastRecoveryLink;
+  String? _lastContentLink;
 
   @override
   void initState() {
@@ -84,14 +88,34 @@ class _MyAppState extends State<MyApp> {
     if (uri == null) return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
-    if (userId == null || secret == null || userId.isEmpty || secret.isEmpty) return;
-    final key = '$userId:$secret';
-    if (_lastRecoveryLink == key) return;
-    _lastRecoveryLink = key;
+    if (userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
+      final key = '$userId:$secret';
+      if (_lastRecoveryLink == key) return;
+      _lastRecoveryLink = key;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final navigator = appNavigatorKey.currentState;
+        if (navigator != null) {
+          navigator.push(MaterialPageRoute(builder: (_) => PasswordResetScreen(userId: userId, secret: secret)));
+        }
+      });
+      return;
+    }
+    final type = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
+    final sourceUrl = uri.queryParameters['url'];
+    if (sourceUrl == null || sourceUrl.isEmpty || !{'anime', 'episode', 'manga', 'chapter'}.contains(type)) return;
+    final key = '${type}:$sourceUrl';
+    if (_lastContentLink == key) return;
+    _lastContentLink = key;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final navigator = appNavigatorKey.currentState;
       if (navigator != null) {
-        navigator.push(MaterialPageRoute(builder: (_) => PasswordResetScreen(userId: userId, secret: secret)));
+        final Widget destination = switch (type) {
+          'anime' || 'episode' => AnimeDetailsScreen(url: sourceUrl),
+          'manga' => ComicDetailsScreen(url: sourceUrl),
+          'chapter' => MangaReaderScreen(url: sourceUrl),
+          _ => AnimeDetailsScreen(url: sourceUrl),
+        };
+        navigator.push(MaterialPageRoute(builder: (_) => destination));
       }
     });
   }

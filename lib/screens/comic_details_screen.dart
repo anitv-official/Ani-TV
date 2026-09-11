@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
+import '../services/content_link_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'manga_reader_screen.dart';
@@ -162,7 +162,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
 
   Future<void> _shareComic() async {
     final title = _comicData?['title'] ?? 'مانجا';
-    await Share.share('$title\n${widget.url}', subject: title.toString());
+    await ContentLinkService.share(type: 'manga', title: title.toString(), sourceUrl: widget.url);
   }
 
   Future<void> _copyComicLink() async {
