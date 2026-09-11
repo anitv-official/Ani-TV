@@ -34,12 +34,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void initState() {
     super.initState();
     _currentTabIndex = widget.initialIsAnime ? 0 : 1;
-    
+
     // Initialize AppStateProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AppStateProvider>(context, listen: false).initialize();
     });
-    
+
     _loadData();
   }
 
@@ -122,24 +122,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
               const SizedBox(height: 16),
               // Header
               _buildHeader(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Custom Toggle
               _buildToggleButtons(),
-              
+
               const SizedBox(height: 24),
 
               // Section Title
               Text(
-                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'Latest Komik',
+                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث الكوميكس',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
 
               // Content Grid
@@ -226,13 +226,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Widget _buildContentGrid() {
     if (isLoadingContent) {
-      return Center(child: CustomLoadingWidget(message: "Exploring content...", size: 100));
+      return Center(child: const CustomLoadingWidget(message: 'جارٍ تحميل المحتوى...', size: 100));
     }
 
     final items = _currentTabIndex == 0 ? latestAnime : latestComics;
-    
+
     if (items.isEmpty) {
-      return Center(child: Text('Ga Ketemu Nih...', style: TextStyle(color: Colors.white)));
+      return Center(child: const Text('لا يوجد محتوى متاح حاليًا', style: TextStyle(color: Colors.white)));
     }
 
     return LayoutBuilder(
@@ -255,7 +255,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
-            childAspectRatio: 0.7, 
+            childAspectRatio: 0.7,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {

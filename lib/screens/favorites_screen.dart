@@ -24,7 +24,7 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen> {
   // Using a custom index state instead of TabController for custom toggle
   int _currentTabIndex = 0; // 0 for Anime, 1 for Komik
-  
+
   List<dynamic> favoriteAnime = [];
   List<dynamic> favoriteComics = [];
   bool isLoading = true;
@@ -54,7 +54,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     try {
       final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
       await appStateProvider.initialize();
-      
+
       setState(() {
         favoriteAnime = appStateProvider.favoriteAnime;
         favoriteComics = appStateProvider.favoriteComics;
@@ -70,7 +70,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     try {
       final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
       await appStateProvider.removeFromFavorites(id, isAnime);
-      
+
       setState(() {
         if (isAnime) {
           favoriteAnime = appStateProvider.favoriteAnime;
@@ -111,7 +111,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-              child: _isSearching 
+              child: _isSearching
               ? Row(
                   children: [
                     Expanded(
@@ -185,23 +185,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 children: [
                   Expanded(
                     child: _buildToggleItem(
-                      label: 'ANIME', 
-                      isActive: _currentTabIndex == 0, 
+                      label: 'أنمي',
+                      isActive: _currentTabIndex == 0,
                       onTap: () => setState(() => _currentTabIndex = 0)
                     )
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildToggleItem(
-                      label: 'KOMIK', // Using "KOMIK" as requested in image, code uses "comic" internally
-                      isActive: _currentTabIndex == 1, 
+                      label: 'كوميكس', // Using "KOMIK" as requested in image, code uses "comic" internally
+                      isActive: _currentTabIndex == 1,
                       onTap: () => setState(() => _currentTabIndex = 1)
                     )
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
             // Content
@@ -229,7 +229,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         child: Text(
           label,
           style: const TextStyle(
-            color: Colors.white, 
+            color: Colors.white,
             fontWeight: FontWeight.bold
           ),
         ),
@@ -255,11 +255,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         } else {
           crossAxisCount = 3; // Mobile default - 3 columns is better for posters, or 2 if they are wide
         }
-        
+
         // Use 2 columns for very small mobile screens if 3 is too crowded, but user likely wants 3
         // Actually, previous code was fixed at 2. Let's stick closer to that for mobile.
         if (constraints.maxWidth < 400) {
-           crossAxisCount = 2; 
+           crossAxisCount = 2;
         }
 
         return GridView.builder(
@@ -293,7 +293,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'Belum ada Favorit',
+            'لا توجد عناصر مفضلة',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -302,9 +302,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            isAnime 
-              ? 'Tambahkan anime ke favoritmu\nagar muncul di sini'
-              : 'Tambahkan komik ke favoritmu\nagar muncul di sini',
+            isAnime
+              ? 'أضف أنمي إلى المفضلة\nليظهر هنا'
+              : 'أضف كوميكس إلى المفضلة\nليظهر هنا',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[400],
@@ -320,7 +320,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               onPressed: () {
                  // Navigate to ExploreScreen with the correct tab selected
                  Navigator.push(
-                   context, 
+                   context,
                    MaterialPageRoute(
                      builder: (_) => ExploreScreen(initialIsAnime: isAnime)
                    )

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../screens/home_screen.dart';
@@ -27,9 +26,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool isLoading = true;
   String _apiBaseUrl = '';
   String _appVersionUrl = '';
-  
+
   bool _streamCellular = false;
   bool _showMatureContent = false;
+  bool _notificationsEnabled = true;
+  String _audioLanguage = 'اليابانية';
+  String _subtitleLanguage = 'الإنجليزية';
 
   @override
   void initState() {
@@ -67,6 +69,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _streamCellular = prefs.getBool('stream_cellular') ?? false;
       _showMatureContent = prefs.getBool('show_mature_content') ?? false;
+      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _audioLanguage = prefs.getString('audio_language') ?? 'اليابانية';
+      _subtitleLanguage = prefs.getString('subtitle_language') ?? 'الإنجليزية';
     });
   }
 
@@ -205,6 +210,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showLanguageDialog(bool audio) {
+    final options = audio ? ['اليابانية', 'العربية', 'الإنجليزية'] : ['الإنجليزية', 'العربية', 'اليابانية'];
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        title: Text(audio ? 'لغة الصوت' : 'لغة الترجمة', style: const TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((option) => RadioListTile<String>(
+            value: option,
+            groupValue: audio ? _audioLanguage : _subtitleLanguage,
+            activeColor: AppTheme.primaryColor,
+            title: Text(option, style: const TextStyle(color: Colors.white)),
+            onChanged: (value) async {
+              if (value == null) return;
+              setState(() { if (audio) { _audioLanguage = value; } else { _subtitleLanguage = value; } });
+              await _saveStringPreference(audio ? 'audio_language' : 'subtitle_language', value);
+              if (mounted) Navigator.pop(context);
+            },
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveStringPreference(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
   void _showChangePasswordDialog() => _showEditValueDialog(
     title: 'تغيير كلمة المرور', initial: '', obscure: true,
     onSave: (value) { if (value.length < 6) { _showInfoDialog('كلمة المرور قصيرة', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.'); } else { _showInfoDialog('تغيير كلمة المرور', 'لا يمكن تغيير كلمة المرور من هذا الإصدار لأن المصادقة الحالية لا توفر هذه العملية.'); } },
@@ -233,19 +269,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
-                    // Avatar
-                    SizedBox(
-                      width: 160,
-                      height: 160,
-                      child: SvgPicture.asset(
-                        'assets/images/anime_profile.svg',
-                        fit: BoxFit.contain,
-                      ),
+
+                    // Neutral avatar: no profile image is shown unless Appwrite provides one.
+                    CircleAvatar(
+                      radius: 64,
+                      backgroundColor: AppTheme.surfaceColor,
+                      child: Icon(Icons.person_outline, size: 72, color: AppTheme.textSecondaryColor),
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     if (!isLoggedIn)
                       _buildSectionContainer(
                         children: [
@@ -261,18 +294,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     else
                       _buildSectionContainer(
                         children: [
-                          _buildMenuItem('الاشتراك', onTap: () => _showInfoDialog('الاشتراك', 'ستتوفر خطط الاشتراك قريبًا.')),
-                          _buildMenuItem('تغيير البريد الإلكتروني', trailing: email, onTap: _showChangeEmailDialog),
-                          _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
+                          _buildMenuItem('بيانات الحساب', trailing: email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
                           _buildMenuItem('إعدادات واجهة API', onTap: _showEditApiDialog),
                         ],
                       ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Preferences Title
                     Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: Alignment.centerRight,
                       child: Padding(
                         padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
                         child: Text(
@@ -285,19 +316,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                    
+
                     // Preferences Section
                     _buildSectionContainer(
                       children: [
-                        _buildMenuItem('لغة الصوت', trailing: 'اليابانية', onTap: () => _showInfoDialog('لغة الصوت', 'اختيار اللغة محفوظ محليًا.')),
-                        _buildMenuItem('لغة الترجمة', trailing: 'الإنجليزية', onTap: () => _showInfoDialog('لغة الترجمة', 'اختيار اللغة محفوظ محليًا.')),
+                        _buildMenuItem('لغة الصوت', trailing: _audioLanguage, onTap: () => _showLanguageDialog(true)),
+                        _buildMenuItem('لغة الترجمة', trailing: _subtitleLanguage, onTap: () => _showLanguageDialog(false)),
+                        _buildSwitchItem('إشعارات التحديث', _notificationsEnabled, (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
                         _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
                         _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Account action
                     Center(
                       child: ElevatedButton(
@@ -305,7 +337,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ? _showLogoutDialog
                             : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE53935), // merah
+                          backgroundColor: AppTheme.primaryColor, // merah
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 40, // lebar tombol
@@ -336,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildSectionContainer({required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -405,7 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: value,
             onChanged: onChanged,
             activeColor: Colors.white,
-            activeTrackColor: const Color(0xFFE53935), // Red track
+            activeTrackColor: AppTheme.primaryColor, // Red track
             inactiveThumbColor: Colors.white,
             inactiveTrackColor: Colors.grey[700],
           ),
@@ -413,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   void _showLogoutDialog() {
     showDialog(
       context: context,
