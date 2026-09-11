@@ -1,3 +1,5 @@
+import 'html_client.dart';
+
 abstract class ContentSource {
   String get id;
   String get name;
