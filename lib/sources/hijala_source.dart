@@ -144,7 +144,7 @@ class HijalaSource extends ContentSource {
       for (final chapter in _parseChapters(html, seriesUrl)) {
         chapters[chapter['url'].toString()] = chapter;
       }
-      for (final match in RegExp(r'href=["\']([^"\']*(?:/page/\d+|[?&](?:paged|page)=\d+)[^"\']*)["\']', caseSensitive: false).allMatches(html)) {
+      for (final match in RegExp("""href=["']([^"']*(?:/page/\\d+|[?&](?:paged|page)=\\d+)[^"']*)["']""", caseSensitive: false).allMatches(html)) {
         final next = HtmlParse.absUrl(seriesUrl, match.group(1)!);
         if (!visited.contains(next) && next.contains('hijala.com')) pages.add(next);
       }
@@ -159,7 +159,7 @@ class HijalaSource extends ContentSource {
     final seen = <String>{};
     final slug = Uri.parse(seriesUrl).pathSegments.where((s) => s.isNotEmpty).last;
     final pattern = RegExp(
-      r'href=["\']([^"\']*hijala\.com/' + RegExp.escape(slug) + r'(?:/|[-_])[^"\']*?)(?:["\'])',
+      """href=["']([^"']*hijala\\.com/""" + RegExp.escape(slug) + """(?:/|[-_])[^"']*?)(?:["'])""",
       caseSensitive: false,
     );
     for (final match in pattern.allMatches(html)) {
@@ -173,8 +173,8 @@ class HijalaSource extends ContentSource {
 
   String _coverImage(String html, String baseUrl) {
     final raw = HtmlParse.meta(html, 'og:image') ?? HtmlParse.firstMatch(html, [
-      RegExp(r'<img[^>]+(?:data-src|data-lazy-src|src)=["\']([^"\']+)', caseSensitive: false),
-      RegExp(r'background-image\s*:\s*url\((["\']?)([^)"\']+)\1\)', caseSensitive: false),
+      RegExp("""<img[^>]+(?:data-src|data-lazy-src|src)=["']([^"']+)""", caseSensitive: false),
+      RegExp("""background-image\\s*:\\s*url\\((["']?)([^)"']+)\\1\\)""", caseSensitive: false),
     ]) ?? '';
     final value = raw.trim();
     return value.isEmpty ? '' : HtmlParse.absUrl(baseUrl, value);

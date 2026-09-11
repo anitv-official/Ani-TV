@@ -167,7 +167,7 @@ class OlympusSource extends ContentSource {
   String _coverImage(String raw, String baseUrl) {
     var value = HtmlParse.decode(raw).trim();
     if (value.contains(',')) value = value.split(',').first.trim().split(' ').first;
-    value = value.replaceAll(RegExp(r'[\"\'()]'), '');
+    value = value.replaceAll(RegExp("""[\"'()]"""), '');
     return value.isEmpty ? '' : HtmlParse.absUrl(baseUrl, value);
   }
 
