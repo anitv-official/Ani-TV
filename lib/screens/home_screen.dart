@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        extendBody: true, // Important for floating nav bar
+        extendBody: false,
         // Desktop: Row (SideNav + Body) vs Mobile: Body only
         body: isDesktop
             ? Row(
