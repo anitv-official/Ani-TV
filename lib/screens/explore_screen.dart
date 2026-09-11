@@ -25,7 +25,7 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  int _currentTabIndex = 0; // 0: Anime, 1: Komik
+  int _currentTabIndex = 0; // 0: anime, 1: manga
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
   bool isLoadingContent = true;
@@ -132,7 +132,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
               // Section Title
               Text(
-                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث الكوميكس',
+                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث المانجا',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -193,7 +193,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildToggleItem(
-            label: 'KOMIK',
+            label: 'مانجا',
             isActive: _currentTabIndex == 1,
             onTap: () => setState(() => _currentTabIndex = 1),
           ),

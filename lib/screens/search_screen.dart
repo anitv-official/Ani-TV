@@ -39,7 +39,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   // Redesign States
   bool _isSearching = false;
-  bool _showAnimeHistory = true; // Toggle between Anime and Komik history
+  bool _showAnimeHistory = true; // Toggle between anime and manga history
   Timer? _debounce;
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -368,7 +368,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           SizedBox(width: 16),
           Expanded(
             child: _buildToggleItem(
-              label: 'KOMIK',
+              label: 'مانجا',
               isActive: !_showAnimeHistory,
               onTap: () => setState(() => _showAnimeHistory = false),
             ),
@@ -601,7 +601,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         filled: true,
         fillColor: AppTheme.surfaceColor,
         prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondaryColor),
-        hintText: 'ابحث عن أنمي أو كوميكس...',
+        hintText: 'ابحث عن أنمي أو مانجا...',
         hintStyle: TextStyle(color: AppTheme.textSecondaryColor.withOpacity(0.7)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30), // Pill shape for search bar

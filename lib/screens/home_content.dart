@@ -290,12 +290,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                       ),
                       Row(
                         children: [
-                          IconButton(
-                            tooltip: 'بحث',
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-                            icon: const Icon(Icons.search, color: Colors.white, size: 24),
-                          ),
-                          SizedBox(width: 16),
                           GestureDetector(
                             onTap: () {
                               if (_isUpdateAvailable) {
@@ -330,6 +324,29 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         ],
                       ),
                     ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+                    child: Container(
+                      height: 50,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(.12),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withOpacity(.16)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
+                        const SizedBox(width: 10),
+                        Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 15)),
+                        const Spacer(),
+                        Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
+                      ]),
+                    ),
                   ),
                 ),
 
@@ -387,8 +404,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                 padding: EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              child: Text(
-                                item['type'] == 'comic' ? 'Read' : 'Play', 
+                                child: Text(
+                                item['type'] == 'comic' ? 'اقرأ' : 'شاهد',
                                 style: const TextStyle(
                                   fontSize: 16, 
                                   fontWeight: FontWeight.bold, 
@@ -501,7 +518,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     child: Container(
                       alignment: Alignment.center,
                       child: Text(
-                        'KOMIK',
+                        'مانجا',
                         style: TextStyle(
                           color: Colors.white, 
                           fontWeight: FontWeight.bold,

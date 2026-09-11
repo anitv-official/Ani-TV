@@ -30,8 +30,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _streamCellular = false;
   bool _showMatureContent = false;
   bool _notificationsEnabled = true;
-  String _audioLanguage = 'اليابانية';
-  String _subtitleLanguage = 'الإنجليزية';
 
   @override
   void initState() {
@@ -70,8 +68,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _streamCellular = prefs.getBool('stream_cellular') ?? false;
       _showMatureContent = prefs.getBool('show_mature_content') ?? false;
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _audioLanguage = prefs.getString('audio_language') ?? 'اليابانية';
-      _subtitleLanguage = prefs.getString('subtitle_language') ?? 'الإنجليزية';
     });
   }
 
@@ -175,6 +171,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showSourcesDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        title: const Text('مصادر التطبيق', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('مصدر المحتوى', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            SelectableText(_apiBaseUrl.isEmpty ? 'جارٍ التحميل...' : _apiBaseUrl, style: TextStyle(color: Colors.grey[300])),
+            const SizedBox(height: 16),
+            const Text('مصدر تحديثات التطبيق', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            SelectableText(_appVersionUrl.isEmpty ? 'جارٍ التحميل...' : _appVersionUrl, style: TextStyle(color: Colors.grey[300])),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسنًا'))],
+      ),
+    );
+  }
+
   void _showInfoDialog(String title, String message) {
     showDialog<void>(
       context: context,
@@ -208,37 +228,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'تغيير البريد الإلكتروني',
       'لا يمكن تغيير البريد الإلكتروني من هذا الإصدار لأن العملية تحتاج إلى إعادة التحقق من كلمة المرور عبر خدمة الحساب.',
     );
-  }
-
-  void _showLanguageDialog(bool audio) {
-    final options = audio ? ['اليابانية', 'العربية', 'الإنجليزية'] : ['الإنجليزية', 'العربية', 'اليابانية'];
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(audio ? 'لغة الصوت' : 'لغة الترجمة', style: const TextStyle(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: options.map((option) => RadioListTile<String>(
-            value: option,
-            groupValue: audio ? _audioLanguage : _subtitleLanguage,
-            activeColor: AppTheme.primaryColor,
-            title: Text(option, style: const TextStyle(color: Colors.white)),
-            onChanged: (value) async {
-              if (value == null) return;
-              setState(() { if (audio) { _audioLanguage = value; } else { _subtitleLanguage = value; } });
-              await _saveStringPreference(audio ? 'audio_language' : 'subtitle_language', value);
-              if (mounted) Navigator.pop(context);
-            },
-          )).toList(),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveStringPreference(String key, String value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
   }
 
   void _showChangePasswordDialog() => _showEditValueDialog(
@@ -295,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _buildSectionContainer(
                         children: [
                           _buildMenuItem('بيانات الحساب', trailing: email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
-                          _buildMenuItem('إعدادات واجهة API', onTap: _showEditApiDialog),
+                          _buildMenuItem('المصادر', onTap: _showSourcesDialog),
                         ],
                       ),
 
@@ -320,8 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Preferences Section
                     _buildSectionContainer(
                       children: [
-                        _buildMenuItem('لغة الصوت', trailing: _audioLanguage, onTap: () => _showLanguageDialog(true)),
-                        _buildMenuItem('لغة الترجمة', trailing: _subtitleLanguage, onTap: () => _showLanguageDialog(false)),
+                        _buildMenuItem('المصادر', onTap: _showSourcesDialog),
                         _buildSwitchItem('إشعارات التحديث', _notificationsEnabled, (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
                         _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
                         _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),

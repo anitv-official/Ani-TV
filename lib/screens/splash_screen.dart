@@ -190,7 +190,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               SizedBox(height: 8),
               Text(
-                'Watch Anime & Read Komik',
+                'شاهد الأنمي واقرأ المانجا',
                 style: TextStyle(
                   fontSize: 16,
                   color: AppTheme.textSecondaryColor,

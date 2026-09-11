@@ -23,7 +23,7 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
   // Using a custom index state instead of TabController for custom toggle
-  int _currentTabIndex = 0; // 0 for Anime, 1 for Komik
+  int _currentTabIndex = 0; // 0 for anime, 1 for manga
 
   List<dynamic> favoriteAnime = [];
   List<dynamic> favoriteComics = [];
@@ -193,7 +193,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildToggleItem(
-                      label: 'كوميكس', // Using "KOMIK" as requested in image, code uses "comic" internally
+                      label: 'مانجا',
                       isActive: _currentTabIndex == 1,
                       onTap: () => setState(() => _currentTabIndex = 1)
                     )
@@ -304,7 +304,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           Text(
             isAnime
               ? 'أضف أنمي إلى المفضلة\nليظهر هنا'
-              : 'أضف كوميكس إلى المفضلة\nليظهر هنا',
+              : 'أضف مانجا إلى المفضلة\nليظهر هنا',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[400],

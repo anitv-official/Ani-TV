@@ -7,7 +7,6 @@ import '../widgets/update_bottom_sheet.dart';
 import '../services/app_version_service.dart';
 import '../services/ad_service.dart';
 import 'home_content.dart';
-import 'search_screen.dart';
 import 'explore_screen.dart';
 import 'favorites_screen.dart';
 import 'profile_screen.dart';
@@ -75,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         preloadedComics: widget.preloadedComics,
         preloadedFeaturedContent: widget.preloadedFeaturedContent,
       ),
-      SearchScreen(),
       ExploreScreen(showBackButton: false),
       FavoritesScreen(showBackButton: false), // Hide back button for bottom nav
       ProfileScreen(),
@@ -180,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        extendBody: false,
+        extendBody: true,
         // Desktop: Row (SideNav + Body) vs Mobile: Body only
         body: isDesktop
             ? Row(

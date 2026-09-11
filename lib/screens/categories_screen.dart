@@ -43,7 +43,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ),
                       const SizedBox(width: 16),
                       const Text(
-                        'Category',
+                        'التصنيفات',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -97,7 +97,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          'KOMIK',
+                          'مانجا',
                           style: TextStyle(
                             color: !_isAnimeSelected ? Colors.white : Colors.grey,
                             fontWeight: FontWeight.bold,
@@ -182,7 +182,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Category',
+                  'تصنيف',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -194,7 +194,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Soon',
+                  'قريبًا',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 14,
