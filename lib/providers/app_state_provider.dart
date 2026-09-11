@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../services/appwrite_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
   // User data is empty until a real authenticated user is available.
@@ -8,6 +9,7 @@ class AppStateProvider extends ChangeNotifier {
   String _email = '';
   bool _isLoggedIn = false;
   bool _isDarkMode = true;
+  final AppwriteService _appwrite = AppwriteService.instance;
   
   // App data
   List<dynamic> _favoriteAnime = [];
@@ -44,17 +46,51 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-      _username = _isLoggedIn ? (prefs.getString('username') ?? '').trim() : '';
-      _email = _isLoggedIn ? (prefs.getString('email') ?? '').trim() : '';
-      if (_isLoggedIn && _username.isEmpty && _email.isEmpty) {
-        _isLoggedIn = false;
-        await prefs.setBool('isLoggedIn', false);
-      }
       _isDarkMode = prefs.getBool('dark_mode') ?? true;
+      final user = await _appwrite.getCurrentUser();
+      _setUserFromAppwrite(user);
       notifyListeners();
-    } catch (e) {
-      _setErrorMessage('تعذر تحميل بيانات الحساب. حاول مرة أخرى.');
+    } catch (_) {
+      _clearUser();
+      _setErrorMessage('تعذر التحقق من جلسة الحساب. حاول مرة أخرى.');
+    }
+  }
+
+  void _setUserFromAppwrite(dynamic user) {
+    if (user == null) {
+      _clearUser();
+      return;
+    }
+    _username = (user.name as String?)?.trim() ?? '';
+    _email = (user.email as String?)?.trim() ?? '';
+    _isLoggedIn = true;
+  }
+
+  void _clearUser() {
+    _username = '';
+    _email = '';
+    _isLoggedIn = false;
+  }
+
+  Future<void> login({required String email, required String password}) async {
+    try {
+      final user = await _appwrite.login(email: email, password: password);
+      _setUserFromAppwrite(user);
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
+    }
+  }
+
+  Future<void> register({required String email, required String password, required String name}) async {
+    try {
+      final user = await _appwrite.register(email: email, password: password, name: name);
+      _setUserFromAppwrite(user);
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
     }
   }
   
@@ -95,18 +131,12 @@ class AppStateProvider extends ChangeNotifier {
   
   Future<void> logout() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('username');
-      await prefs.remove('email');
-      await prefs.remove('isLoggedIn');
-      
-      _username = '';
-      _email = '';
-      _isLoggedIn = false;
-      
+      await _appwrite.logout();
+      _clearUser();
       notifyListeners();
     } catch (e) {
       _setErrorMessage('تعذر تسجيل الخروج. حاول مرة أخرى.');
+      rethrow;
     }
   }
   

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/appwrite_service.dart';
 import 'package:provider/provider.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
@@ -34,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedEmail = prefs.getString('email');
+    final savedEmail = prefs.getString('remembered_email');
     if (savedEmail != null && savedEmail.isNotEmpty && mounted) {
       setState(() {
         _emailController.text = savedEmail;
@@ -47,25 +48,19 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await Future.delayed(const Duration(seconds: 2));
+        final identity = _emailController.text.trim();
+        final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+        await appStateProvider.login(
+          email: identity,
+          password: _passwordController.text,
+        );
         if (!mounted) return;
         final prefs = await SharedPreferences.getInstance();
-        final identity = _emailController.text.trim();
-        final username = identity.contains('@') ? identity.split('@').first : identity;
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('username', username);
-        if (identity.contains('@')) await prefs.setString('email', identity);
         if (_rememberMe) {
-          await prefs.setString('email', _emailController.text.trim());
+          await prefs.setString('remembered_email', identity);
         } else {
-          await prefs.remove('email');
+          await prefs.remove('remembered_email');
         }
-        final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-        await appStateProvider.updateUserData(
-          username: username,
-          email: _emailController.text.trim(),
-          isLoggedIn: true,
-        );
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -73,10 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
             (route) => false,
           );
         }
-      } catch (_) {
+      } catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.')),
+            SnackBar(content: Text(authErrorMessage(error, registering: false))),
           );
         }
       } finally {

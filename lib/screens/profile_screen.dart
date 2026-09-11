@@ -198,10 +198,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showChangeEmailDialog() => _showEditValueDialog(
-    title: 'تغيير البريد الإلكتروني', initial: email,
-    onSave: (value) async { if (value.isEmpty || !value.contains('@')) { _showInfoDialog('بيانات غير صحيحة', 'أدخل بريدًا إلكترونيًا صحيحًا.'); return; } final state = Provider.of<AppStateProvider>(context, listen: false); await state.updateUserData(email: value); if (mounted) setState(() => email = value); },
-  );
+  void _showChangeEmailDialog() {
+    _showInfoDialog(
+      'تغيير البريد الإلكتروني',
+      'لا يمكن تغيير البريد الإلكتروني من هذا الإصدار لأن العملية تحتاج إلى إعادة التحقق من كلمة المرور عبر خدمة الحساب.',
+    );
+  }
 
   void _showChangePasswordDialog() => _showEditValueDialog(
     title: 'تغيير كلمة المرور', initial: '', obscure: true,

@@ -4,6 +4,7 @@ import 'login_screen.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import '../utils/toast_utils.dart';
+import '../services/appwrite_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -33,29 +34,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await Future.delayed(const Duration(seconds: 2));
-        if (!mounted) return;
         final email = _emailController.text.trim();
         final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
-        await appStateProvider.updateUserData(
-          username: email.split('@').first,
+        await appStateProvider.register(
           email: email,
-          isLoggedIn: false,
+          password: _passwordController.text,
+          name: email.split('@').first,
         );
-        ToastUtils.show(
-          'تم إنشاء الحساب بنجاح. يرجى تسجيل الدخول.',
-          backgroundColor: Colors.green,
-        );
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-          );
-        }
-      } catch (_) {
+        ToastUtils.show('تم إنشاء الحساب وتسجيل الدخول بنجاح.', backgroundColor: Colors.green);
+        if (mounted) Navigator.pop(context);
+      } catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.')),
+            SnackBar(content: Text(authErrorMessage(error, registering: true))),
           );
         }
       } finally {
