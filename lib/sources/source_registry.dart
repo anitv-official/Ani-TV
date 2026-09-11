@@ -1,5 +1,5 @@
 import 'anime3rb_source.dart';
-import 'anime_phoenix_source.dart';
+import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
 import 'manga_swat_source.dart';
 import 'olympus_source.dart';
@@ -13,7 +13,7 @@ class SourceRegistry {
   static final List<ContentSource> all = [
     RistoAnimeSource(),
     Anime3rbSource(),
-    AnimePhoenixSource(),
+    AnimeSlayerSource(),
     OlympusSource(),
     AzorafySource(),
     MangaSwatSource(),
