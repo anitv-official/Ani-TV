@@ -61,6 +61,11 @@ class HijalaSource extends ContentSource {
       if (src.isEmpty || !seen.add(src) || _isNoiseImage(src.toLowerCase())) continue;
       images.add({'url': src, 'alt': ''});
     }
+    for (final image in RegExp(r'!\[[^\]]*\]\(([^)\s]+)', caseSensitive: false).allMatches(html)) {
+      final src = HtmlParse.absUrl(url, image.group(1)!);
+      if (src.isEmpty || !seen.add(src) || _isNoiseImage(src.toLowerCase())) continue;
+      images.add({'url': src, 'alt': ''});
+    }
     return {
       'title': 'الفصل ${SourceUtils.chapterNumber(url) ?? ''}'.trim(),
       'images': images,
@@ -83,6 +88,12 @@ class HijalaSource extends ContentSource {
       if (title.isEmpty || _isUtilityTitle(title)) continue;
       items.add(item(title: title, url: url, image: _coverImage(block, url), type: 'comic'));
     }
+    for (final link in HtmlParse.markdownLinks(html)) {
+      final url = link['url'] ?? '';
+      final title = HtmlParse.stripTags(link['title'] ?? '');
+      if (!url.contains('hijala.com') || !seen.add(url) || _isUtilityUrl(url) || title.isEmpty) continue;
+      items.add(item(title: title, url: url, image: _nearbyCover(html, url), type: 'comic'));
+    }
     return items;
   }
 
@@ -97,10 +108,19 @@ class HijalaSource extends ContentSource {
       if (page != seriesUrl) {
         try { html = await HtmlClient.getHtml(page); } catch (_) { continue; }
       }
-      final pattern = RegExp("""href=[\"']([^\"']*hijala\\.com/$slug(?:/|[-_])[^\"']*)[\"']""", caseSensitive: false);
+      final pattern = RegExp("""href=[\"']([^\"']+)[\"']""", caseSensitive: false);
       for (final match in pattern.allMatches(html)) {
         final chapterUrl = HtmlParse.absUrl(seriesUrl, match.group(1)!);
+        if (!chapterUrl.contains('hijala.com') || !chapterUrl.contains(slug)) continue;
         final number = _chapterNumber('${match.group(1)} ${_nearby(html, match.start)}');
+        if (number == null || chapterUrl == seriesUrl) continue;
+        chapters[chapterUrl] = {'title': 'الفصل ${_formatNumber(number)}', 'url': chapterUrl, 'number': number};
+      }
+      for (final link in HtmlParse.markdownLinks(html)) {
+        final raw = link['url'] ?? '';
+        if (!raw.contains('hijala.com') || !raw.contains(slug)) continue;
+        final chapterUrl = HtmlParse.absUrl(seriesUrl, raw);
+        final number = _chapterNumber('$raw ${link['title'] ?? ''}');
         if (number == null || chapterUrl == seriesUrl) continue;
         chapters[chapterUrl] = {'title': 'الفصل ${_formatNumber(number)}', 'url': chapterUrl, 'number': number};
       }
@@ -118,8 +138,17 @@ class HijalaSource extends ContentSource {
   String _coverImage(String html, String baseUrl) {
     final raw = HtmlParse.meta(html, 'og:image') ?? HtmlParse.firstMatch(html, [
           RegExp("""<img[^>]+(?:data-src|data-lazy-src|src)=[\"']([^\"']+)""", caseSensitive: false),
+          RegExp(r'!\[[^\]]*\]\((https?://[^)\s]+)', caseSensitive: false),
         ]) ?? '';
     return raw.isEmpty ? '' : HtmlParse.absUrl(baseUrl, raw);
+  }
+
+  String _nearbyCover(String html, String url) {
+    final index = html.indexOf(url);
+    if (index < 0) return _coverImage(html, url);
+    final start = index > 900 ? index - 900 : 0;
+    final end = index + 900 < html.length ? index + 900 : html.length;
+    return _coverImage(html.substring(start, end), url);
   }
 
   double? _chapterNumber(String value) {

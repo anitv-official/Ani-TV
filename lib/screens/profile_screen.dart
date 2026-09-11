@@ -11,6 +11,7 @@ import '../utils/toast_utils.dart';
 import '../sources/source_registry.dart';
 import '../services/appwrite_service.dart';
 import 'sources_screen.dart';
+import 'downloads_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -302,6 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSectionContainer(
                       children: [
                         _buildMenuItem('المصادر', onTap: _showSourcesDialog),
+                        _buildMenuItem('التنزيلات', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
                         _buildSwitchItem('إشعارات التحديث', _notificationsEnabled, (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
                         _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
                         _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),

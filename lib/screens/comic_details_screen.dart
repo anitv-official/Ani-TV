@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'dart:math';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/download_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'manga_reader_screen.dart';
@@ -150,21 +147,25 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       final data = await ApiService.fetchChapterImages(chapter['url'].toString());
       final images = (data['images'] as List?)?.whereType<Map>().toList() ?? [];
       if (images.isEmpty) throw Exception('لا توجد صور للفصل');
-      final root = await getApplicationDocumentsDirectory();
-      final safeTitle = (chapter['title'] ?? 'chapter').toString().replaceAll(RegExp(r'[^a-zA-Z0-9\u0600-\u06FF_-]+'), '_');
-      final folder = Directory('${root.path}/AniTV/$safeTitle')..createSync(recursive: true);
-      for (var i = 0; i < images.length; i++) {
-        final imageUrl = images[i]['url']?.toString() ?? '';
-        if (imageUrl.isEmpty) continue;
-        final response = await http.get(Uri.parse(imageUrl));
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          await File('${folder.path}/${(i + 1).toString().padLeft(3, '0')}.jpg').writeAsBytes(response.bodyBytes);
-        }
-      }
-      messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: ${folder.path}')));
+      final folder = await DownloadService.saveMangaChapter(
+        mangaTitle: _comicData?['title']?.toString() ?? 'مانجا',
+        chapterTitle: chapter['title']?.toString() ?? 'فصل',
+        imageUrls: images.map((image) => image['url']?.toString() ?? '').where((url) => url.isNotEmpty).toList(),
+      );
+      messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: $folder')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('تعذر تنزيل الفصل: $e')));
     }
+  }
+
+  Future<void> _shareComic() async {
+    final title = _comicData?['title'] ?? 'مانجا';
+    await Share.share('$title\n${widget.url}', subject: title.toString());
+  }
+
+  Future<void> _copyComicLink() async {
+    await Clipboard.setData(ClipboardData(text: widget.url));
+    if (mounted) ToastUtils.show('تم نسخ رابط المانجا', backgroundColor: AppTheme.accentColor);
   }
 
   @override
@@ -267,6 +268,12 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 8),
+        Row(children: [
+          const Icon(Icons.language, size: 15, color: AppTheme.primaryColor),
+          const SizedBox(width: 5),
+          Text('المصدر: ${comic['source'] ?? 'AniTV'}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+        ]),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -371,12 +378,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
              _FavoriteIconAction(comic: comic, url: widget.url),
-             _buildIconAction(Icons.thumb_up_alt_outlined, 'Like', () {
-               ToastUtils.show('Like functionality is simulated', backgroundColor: Colors.green);
-             }),
-             _buildIconAction(Icons.share, 'Share', () {
-               ToastUtils.show('Share functionality coming soon', backgroundColor: AppTheme.primaryColor);
-             }),
+             _buildIconAction(Icons.share, 'مشاركة', _shareComic),
+             _buildIconAction(Icons.link, 'نسخ الرابط', _copyComicLink),
           ],
         ),
       ],
@@ -546,7 +549,11 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Icon(Icons.download_for_offline_outlined, color: Colors.grey[400], size: 20),
+                  IconButton(
+                    tooltip: 'تنزيل الفصل',
+                    icon: Icon(Icons.download_for_offline_outlined, color: Colors.grey[400], size: 20),
+                    onPressed: () => _downloadChapter(Map<String, dynamic>.from(chapter as Map)),
+                  ),
                 ],
               ),
             );
@@ -602,9 +609,9 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
       },
       child: Column(
         children: [
-          Icon(isFavorited ? Icons.check : Icons.add, color: Colors.white, size: 24),
+          Icon(isFavorited ? Icons.favorite : Icons.favorite_border, color: isFavorited ? Colors.redAccent : Colors.white, size: 24),
           const SizedBox(height: 4),
-          Text('My List', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
+          Text('المفضلة', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
         ],
       ),
     );

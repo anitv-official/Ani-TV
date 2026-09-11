@@ -1,4 +1,6 @@
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/download_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
@@ -161,6 +164,12 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           ),
         ),
         const SizedBox(height: 8),
+        Row(children: [
+          const Icon(Icons.language, size: 15, color: AppTheme.primaryColor),
+          const SizedBox(width: 5),
+          Text('المصدر: ${anime['source'] ?? 'AniTV'}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+        ]),
+        const SizedBox(height: 8),
         Row(
           children: [
             Text(
@@ -199,6 +208,31 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         _ExpandableDetails(anime: anime),
       ],
     );
+  }
+
+  Future<void> _shareAnime(String title) async {
+    await Share.share('$title\n${widget.url}', subject: title);
+  }
+
+  Future<void> _copyAnimeLink() async {
+    await Clipboard.setData(ClipboardData(text: widget.url));
+    if (mounted) ToastUtils.show('تم نسخ رابط الأنمي', backgroundColor: AppTheme.accentColor);
+  }
+
+  Future<void> _downloadAnimeEpisode(Map<String, dynamic> link, Map<String, dynamic> episode) async {
+    final url = link['url']?.toString() ?? '';
+    if (url.isEmpty) return;
+    try {
+      final anime = await _animeDetailsFuture;
+      await DownloadService.saveAnimeEpisode(
+        animeTitle: anime['title']?.toString() ?? 'أنمي',
+        episodeTitle: episode['title']?.toString() ?? 'حلقة',
+        url: url,
+      );
+      if (mounted) ToastUtils.show('تم حفظ الحلقة في التنزيلات', backgroundColor: AppTheme.accentColor);
+    } catch (error) {
+      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Colors.red);
+    }
   }
 
   Widget _buildActionButtons(BuildContext context, Map<String, dynamic> anime) {
@@ -249,15 +283,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           children: [
 
              _FavoriteIconAction(anime: anime, url: widget.url),
-             _buildIconAction(Icons.thumb_up_alt_outlined, 'Like', () {
-               ToastUtils.show('Like functionality coming soon', backgroundColor: AppTheme.primaryColor);
-             }),
-             _buildIconAction(Icons.share, 'Share', () {
-               ToastUtils.show('Share functionality coming soon', backgroundColor: AppTheme.primaryColor);
-             }),
-             _buildIconAction(Icons.people, 'Watch Party', () {
-               ToastUtils.show('Watch Party coming soon', backgroundColor: AppTheme.primaryColor);
-             }),
+             _buildIconAction(Icons.share, 'مشاركة', () => _shareAnime(anime['title']?.toString() ?? 'أنمي')),
+             _buildIconAction(Icons.link, 'نسخ الرابط', _copyAnimeLink),
           ],
         ),
       ],
@@ -695,7 +722,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                    link['host'] ?? 'Unknown Host',
                                    style: TextStyle(color: Colors.grey[300]),
                                  ),
-                                 onTap: () => _launchUrl(link['url'] ?? ''),
+                                 onTap: () => _downloadAnimeEpisode(Map<String, dynamic>.from(link as Map), episode),
                                );
                              }).toList(),
                            ),
@@ -775,9 +802,9 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
       },
       child: Column(
         children: [
-          Icon(isFavorited ? Icons.check : Icons.add, color: Colors.white, size: 24), // "My List" icon usually acts like a check when added
+          Icon(isFavorited ? Icons.favorite : Icons.favorite_border, color: isFavorited ? Colors.redAccent : Colors.white, size: 24),
           const SizedBox(height: 4),
-          Text('My List', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
+          Text('المفضلة', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
         ],
       ),
     );
