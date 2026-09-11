@@ -221,7 +221,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               return Builder(
                 builder: (BuildContext context) {
                       return CachedNetworkImage(
-                        contentItem['image_url'] ?? '',
+                        imageUrl: (contentItem['image_url'] ?? '').toString(),
                         fit: BoxFit.cover,
                         width: double.infinity,
                         placeholder: (_, __) => Container(color: AppTheme.surfaceColor),
