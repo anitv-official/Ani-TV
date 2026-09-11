@@ -182,7 +182,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Widget _buildLoadingView() {
-    return const SizedBox.shrink();
+    return const CustomLoadingWidget(
+      message: 'جارٍ تحميل المحتوى...',
+      size: 96,
+    );
   }
 
   Widget _buildHeroSection(double screenWidth, double screenHeight) {

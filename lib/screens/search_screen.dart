@@ -258,7 +258,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       return AppBar(
         backgroundColor: AppTheme.backgroundColor,
         elevation: 0,
-        title: _buildSearchField(),
+        titleSpacing: 0,
+        title: SizedBox(
+          height: 46,
+          child: _buildSearchField(),
+        ),
         leading: IconButton(
             icon: Icon(Icons.arrow_back, color: Colors.white),
             onPressed: _toggleSearchMode,
@@ -576,15 +580,17 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       focusNode: _searchFocusNode,
       style: TextStyle(color: Colors.white, fontSize: 16),
       decoration: InputDecoration(
+        isDense: true,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: AppTheme.surfaceColor,
+        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondaryColor),
         hintText: 'Search anime or manga...',
         hintStyle: TextStyle(color: AppTheme.textSecondaryColor.withOpacity(0.7)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30), // Pill shape for search bar
           borderSide: BorderSide.none,
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         suffixIcon: _searchController.text.isNotEmpty
             ? IconButton(
                 icon: Icon(Icons.clear, color: AppTheme.textSecondaryColor),

@@ -61,6 +61,25 @@ void main() async {
     );
   }
 
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: AppTheme.backgroundColor,
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'تعذر عرض هذه الصفحة. حاول مرة أخرى.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   runApp(
     ChangeNotifierProvider(
       create: (context) => AppStateProvider(),

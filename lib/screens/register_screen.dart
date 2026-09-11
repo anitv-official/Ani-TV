@@ -126,6 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: const TextStyle(color: Colors.white),
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
+                    isDense: false,
                     filled: true,
                     fillColor: AppTheme.surfaceColor,
                     hintText: 'Email or username',
@@ -161,6 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
+                    isDense: false,
                     filled: true,
                     fillColor: AppTheme.surfaceColor,
                     hintText: 'كلمة المرور',
@@ -208,6 +210,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscureConfirmPassword,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
+                    isDense: false,
                     filled: true,
                     fillColor: AppTheme.surfaceColor,
                     hintText: 'Confirm Password',

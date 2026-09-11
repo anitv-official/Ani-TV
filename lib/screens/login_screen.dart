@@ -148,6 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: const TextStyle(color: Colors.white),
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
+                          isDense: false,
                           filled: true,
                           fillColor: AppTheme.surfaceColor,
                           hintText: 'Email or username',
