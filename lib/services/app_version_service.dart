@@ -73,6 +73,17 @@ class AppVersionService {
     }
   }
 
+  /// Returns the Android build number configured in pubspec.yaml.
+  static Future<String> getBuildNumber() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      return packageInfo.buildNumber;
+    } catch (e) {
+      print('Error getting build number: $e');
+      return '0';
+    }
+  }
+
   // Membandingkan versi
   // Return: -1 jika current < latest, 0 jika sama, 1 jika current > latest
   static int compareVersions(String current, String latest) {

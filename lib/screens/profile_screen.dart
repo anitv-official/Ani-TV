@@ -12,6 +12,8 @@ import 'register_screen.dart';
 import '../utils/toast_utils.dart';
 import '../sources/source_registry.dart';
 import '../services/appwrite_service.dart';
+import '../services/app_version_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'sources_screen.dart';
 import 'downloads_screen.dart';
 
@@ -108,6 +110,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       _showErrorDialog('خطأ في تسجيل الخروج', 'تعذر تسجيل الخروج. حاول مرة أخرى.');
     }
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    final uri = Uri.parse('https://anitv-manga-lord.vercel.app/privacy');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      _showErrorDialog('الخصوصية والأمان', 'تعذر فتح سياسة الخصوصية. حاول مرة أخرى.');
+    }
+  }
+
+  Future<void> _showAboutDialog() async {
+    final version = await AppVersionService.getCurrentVersion();
+    final buildNumber = await AppVersionService.getBuildNumber();
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        title: const Text('حول AniTV', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Text('الإصدار الحالي: $version', style: const TextStyle(color: Colors.white70)),
+            Text('Version Code: $buildNumber', style: const TextStyle(color: Colors.white70)),
+            const Text('توافق Android: 5.0 وما بعده', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 18),
+            const Text('الخصوصية والأمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.privacy_tip_outlined, color: AppTheme.primaryColor),
+              title: const Text('سياسة الخصوصية', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('عرض السياسة الرسمية', style: TextStyle(color: Colors.white60)),
+              onTap: _openPrivacyPolicy,
+            ),
+            const Text('الأمان: لا يحتوي التطبيق على مفاتيح API خاصة أو أسرار OAuth.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
+      ),
+    );
   }
 
   void _showSourcesDialog() {
@@ -317,6 +362,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildSwitchItem('إشعارات التحديث', _notificationsEnabled, (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
                         _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
                         _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        child: Text('حول التطبيق', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    _buildSectionContainer(
+                      children: [
+                        _buildMenuItem('حول AniTV', onTap: _showAboutDialog),
+                        _buildMenuItem('الخصوصية والأمان', onTap: _showAboutDialog),
+                        _buildMenuItem('سياسة الخصوصية', onTap: _openPrivacyPolicy),
                       ],
                     ),
 
