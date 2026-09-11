@@ -61,7 +61,14 @@ class SourceRegistry {
   static Future<Map<String, dynamic>?> streams(String url) async {
     final source = sourceFor(url);
     if (source == null) return null;
-    return source.streams(url);
+    final result = await source.streams(url);
+    if (result == null) return null;
+    final links = (result['direct_stream_urls'] as List?)?.whereType<Map>().toList() ?? [];
+    final playable = links.any((link) {
+      final value = link['url']?.toString() ?? '';
+      return value.isNotEmpty && value != url && !value.contains(Uri.parse(url).host);
+    });
+    return playable ? result : null;
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

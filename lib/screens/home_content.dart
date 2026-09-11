@@ -39,6 +39,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   int _currentCarouselIndex = 0;
   bool _showAnime = true; // Toggle state
   bool _isUpdateAvailable = false; // Persistent update indicator
+  late final ScrollController _scrollController;
+  int _animePage = 1;
+  int _comicPage = 1;
+  bool _loadingMore = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -46,6 +50,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
     _checkForUpdates(); // Check for updates on init
 
     // Use preloaded content if available
@@ -63,6 +68,51 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     }
   }
 
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.position.extentAfter < 500) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !mounted) return;
+    _loadingMore = true;
+    try {
+      final animePage = _animePage + 1;
+      final comicPage = _comicPage + 1;
+      final loaded = await Future.wait([
+        ApiService.fetchLatestAnime(page: animePage),
+        ApiService.fetchLatestComics(page: comicPage),
+      ]);
+      if (!mounted) return;
+      final anime = loaded[0] as List<dynamic>;
+      final comics = loaded[1] as List<dynamic>;
+      setState(() {
+        if (anime.isNotEmpty) {
+          latestAnime = [...latestAnime, ..._uniqueItems(anime, latestAnime)];
+          _animePage = animePage;
+        }
+        if (comics.isNotEmpty) {
+          latestComics = [...latestComics, ..._uniqueItems(comics, latestComics)];
+          _comicPage = comicPage;
+        }
+      });
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
+  List<dynamic> _uniqueItems(List<dynamic> incoming, List<dynamic> existing) {
+    final keys = existing.map((e) => e['url'] ?? e['title']).toSet();
+    return incoming.where((e) => keys.add(e['url'] ?? e['title'])).toList();
+  }
 
   Future<void> _loadContent() async {
     setState(() => isLoading = true);
@@ -99,6 +149,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             ..shuffle(); // Shuffle for variety
           latestAnime = anime;
           latestComics = comics;
+          _animePage = 1;
+          _comicPage = 1;
           isLoading = false;
         });
       }
@@ -160,6 +212,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       color: AppTheme.primaryColor,
       strokeWidth: 3,
       child: CustomScrollView(
+        controller: _scrollController,
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
@@ -331,28 +384,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                   ),
                 ),
 
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-                    child: Container(
-                      height: 50,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(.12),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white.withOpacity(.16)),
-                      ),
-                      child: Row(children: [
-                        const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
-                        const SizedBox(width: 10),
-                        Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 15)),
-                        const Spacer(),
-                        Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
-                      ]),
-                    ),
-                  ),
-                ),
                 const Spacer(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 0), // Bottom padding removed for tight spacing
@@ -431,6 +462,31 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                   ),
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            top: 78,
+            left: 16,
+            right: 16,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+              child: Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withOpacity(.34), width: 1.3),
+                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 4))],
+                ),
+                child: Row(children: [
+                  const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
+                  const SizedBox(width: 10),
+                  Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 15)),
+                  const Spacer(),
+                  Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
+                ]),
+              ),
             ),
           ),
         ],

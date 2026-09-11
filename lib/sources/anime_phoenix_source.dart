@@ -18,16 +18,23 @@ class AnimePhoenixSource extends ContentSource {
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
-    final html = await HtmlClient.getHtml(
-        '$_base/?s=${Uri.encodeQueryComponent(query)}');
-    return _parseCards(html);
+    try {
+      final html = await HtmlClient.getHtml('$_base/?s=${Uri.encodeQueryComponent(query)}');
+      final cards = _parseCards(html);
+      if (cards.isNotEmpty) return cards;
+    } catch (_) {}
+    return _searchViaWp(query);
   }
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    final url = page <= 1 ? '$_base/' : '$_base/page/$page/';
-    final html = await HtmlClient.getHtml(url);
-    return _parseCards(html);
+    try {
+      final url = page <= 1 ? '$_base/' : '$_base/page/$page/';
+      final html = await HtmlClient.getHtml(url);
+      final cards = _parseCards(html);
+      if (cards.isNotEmpty) return cards;
+    } catch (_) {}
+    return _searchViaWp('');
   }
 
   @override
@@ -87,12 +94,35 @@ class AnimePhoenixSource extends ContentSource {
     ).allMatches(html)) {
       add(match.group(1)!);
     }
+    for (final media in SourceUtils.extractMediaUrls(html, url)) {
+      add(media, 'مباشر');
+    }
     if (servers.isEmpty) add(url, 'صفحة الحلقة');
     return {
       'stream_url': servers.first['url'],
       'direct_stream_urls': servers,
       'download_links': <String, dynamic>{},
     };
+  }
+
+  Future<List<Map<String, dynamic>>> _searchViaWp(String query) async {
+    final data = await HtmlClient.getJson(
+      '$_base/wp-json/wp/v2/posts?search=${Uri.encodeQueryComponent(query)}&_embed=1&per_page=20',
+    ) as List<dynamic>;
+    final items = <Map<String, dynamic>>[];
+    for (final raw in data.whereType<Map>()) {
+      final title = HtmlParse.stripTags((raw['title']?['rendered'] ?? '').toString());
+      final link = (raw['link'] ?? '').toString();
+      if (title.isEmpty || link.isEmpty) continue;
+      var image = '';
+      final embedded = raw['_embedded'];
+      if (embedded is Map && embedded['wp:featuredmedia'] is List &&
+          (embedded['wp:featuredmedia'] as List).isNotEmpty) {
+        image = ((embedded['wp:featuredmedia'] as List).first['source_url'] ?? '').toString();
+      }
+      items.add(item(title: title, url: link, image: image, type: 'anime'));
+    }
+    return items;
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {

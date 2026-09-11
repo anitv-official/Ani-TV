@@ -134,6 +134,9 @@ class RistoAnimeSource extends ContentSource {
       add(match.group(0)!, 'مباشر');
     }
 
+    for (final media in SourceUtils.extractMediaUrls(html, url)) {
+      add(media, 'مباشر');
+    }
     if (servers.isEmpty) {
       add(url, 'صفحة الحلقة');
     }

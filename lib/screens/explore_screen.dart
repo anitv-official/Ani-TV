@@ -29,10 +29,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
   bool isLoadingContent = true;
+  late final ScrollController _scrollController;
+  int _animePage = 2;
+  int _comicPage = 2;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
     _currentTabIndex = widget.initialIsAnime ? 0 : 1;
 
     // Initialize AppStateProvider
@@ -41,6 +46,38 @@ class _ExploreScreenState extends State<ExploreScreen> {
     });
 
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients && _scrollController.position.extentAfter < 500) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !mounted) return;
+    _loadingMore = true;
+    try {
+      final isAnime = _currentTabIndex == 0;
+      final page = isAnime ? ++_animePage : ++_comicPage;
+      final items = isAnime
+          ? await ApiService.fetchLatestAnime(page: page)
+          : await ApiService.fetchLatestComics(page: page);
+      if (!mounted) return;
+      setState(() {
+        final target = isAnime ? latestAnime : latestComics;
+        final keys = target.map((e) => e['url'] ?? e['title']).toSet();
+        target.addAll(items.where((e) => keys.add(e['url'] ?? e['title'])));
+      });
+    } finally {
+      _loadingMore = false;
+    }
   }
 
   Future<void> _loadData() async {
@@ -56,6 +93,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         setState(() {
           latestAnime = latestAnimeData;
           latestComics = latestComicsData;
+          _animePage = 2;
+          _comicPage = 2;
           isLoadingContent = false;
         });
       }
@@ -252,6 +291,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         }
 
         return GridView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 130),
           physics: const BouncingScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

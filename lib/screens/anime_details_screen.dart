@@ -31,6 +31,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   void initState() {
     super.initState();
     _animeDetailsFuture = ApiService.fetchAnimeDetails(widget.url);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Provider.of<AppStateProvider>(context, listen: false).initialize();
+    });
   }
 
   @override
@@ -746,6 +749,7 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
          try {
             // Logic duplicated from original _FavoriteButton but simplified
             final provider = Provider.of<AppStateProvider>(context, listen: false);
+            await provider.initialize();
             // ... (Simple toggle logic)
             if (isFavorited) {
                // Must find ID

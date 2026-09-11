@@ -91,11 +91,44 @@ class SourceContentScreen extends StatefulWidget {
 
 class _SourceContentScreenState extends State<SourceContentScreen> {
   late Future<List<Map<String, dynamic>>> _content;
+  late final ScrollController _scrollController;
+  int _page = 1;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()..addListener(_loadMoreWhenNeeded);
     _content = widget.source.latest();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreWhenNeeded() {
+    if (_scrollController.hasClients && _scrollController.position.extentAfter < 400) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !mounted) return;
+    _loadingMore = true;
+    try {
+      final next = await widget.source.latest(page: _page + 1);
+      if (!mounted || next.isEmpty) return;
+      final current = await _content;
+      final keys = current.map((e) => e['url'] ?? e['title']).toSet();
+      setState(() {
+        _page++;
+        _content = Future.value([...current, ...next.where((e) => keys.add(e['url'] ?? e['title']))]);
+      });
+    } finally {
+      _loadingMore = false;
+    }
   }
 
   @override
@@ -124,6 +157,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
           return RefreshIndicator(
             onRefresh: () async => setState(() => _content = widget.source.latest()),
             child: GridView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: items.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

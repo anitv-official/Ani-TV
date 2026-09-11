@@ -53,6 +53,23 @@ abstract class ContentSource {
 }
 
 class SourceUtils {
+  static List<String> extractMediaUrls(String html, String pageUrl) {
+    final urls = <String>{};
+    void add(String raw) {
+      final value = raw.trim().replaceAll('&amp;', '&');
+      if (value.isEmpty) return;
+      final resolved = HtmlParse.absUrl(pageUrl, value);
+      if (resolved.isNotEmpty) urls.add(resolved);
+    }
+    for (final match in RegExp(r'''(?:src|data-src|data-url|data-embed|href)=["']([^"']+)["']''', caseSensitive: false).allMatches(html)) {
+      add(match.group(1)!);
+    }
+    for (final match in RegExp(r'https?://[^\s"<>]+(?:\.mp4|\.m3u8|ok\.ru|dood|mp4upload|vidmoly|uqload|streamtape|filemoon|voe|mixdrop|yourupload|goload|sbfull|sbplay|pixeldrain)[^\s"<>]*', caseSensitive: false).allMatches(html)) {
+      add(match.group(0)!);
+    }
+    return urls.where((url) => !url.contains(HtmlParse.hostOf(pageUrl))).toList();
+  }
+
   static String cleanTitle(String title) {
     return title
         .replaceAll(RegExp(r'<[^>]+>'), ' ')

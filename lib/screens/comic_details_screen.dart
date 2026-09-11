@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -40,6 +43,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
     super.initState();
     _loadComicData();
     _loadRewardedAd();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Provider.of<AppStateProvider>(context, listen: false).initialize();
+    });
   }
   
   @override
@@ -142,6 +148,30 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _downloadChapter(Map<String, dynamic> chapter) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(content: Text('جارٍ تنزيل الفصل...')));
+    try {
+      final data = await ApiService.fetchChapterImages(chapter['url'].toString());
+      final images = (data['images'] as List?)?.whereType<Map>().toList() ?? [];
+      if (images.isEmpty) throw Exception('لا توجد صور للفصل');
+      final root = await getApplicationDocumentsDirectory();
+      final safeTitle = (chapter['title'] ?? 'chapter').toString().replaceAll(RegExp(r'[^a-zA-Z0-9\u0600-\u06FF_-]+'), '_');
+      final folder = Directory('${root.path}/AniTV/$safeTitle')..createSync(recursive: true);
+      for (var i = 0; i < images.length; i++) {
+        final imageUrl = images[i]['url']?.toString() ?? '';
+        if (imageUrl.isEmpty) continue;
+        final response = await http.get(Uri.parse(imageUrl));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          await File('${folder.path}/${(i + 1).toString().padLeft(3, '0')}.jpg').writeAsBytes(response.bodyBytes);
+        }
+      }
+      messenger.showSnackBar(SnackBar(content: Text('تم حفظ الفصل داخل: ${folder.path}')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('تعذر تنزيل الفصل: $e')));
     }
   }
 
@@ -450,7 +480,12 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () {
-                    ToastUtils.show('ميزة التنزيل غير متاحة حالياً', backgroundColor: AppTheme.primaryColor);
+                  final chapters = comic['chapters'] as List<dynamic>? ?? [];
+                  if (chapters.isNotEmpty) {
+                    _downloadChapter(Map<String, dynamic>.from(chapters.last as Map));
+                  } else {
+                    ToastUtils.show('لا توجد فصول متاحة للتنزيل', backgroundColor: AppTheme.primaryColor);
+                  }
                 },
                 icon: const Icon(Icons.download, color: Colors.white),
                 label: const Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -672,8 +707,9 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
     return GestureDetector(
       onTap: () async {
          try {
-            final provider = Provider.of<AppStateProvider>(context, listen: false);
-            if (isFavorited) {
+                 final provider = Provider.of<AppStateProvider>(context, listen: false);
+                 await provider.initialize();
+                 if (isFavorited) {
                final items = provider.favoriteComics.where((x) => x['url'] == widget.url).toList();
                if(items.isNotEmpty) {
                  await provider.removeFromFavorites(items.first['id'], false);

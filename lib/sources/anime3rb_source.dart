@@ -120,6 +120,9 @@ class Anime3rbSource extends ContentSource {
     ).allMatches(html)) {
       add(match.group(0)!);
     }
+    for (final media in SourceUtils.extractMediaUrls(html, url)) {
+      add(media, 'مباشر');
+    }
     if (servers.isEmpty) add(url, 'صفحة الحلقة');
     return {
       'stream_url': servers.first['url'],
