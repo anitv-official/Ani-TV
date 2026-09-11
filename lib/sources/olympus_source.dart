@@ -5,7 +5,7 @@ class OlympusSource extends ContentSource {
   static const String _base = 'https://olympustaff.com';
 
   @override
-  String get id => 'olympus';
+  String get id => 'teamx';
 
   @override
   String get name => 'Team X Manga';
@@ -14,7 +14,7 @@ class OlympusSource extends ContentSource {
   String get kind => 'manga';
 
   @override
-  List<String> get hosts => ['olympustaff.com'];
+  List<String> get hosts => ['olympustaff.com', 'teamxmanga.store'];
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {

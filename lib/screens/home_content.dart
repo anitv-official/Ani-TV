@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
 import '../theme/app_theme.dart';
@@ -69,11 +70,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       final loaded = await Future.wait([
         ApiService.fetchLatestAnime(),
         ApiService.fetchLatestComics(),
-        ApiService.fetchTopAnime(),
       ]);
       final anime = loaded[0] as List<dynamic>;
       final comics = loaded[1] as List<dynamic>;
-      final topAnime = loaded[2] as List<dynamic>;
+      final topAnime = anime;
 
       if (mounted) {
         setState(() {
@@ -220,12 +220,13 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             items: featuredContent.map((contentItem) {
               return Builder(
                 builder: (BuildContext context) {
-                  return Image.network(
-                    contentItem['image_url'] ?? '',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (_,__,___) => Container(color: AppTheme.surfaceColor),
-                  );
+                      return CachedNetworkImage(
+                        contentItem['image_url'] ?? '',
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        placeholder: (_, __) => Container(color: AppTheme.surfaceColor),
+                        errorWidget: (_, __, ___) => Container(color: AppTheme.surfaceColor),
+                      );
                 },
               );
             }).toList(),

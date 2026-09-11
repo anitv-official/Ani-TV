@@ -127,7 +127,7 @@ class ApiService {
   // API Methods
   static Future<List<dynamic>> fetchTopAnime() async {
     try {
-      final sourced = await SourceRegistry.latestAnime(page: 1);
+      final sourced = await fetchLatestAnime();
       if (sourced.isNotEmpty) return sourced.take(12).toList();
     } catch (_) {}
     try {

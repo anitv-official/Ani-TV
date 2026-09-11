@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class HtmlClient {
-  static const Duration timeout = Duration(seconds: 10);
-  static const Duration readerTimeout = Duration(seconds: 8);
+  static const Duration timeout = Duration(seconds: 6);
+  static const Duration readerTimeout = Duration(seconds: 6);
   static const Duration cacheDuration = Duration(minutes: 3);
   static final Map<String, _CachedHtml> _cache = {};
   static const String userAgent =
@@ -43,7 +43,7 @@ class HtmlClient {
   static Future<dynamic> getJson(String url, {Map<String, String>? headers}) async {
     final response = await http
         .get(Uri.parse(url), headers: {..._headers, ...?headers})
-        .timeout(timeoutOverride ?? timeout);
+        .timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('تعذر تحميل المحتوى');
     }
@@ -108,8 +108,7 @@ class HtmlClient {
 
   static String _readerUrl(String url) {
     final uri = Uri.parse(url);
-    final httpUrl = uri.replace(scheme: 'http').toString();
-    return 'https://r.jina.ai/$httpUrl';
+    return 'https://r.jina.ai/http://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
   }
 }
 

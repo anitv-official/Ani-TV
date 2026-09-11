@@ -14,12 +14,12 @@ class Anime3rbSource extends ContentSource {
   String get kind => 'anime';
 
   @override
-  List<String> get hosts => ['anime3rb.com'];
+  List<String> get hosts => ['anime3rb.com', 'www.anime3rb.com'];
 
   @override
   Future<List<Map<String, dynamic>>> search(String query) async {
     final html = await HtmlClient.getHtml(
-        '$_base/?s=${Uri.encodeQueryComponent(query)}');
+        '$_base/search?q=${Uri.encodeQueryComponent(query)}');
     final items = _parseCards(html);
     if (items.isNotEmpty) return items;
     return _parseGeneric(html, query);

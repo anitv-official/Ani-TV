@@ -7,6 +7,9 @@ import 'risto_anime_source.dart';
 import 'source_base.dart';
 
 class SourceRegistry {
+  static const Duration _sourceTimeout = Duration(seconds: 7);
+  static const Duration _cacheDuration = Duration(minutes: 3);
+  static final Map<String, _RegistryCache> _cache = {};
   static final List<ContentSource> all = [
     RistoAnimeSource(),
     Anime3rbSource(),
@@ -42,11 +45,11 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) async {
-    return _merge(animeSources.map((s) => s.latest(page: page)));
+    return _cached('anime:$page', () => _merge(animeSources.map((s) => s.latest(page: page))));
   }
 
   static Future<List<Map<String, dynamic>>> latestManga({int page = 1}) async {
-    return _merge(mangaSources.map((s) => s.latest(page: page)));
+    return _cached('manga:$page', () => _merge(mangaSources.map((s) => s.latest(page: page))));
   }
 
   static Future<Map<String, dynamic>?> details(String url) async {
@@ -72,7 +75,7 @@ class SourceRegistry {
     final results = await Future.wait(
       tasks.map((task) async {
         try {
-          return await task.timeout(const Duration(seconds: 12));
+          return await task.timeout(_sourceTimeout);
         } catch (_) {
           return <Map<String, dynamic>>[];
         }
@@ -88,4 +91,23 @@ class SourceRegistry {
     }
     return merged;
   }
+
+  static Future<List<Map<String, dynamic>>> _cached(
+      String key, Future<List<Map<String, dynamic>>> Function() loader) async {
+    final existing = _cache[key];
+    if (existing != null && DateTime.now().difference(existing.createdAt) < _cacheDuration) {
+      return existing.value;
+    }
+    final value = await loader();
+    if (value.isNotEmpty) _cache[key] = _RegistryCache(value);
+    return value;
+  }
+
+  static void clearCache() => _cache.clear();
+}
+
+class _RegistryCache {
+  final List<Map<String, dynamic>> value;
+  final DateTime createdAt = DateTime.now();
+  _RegistryCache(this.value);
 }
