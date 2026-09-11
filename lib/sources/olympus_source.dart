@@ -147,6 +147,28 @@ class OlympusSource extends ContentSource {
   }
 
   List<Map<String, dynamic>> _parseSeriesList(String html) {
+    // Current Team X markup uses `.bsx` cards inside `.manga-list`.
+    final current = <Map<String, dynamic>>[];
+    final currentSeen = <String>{};
+    final currentPattern = RegExp(
+      r'''<div[^>]+class=["'][^"']*bsx[^"']*["'][\s\S]*?<a[^>]+href=["']([^"']*/series/[^"']+)["'][^>]*title=["']([^"']*)["'][\s\S]*?<img[^>]+(?:src|data-src)=["']([^"']+)["']''',
+      caseSensitive: false,
+    );
+    for (final match in currentPattern.allMatches(html)) {
+      final url = HtmlParse.absUrl(_base, match.group(1)!);
+      if (!url.contains('/series/') || !currentSeen.add(url)) continue;
+      final rawTitle = HtmlParse.decode(match.group(2) ?? '').trim();
+      current.add(item(
+        title: HtmlParse.stripTags(rawTitle.isEmpty
+            ? url.split('/').last.replaceAll('-', ' ')
+            : rawTitle),
+        url: url,
+        image: HtmlParse.absUrl(_base, match.group(3)!),
+        type: 'comic',
+      ));
+    }
+    if (current.isNotEmpty) return current;
+
     final modern = <Map<String, dynamic>>[];
     final modernSeen = <String>{};
     final modernPattern = RegExp(
@@ -205,13 +227,32 @@ class OlympusSource extends ContentSource {
     final chapters = <Map<String, dynamic>>[];
     final seen = <String>{};
     final slug = Uri.parse(seriesUrl).path.replaceAll(RegExp(r'/$'), '');
+    final currentPattern = RegExp(
+      r'''<a[^>]+href=["']([^"']*/series/[^"']+/(\d+(?:\.\d+)?))["'][^>]*class=["'][^"']*chapter-link[^"']*["']''',
+      caseSensitive: false,
+    );
+    for (final match in currentPattern.allMatches(html)) {
+      final numStr = match.group(2)!;
+      final url = HtmlParse.absUrl(_base, match.group(1)!);
+      if (!seen.add(url)) continue;
+      chapters.add({
+        'title': 'الفصل $numStr',
+        'url': url,
+        'number': double.tryParse(numStr) ?? chapters.length + 1,
+      });
+    }
+    if (chapters.isNotEmpty) {
+      chapters.sort((a, b) =>
+          (b['number'] as double).compareTo(a['number'] as double));
+      return chapters;
+    }
     for (final match in RegExp(
       'https://olympustaff\\.com$slug/(\\d+(?:\\.\\d+)?)',
     ).allMatches(html)) {
       final numStr = match.group(1)!;
       final url = match.group(0)!;
       if (!seen.add(url)) continue;
-      final number = int.tryParse(numStr.split('.').first) ?? chapters.length + 1;
+      final number = double.tryParse(numStr) ?? chapters.length + 1;
       chapters.add({
         'title': 'الفصل $numStr',
         'url': url,
@@ -225,7 +266,9 @@ class OlympusSource extends ContentSource {
       ).allMatches(html)) {
         final url = HtmlParse.absUrl(_base, match.group(1)!);
         if (!seen.add(url)) continue;
-        final number = SourceUtils.chapterNumber(url) ?? chapters.length + 1;
+        final number = double.tryParse(
+                RegExp(r'(\d+(?:\.\d+)?)$').firstMatch(url)?.group(1) ?? '') ??
+            chapters.length + 1;
         chapters.add({
           'title': 'الفصل $number',
           'url': url,
@@ -233,7 +276,8 @@ class OlympusSource extends ContentSource {
         });
       }
     }
-    chapters.sort((a, b) => (b['number'] as int).compareTo(a['number'] as int));
+    chapters.sort((a, b) =>
+        (b['number'] as double).compareTo(a['number'] as double));
     return chapters;
   }
 }

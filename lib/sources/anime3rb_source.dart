@@ -132,6 +132,29 @@ class Anime3rbSource extends ContentSource {
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {
+    // Current Anime3rb markup uses a title-card wrapper. The previous
+    // expression assumed a much shorter image/title layout and could miss
+    // every card after the site redesign.
+    final current = <Map<String, dynamic>>[];
+    final currentSeen = <String>{};
+    final currentPattern = RegExp(
+      r'''<div[^>]+class=["'][^"']*title-card[^"']*["'][\s\S]*?<a[^>]+href=["']([^"']*/titles/[^"']+)["'][\s\S]*?<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>[\s\S]*?<h2[^>]+class=["'][^"']*title-name[^"']*["'][^>]*>([\s\S]*?)</h2>''',
+      caseSensitive: false,
+    );
+    for (final match in currentPattern.allMatches(html)) {
+      final url = HtmlParse.absUrl(_base, match.group(1)!);
+      if (!url.contains('/titles/') || !currentSeen.add(url)) continue;
+      final title = HtmlParse.stripTags(match.group(3) ?? '');
+      if (title.isEmpty) continue;
+      current.add(item(
+        title: title,
+        url: url,
+        image: HtmlParse.absUrl(_base, match.group(2)!),
+        type: 'anime',
+      ));
+    }
+    if (current.isNotEmpty) return current;
+
     final modern = <Map<String, dynamic>>[];
     final modernSeen = <String>{};
     final modernPattern = RegExp(
@@ -180,12 +203,13 @@ class Anime3rbSource extends ContentSource {
     final items = <Map<String, dynamic>>[];
     final seen = <String>{};
     for (final match in RegExp(
-      r'href="(https?://anime3rb\.com/[^"]+)"[^>]*>([\s\S]*?)</a>',
+      r'''href=["'](https?://anime3rb\.com/titles/[^"']+)["'][^>]*>([\s\S]*?)</a>''',
       caseSensitive: false,
     ).allMatches(html)) {
       final url = match.group(1)!;
       final title = HtmlParse.stripTags(match.group(2) ?? '');
       if (title.isEmpty || !seen.add(url)) continue;
+      if (url.endsWith('/titles/list')) continue;
       if (query.isNotEmpty &&
           !title.toLowerCase().contains(query.toLowerCase()) &&
           !url.toLowerCase().contains(query.toLowerCase())) {
