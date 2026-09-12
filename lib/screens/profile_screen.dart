@@ -83,6 +83,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_avatar_path', path);
     if (mounted) setState(() => _avatarPath = path);
+    final provider = context.read<AppStateProvider>();
+    if (provider.isLoggedIn) {
+      try {
+        await provider.updateProfileImage(path);
+        if (mounted) setState(() {});
+      } catch (_) {
+        if (mounted) _showInfoDialog('تعذر تحديث صورة الملف الشخصي', 'تم الاحتفاظ بالصورة على الجهاز، وسنحاول مزامنتها لاحقًا.');
+      }
+    }
   }
 
   Future<void> _savePreference(String key, bool value) async {
@@ -360,6 +369,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildProfileCard() {
     final hasAvatar = _avatarPath != null && File(_avatarPath!).existsSync();
+    final cloudAvatarUrl = context.watch<AppStateProvider>().profileImageUrl;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -374,8 +384,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: CircleAvatar(
               radius: 34,
               backgroundColor: AppTheme.elevatedColor,
-              backgroundImage: hasAvatar ? FileImage(File(_avatarPath!)) : null,
-              child: hasAvatar ? null : const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor),
+              backgroundImage: hasAvatar
+                  ? FileImage(File(_avatarPath!))
+                  : (cloudAvatarUrl == null ? null : NetworkImage(cloudAvatarUrl)),
+              child: hasAvatar || cloudAvatarUrl != null ? null : const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor),
             ),
           ),
           const SizedBox(width: 14),
