@@ -134,6 +134,7 @@ class AnyPlaySource extends ContentSource {
     final season = parsed['season'];
     final episode = parsed['episode'];
     final links = <Map<String, dynamic>>[];
+    String? resolvedDirect;
     for (final server in _servers) {
       final serverId = server['id'];
       if (serverId == null || serverId.isEmpty) continue;
@@ -141,15 +142,50 @@ class AnyPlaySource extends ContentSource {
           ? '$_embed/movie/$serverId/$idValue'
           : '$_embed/tv/$serverId/$idValue/$season/$episode';
       links.add({'quality': server['name'] ?? 'AnyPlay', 'server': server['name'] ?? '', 'url': embed});
+      if (resolvedDirect == null && links.length <= 3) {
+        resolvedDirect = await _resolveDirectMedia(embed);
+      }
     }
     if (links.isEmpty) return null;
     return {
       'source_id': id,
-      'stream_url': links.first['url'],
-      'direct_stream_urls': links,
+      'stream_url': resolvedDirect ?? links.first['url'],
+      'direct_stream_urls': resolvedDirect == null
+          ? links
+          : [
+              {'quality': 'AnyPlay • مباشر', 'server': 'AnyPlay', 'url': resolvedDirect},
+              ...links,
+            ],
       'headers': {'Referer': '$_site/'},
       'download_links': const <String, dynamic>{},
     };
+  }
+
+  Future<String?> _resolveDirectMedia(String embedUrl) async {
+    try {
+      final response = await _client.get(Uri.parse(embedUrl), headers: {
+        'Accept': 'text/html,application/xhtml+xml',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36',
+      }).timeout(const Duration(seconds: 8));
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      final html = response.body.replaceAll(r'\/', '/').replaceAll(r'\u0026', '&');
+      final candidates = <String>{};
+      for (final match in RegExp(r'''https?://[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false).allMatches(html)) {
+        candidates.add(match.group(0)!);
+      }
+      for (final match in RegExp(r'''(?:file|src|source|url)\s*[:=]\s*["']([^"']+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^"']*)?)["']''', caseSensitive: false).allMatches(html)) {
+        candidates.add(match.group(1)!);
+      }
+      return candidates.firstWhere(_isPlayableMedia, orElse: () => '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isPlayableMedia(String value) {
+    final lower = value.toLowerCase();
+    return (lower.startsWith('https://') || lower.startsWith('http://')) &&
+        RegExp(r'\.(?:m3u8|mp4|mpd)(?:[?#].*)?$', caseSensitive: false).hasMatch(lower);
   }
 
   Map<String, dynamic> _contentItem({required String title, required String url, required Map<String, dynamic> raw, required bool isTv}) {

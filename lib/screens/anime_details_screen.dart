@@ -690,7 +690,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   bool _isInAppSource(String sourceId) {
-    return sourceId == 'risto' || sourceId == 'anime3rb' || sourceId == 'anime4up';
+    return sourceId == 'risto' || sourceId == 'anime3rb' || sourceId == 'anime4up' || sourceId == 'anyplay';
   }
 
 }
