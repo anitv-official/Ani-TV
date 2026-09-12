@@ -425,10 +425,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               url: (item['image_url'] ?? item['image'])?.toString(),
               width: 62,
               height: 84,
-              borderRadius: const BorderRadiusDirectional.only(
-                topStart: Radius.circular(14),
-                bottomStart: Radius.circular(14),
-              ),
+              borderRadius: BorderRadius.circular(12),
             ),
 
             SizedBox(width: 12),

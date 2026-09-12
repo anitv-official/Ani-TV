@@ -176,7 +176,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ).then((_) => _loadFavorites());
           },
-          overlay: Positioned(
+          overlay: Positioned.directional(
+            textDirection: Directionality.of(context),
             top: 6,
             end: 6,
             child: Material(

@@ -47,7 +47,8 @@ class ContentCard extends StatelessWidget {
                     ),
                   ),
                   if (badge != null && badge!.trim().isNotEmpty)
-                    Positioned(
+                    Positioned.directional(
+                      textDirection: Directionality.of(context),
                       top: 6,
                       start: 6,
                       child: SourceBadge(label: badge),
