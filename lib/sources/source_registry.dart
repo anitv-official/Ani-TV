@@ -1,5 +1,5 @@
 import 'anime3rb_source.dart';
-import 'anime_witcher_source.dart';
+import 'animefy_source.dart';
 import 'anime4up_source.dart';
 import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
@@ -16,7 +16,7 @@ class SourceRegistry {
   static final Map<String, _RegistryCache> _cache = {};
   static final List<ContentSource> all = [
     RistoAnimeSource(),
-    AnimeWitcherSource(),
+    AnimefySource(),
     Anime3rbSource(),
     Anime4UpSource(),
     AnimeSlayerSource(),
