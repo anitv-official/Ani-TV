@@ -264,8 +264,14 @@ class MangaSlayerSource extends ContentSource {
   List<String> _images(String html, String base, String selector, Map<String, dynamic> config, Map<String, dynamic> extractor) {
     final transformations = extractor['url_transformations'];
     final urls = <String>{};
-    for (final match in RegExp('<img[^>]+(?:src|data-src|data-lazy-src)=["\\\']([^"\\\']+)', caseSensitive: false).allMatches(html)) {
-      var url = HtmlParse.absUrl(base, match.group(1) ?? '');
+    final requiredClass = selector.split('.').last.trim();
+    final imageTags = RegExp('<img\\b[^>]*>', caseSensitive: false).allMatches(html);
+    for (final tagMatch in imageTags) {
+      final tag = tagMatch.group(0) ?? '';
+      final classes = RegExp('\\bclass=["\\\']([^"\\\']*)', caseSensitive: false).firstMatch(tag)?.group(1) ?? '';
+      if (requiredClass.isNotEmpty && !classes.split(RegExp(r'\s+')).contains(requiredClass)) continue;
+      final source = RegExp('\\bsrc=["\\\']([^"\\\']+)', caseSensitive: false).firstMatch(tag)?.group(1) ?? '';
+      var url = HtmlParse.absUrl(base, source);
       url = _transformUrl(url, transformations);
       if (url.isNotEmpty) urls.add(_imageUrl(url, config));
     }
