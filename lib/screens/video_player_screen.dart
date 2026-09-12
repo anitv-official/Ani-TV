@@ -508,6 +508,61 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   static const String _browserUserAgent =
       'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
+  bool get _isAnyPlayEmbed => _currentUrl.toLowerCase().contains('anyplay.stream/embed/');
+
+  bool _isBlockedAdUrl(String value) {
+    final lower = value.toLowerCase();
+    if (!lower.startsWith('http://') && !lower.startsWith('https://')) return true;
+    const adMarkers = [
+      'doubleclick.',
+      'googlesyndication.',
+      'googleadservices.',
+      'adservice.',
+      'adsystem.',
+      'adserver.',
+      'popads.',
+      'popcash.',
+      'propellerads.',
+      'onclickads.',
+      'exoclick.',
+      'juicyads.',
+      'trafficjunky.',
+      '/ads/',
+      '/advert/',
+      '/popunder',
+      'popunder',
+      'redirect?url=',
+    ];
+    return adMarkers.any(lower.contains);
+  }
+
+  static const String _anyPlayAdShieldScript = r'''(() => {
+    try {
+      // AnyPlay's player is retained, but its embed page must not be able to
+      // open popunders or redirect the top-level WebView to an advertisement.
+      window.open = () => null;
+      window.alert = () => null;
+      window.confirm = () => false;
+      const blocked = (value) => {
+        const url = String(value || '').toLowerCase();
+        return /doubleclick\.|googlesyndication\.|googleadservices\.|adservice\.|adsystem\.|adserver\.|popads\.|popcash\.|propellerads\.|onclickads\.|exoclick\.|juicyads\.|trafficjunky\.|\/ads\/|\/advert\/|popunder|redirect\?url=/.test(url);
+      };
+      const clean = (root) => {
+        (root || document).querySelectorAll('script[src], iframe, a, form').forEach((node) => {
+          const value = node.src || node.href || node.action || '';
+          if (blocked(value)) node.remove();
+          if (node.tagName === 'A') node.target = '_self';
+        });
+      };
+      clean(document);
+      new MutationObserver(() => clean(document)).observe(document.documentElement, {childList: true, subtree: true});
+      document.addEventListener('click', (event) => {
+        const link = event.target && event.target.closest ? event.target.closest('a') : null;
+        if (link && blocked(link.href)) { event.preventDefault(); event.stopPropagation(); }
+      }, true);
+    } catch (_) {}
+  })();''';
+
   void _initializeWebView() {
     setState(() => _isLoading = true);
     final controller = WebViewController()
@@ -517,8 +572,25 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..setUserAgent(_browserUserAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            if (_isAnyPlayEmbed) {
+              if (_isBlockedAdUrl(request.url)) return NavigationDecision.prevent;
+              // Never let an ad or a clicked external link replace the
+              // AnyPlay page. Child frames (the actual player) are allowed.
+              if (request.isMainFrame) {
+                final host = Uri.tryParse(request.url)?.host.toLowerCase().replaceFirst('www.', '') ?? '';
+                if (host.isNotEmpty && host != 'anyplay.stream' && !host.endsWith('.anyplay.stream')) {
+                  return NavigationDecision.prevent;
+                }
+              }
+            }
+            return NavigationDecision.navigate;
+          },
           onPageFinished: (String url) {
             if (!mounted) return;
+            if (_isAnyPlayEmbed) {
+              _webViewController?.runJavaScript(_anyPlayAdShieldScript);
+            }
             setState(() {
               _isLoading = false;
               _isInitialized = true;
