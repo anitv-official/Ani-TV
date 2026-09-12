@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/password_reset_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/email_verification_screen.dart';
 import 'screens/anime_details_screen.dart';
 import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
@@ -71,7 +73,9 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   static const _deepLinkChannel = MethodChannel('com.anitv.app/deeplink');
   String? _lastRecoveryLink;
+  String? _lastVerificationLink;
   String? _lastContentLink;
+  bool _verificationInProgress = false;
 
   @override
   void initState() {
@@ -89,14 +93,34 @@ class _MyAppState extends State<MyApp> {
     if (uri == null) return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
-    if (uri.scheme == 'anitv' && uri.host == 'verify-email' && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
+    final isVerificationCallback = (uri.scheme == 'anitv' && uri.host == 'verify-email') ||
+        (uri.scheme == 'https' && uri.host == 'anitv-manga-lord.vercel.app' && uri.path == '/verify-email');
+    if (isVerificationCallback && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
+      final key = '$userId:$secret';
+      if (_lastVerificationLink == key || _verificationInProgress) return;
+      _lastVerificationLink = key;
+      _verificationInProgress = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {
-          await appNavigatorKey.currentContext?.read<AppStateProvider>().confirmEmailVerification(userId: userId, secret: secret);
-          appNavigatorKey.currentState?.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
-          ToastUtils.show('تم تأكيد البريد الإلكتروني بنجاح.', backgroundColor: Colors.green);
+          final context = appNavigatorKey.currentContext;
+          final navigator = appNavigatorKey.currentState;
+          if (context == null || navigator == null) return;
+          final provider = context.read<AppStateProvider>();
+          await provider.confirmEmailVerification(userId: userId, secret: secret);
+          if (provider.emailVerified) {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+            ToastUtils.show('تم تأكيد البريد الإلكتروني بنجاح.', backgroundColor: Colors.green);
+          } else {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: provider.email)), (_) => false);
+          }
         } catch (_) {
-          ToastUtils.show('تعذر تأكيد البريد الإلكتروني. افتح رابطًا جديدًا وحاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null) {
+            navigator.pushAndRemoveUntil(const MaterialPageRoute(builder: (_) => LoginScreen()), (_) => false);
+          }
+          ToastUtils.show('تعذر تأكيد البريد الإلكتروني. سجّل الدخول وحاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
+        } finally {
+          _verificationInProgress = false;
         }
       });
       return;
