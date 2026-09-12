@@ -674,7 +674,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return ContentCard(
       title: item['title']?.toString(),
       imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-      badge: item['type']?.toString() ?? category,
+      badge: item['source_id']?.toString().toLowerCase() == 'anyplay'
+          ? 'ANYPLAY'
+          : item['type']?.toString() ?? category,
       onTap: () {
         if (targetScreen != null) {
           Navigator.push(context, MaterialPageRoute(builder: (context) => targetScreen!));

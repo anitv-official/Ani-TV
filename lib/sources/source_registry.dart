@@ -122,6 +122,10 @@ class SourceRegistry {
 
 
   static bool _matchesQuery(Map<String, dynamic> item, String query) {
+    // AnyPlay performs the authoritative search server-side. Its catalog may
+    // return an English/original title for an Arabic query, so applying the
+    // generic local title filter here would incorrectly hide valid results.
+    if ('${item['source_id'] ?? ''}'.toLowerCase() == 'anyplay') return true;
     final normalizedQuery = query.toLowerCase().trim();
     final haystack = '${item['title'] ?? ''} ${item['url'] ?? ''}'.toLowerCase();
     final terms = normalizedQuery.split(RegExp(r'\s+')).where((term) => term.length > 1).toList();
