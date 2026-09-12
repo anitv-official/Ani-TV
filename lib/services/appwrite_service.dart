@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'dart:typed_data';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -103,7 +104,7 @@ class AppwriteService {
     return file.$id;
   }
 
-  String profileImageUrl(String fileId) => storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
+  Future<Uint8List> profileImageBytes(String fileId) => storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
 
   Future<void> deleteProfileImage(String fileId) async {
     if (fileId.isEmpty) return;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import '../services/appwrite_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
@@ -13,7 +14,7 @@ class AppStateProvider extends ChangeNotifier {
   String? _userId;
   String? _profileDocumentId;
   String? _profileImageId;
-  String? get profileImageUrl => _profileImageId == null || _profileImageId!.isEmpty ? null : _appwrite.profileImageUrl(_profileImageId!);
+  Future<Uint8List>? get profileImageBytes => _profileImageId == null || _profileImageId!.isEmpty ? null : _appwrite.profileImageBytes(_profileImageId!);
 
   List<dynamic> _favoriteAnime = [];
   List<dynamic> _favoriteComics = [];

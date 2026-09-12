@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -369,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildProfileCard() {
     final hasAvatar = _avatarPath != null && File(_avatarPath!).existsSync();
-    final cloudAvatarUrl = context.watch<AppStateProvider>().profileImageUrl;
+    final cloudAvatarBytes = context.watch<AppStateProvider>().profileImageBytes;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -384,10 +385,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: CircleAvatar(
               radius: 34,
               backgroundColor: AppTheme.elevatedColor,
-              backgroundImage: hasAvatar
-                  ? FileImage(File(_avatarPath!))
-                  : (cloudAvatarUrl == null ? null : NetworkImage(cloudAvatarUrl)),
-              child: hasAvatar || cloudAvatarUrl != null ? null : const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor),
+              backgroundImage: hasAvatar ? FileImage(File(_avatarPath!)) : null,
+              child: hasAvatar
+                  ? null
+                  : (cloudAvatarBytes == null
+                      ? const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor)
+                      : FutureBuilder<Uint8List>(
+                          future: cloudAvatarBytes,
+                          builder: (context, snapshot) => snapshot.hasData
+                              ? ClipOval(child: Image.memory(snapshot.data!, width: 68, height: 68, fit: BoxFit.cover))
+                              : const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor),
+                        )),
             ),
           ),
           const SizedBox(width: 14),
