@@ -18,13 +18,18 @@ class MainActivity: FlutterActivity() {
     private val DOWNLOAD_CHANNEL = "com.anitv.app/downloads"
     private val NOTIFICATION_ID = 7241
     private lateinit var deepLinkChannel: MethodChannel
+    private var initialLink: String? = null
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        initialLink = intent?.data?.toString()
 
         deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEP_LINK_CHANNEL)
         deepLinkChannel.setMethodCallHandler { call, result ->
-            if (call.method == "getInitialLink") result.success(intent?.data?.toString()) else result.notImplemented()
+            if (call.method == "getInitialLink") {
+                result.success(initialLink)
+                initialLink = null
+            } else result.notImplemented()
         }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
