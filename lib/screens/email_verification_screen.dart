@@ -17,6 +17,8 @@ class EmailVerificationScreen extends StatefulWidget {
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _loading = false;
   bool _sending = false;
+  DateTime? _lastSentAt;
+  static const _resendCooldown = Duration(seconds: 30);
 
   @override
   void initState() {
@@ -26,12 +28,18 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
   Future<void> _sendLink() async {
     if (_sending) return;
+    final lastSentAt = _lastSentAt;
+    if (lastSentAt != null && DateTime.now().difference(lastSentAt) < _resendCooldown) {
+      if (mounted) ToastUtils.show('انتظر قليلًا قبل إعادة الإرسال.', backgroundColor: AppTheme.errorColor);
+      return;
+    }
     setState(() => _sending = true);
     try {
       await context.read<AppStateProvider>().sendEmailVerification();
+      _lastSentAt = DateTime.now();
       if (mounted) ToastUtils.show('تم إرسال رابط التأكيد إلى بريدك الإلكتروني.', backgroundColor: Colors.green);
     } catch (error) {
-      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor);
+      if (mounted) ToastUtils.show('تعذر إرسال رسالة التحقق. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
     } finally {
       if (mounted) setState(() => _sending = false);
     }
