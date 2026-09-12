@@ -5,6 +5,7 @@ import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
 import 'manga_swat_source.dart';
 import 'manga_slayer_source.dart';
+import 'manga_mello_source.dart';
 import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
@@ -22,9 +23,10 @@ class SourceRegistry {
     AnimeSlayerSource(),
     OlympusSource(),
     AzorafySource(),
-    MangaSwatSource(),
-    MangaSlayerSource(),
-    HijalaSource(),
+      MangaSwatSource(),
+      MangaSlayerSource(),
+      MangaMelloSource(),
+      HijalaSource(),
   ];
 
   static List<ContentSource> get animeSources =>
