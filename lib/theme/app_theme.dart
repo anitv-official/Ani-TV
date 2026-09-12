@@ -37,6 +37,10 @@ class AppTheme {
         colors: [Colors.transparent, Colors.black.withOpacity(.86)],
       );
 
+  static LinearGradient get glassGradient => LinearGradient(
+        colors: [Colors.white.withOpacity(.08), Colors.white.withOpacity(.025)],
+      );
+
   static ThemeData _base({required Brightness brightness}) {
     final dark = brightness == Brightness.dark;
     final background = dark ? backgroundColor : const Color(0xFFF4F5F6);
