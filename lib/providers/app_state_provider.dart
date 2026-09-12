@@ -151,7 +151,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> sendPasswordRecovery(String email) async {
-    await _appwrite.sendPasswordRecovery(email, 'anitv://reset-password');
+    await _appwrite.sendPasswordRecovery(email, 'https://anitv-tau.vercel.app/reset-password');
   }
 
   Future<void> completePasswordRecovery({required String userId, required String secret, required String password}) async {

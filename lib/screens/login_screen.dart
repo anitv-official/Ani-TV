@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../widgets/auth_branding.dart';
@@ -73,19 +74,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _forgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      ToastUtils.show('أدخل بريدك الإلكتروني أولًا', backgroundColor: Colors.red);
-      return;
-    }
-    setState(() => _isLoading = true);
+    final uri = Uri.parse('https://anitv-tau.vercel.app/reset-password');
     try {
-      await context.read<AppStateProvider>().sendPasswordRecovery(email);
-      if (mounted) ToastUtils.show('تم إرسال رابط استعادة كلمة المرور إلى بريدك', backgroundColor: Colors.green);
-    } catch (error) {
-      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ToastUtils.show('تعذر فتح صفحة استعادة كلمة المرور. حاول مرة أخرى.', backgroundColor: Colors.red);
+      }
+    } catch (_) {
+      if (mounted) {
+        ToastUtils.show('تعذر فتح صفحة استعادة كلمة المرور. حاول مرة أخرى.', backgroundColor: Colors.red);
+      }
     }
   }
 
