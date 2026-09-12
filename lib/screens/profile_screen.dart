@@ -282,7 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: isLoading
             ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
             : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
                 child: Column(
                   children: [
                     // Header Title
@@ -290,29 +290,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Text(
                         'الملف الشخصي',
                         style: TextStyle(
-                          fontSize: 21,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
 
                     // Neutral avatar: no profile image is shown unless Appwrite provides one.
                     GestureDetector(
                       onTap: _pickAvatar,
                       child: CircleAvatar(
-                        radius: 48,
+                        radius: 40,
                         backgroundColor: AppTheme.surfaceColor,
                         backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync() ? FileImage(File(_avatarPath!)) : null,
-                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? const Icon(Icons.person_outline, size: 52, color: AppTheme.textSecondaryColor) : null,
+                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? const Icon(Icons.person_outline, size: 43, color: AppTheme.textSecondaryColor) : null,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(username.isEmpty ? 'زائر' : username, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     TextButton.icon(onPressed: _pickAvatar, icon: const Icon(Icons.edit, size: 16), label: const Text('تغيير صورة الملف الشخصي')),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 22),
 
                     if (!isLoggedIn)
                       _buildSectionContainer(

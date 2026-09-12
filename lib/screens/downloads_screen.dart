@@ -52,7 +52,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _items.isEmpty
               ? const Center(child: Text('لا توجد تنزيلات محفوظة', style: TextStyle(color: Colors.white70)))
-              : ListView(padding: const EdgeInsets.all(16), children: [
+              : ListView(padding: const EdgeInsets.fromLTRB(12, 8, 12, 110), children: [
                   if (manga.isNotEmpty) _section('المانجا المنزلة', manga, true),
                   if (anime.isNotEmpty) _section('الأنمي المنزّل', anime, false),
                 ]),
@@ -62,7 +62,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget _section(String title, Map<String, List<Map<String, dynamic>>> groups, bool isManga) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold))),
+      Padding(padding: const EdgeInsets.only(bottom: 7), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
       ...groups.entries.map((entry) => _seriesCard(entry.value, isManga)),
       const SizedBox(height: 20),
     ],
@@ -78,8 +78,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(children: [
         ListTile(
-          leading: cover.isNotEmpty ? Image.network(cover, width: 52, height: 70, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _icon(isManga)) : _icon(isManga),
-          title: Text(first['title']?.toString() ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          leading: cover.isNotEmpty ? Image.network(cover, width: 44, height: 58, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _icon(isManga)) : _icon(isManga),
+          title: Text(first['title']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
           subtitle: Text('${items.length} ${isManga ? 'فصل' : 'حلقة'} محفوظة', style: const TextStyle(color: Colors.white60)),
           trailing: IconButton(icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: Colors.white), onPressed: () => setState(() => open ? _expanded.remove(key) : _expanded.add(key))),
         ),

@@ -161,28 +161,28 @@ class _ExploreScreenState extends State<ExploreScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               // Header
               _buildHeader(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
 
               // Custom Toggle
               _buildToggleButtons(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
 
               // Section Title
               Text(
                 _currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث المانجا',
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
               // Content Grid
               Expanded(
@@ -296,9 +296,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
           physics: const BouncingScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.7,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 11,
+            childAspectRatio: 0.68,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -326,7 +326,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                 color: const Color(0xFF1E1E1E),
               ),
               clipBehavior: Clip.antiAlias,
@@ -367,14 +367,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           Text(
             item['title'] ?? 'بدون عنوان',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 14,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
           ),

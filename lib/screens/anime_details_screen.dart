@@ -53,7 +53,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         future: _animeDetailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل الأنمي...', size: 100));
+            return const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل الأنمي...', size: 58));
           } else if (snapshot.hasError) {
             return const Center(child: Text('تعذر تحميل التفاصيل. حاول مرة أخرى.', style: TextStyle(color: Colors.white)));
           } else if (!snapshot.hasData) {
@@ -73,11 +73,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildInfo(context, anime),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 10),
                         _buildActionButtons(context, anime),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         _buildEpisodesList(context, anime),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 22),
                       ],
                     ),
                   ),
@@ -102,7 +102,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               aspectRatio = 21 / 9; // Ultra-wide for desktop
             }
             return ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 330),
+              constraints: const BoxConstraints(maxHeight: 285),
               child: AspectRatio(
                 aspectRatio: aspectRatio,
                 child: Image.network(
@@ -163,7 +163,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           anime['title'] ?? 'بدون عنوان',
           style: const TextStyle(
             color: Colors.white,
-             fontSize: 21,
+             fontSize: 19,
             fontWeight: FontWeight.bold,
           ),
         ),

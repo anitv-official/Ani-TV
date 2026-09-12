@@ -106,7 +106,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
               child: _isSearching
               ? Row(
                   children: [
@@ -148,14 +148,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       if (widget.showBackButton) ...[
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                          child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
                         ),
                         const SizedBox(width: 16),
                       ],
                       const Text(
                         'المفضلة',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -168,7 +168,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                          _isSearching = true;
                        });
                      },
-                     child: Icon(Icons.search, color: Colors.white, size: 28),
+                     child: Icon(Icons.search, color: Colors.white, size: 22),
                   ),
                 ],
               ),
@@ -176,7 +176,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
             // Toggle Tabs
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 5.0),
               child: Row(
                 children: [
                   Expanded(
@@ -186,7 +186,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       onTap: () => setState(() => _currentTabIndex = 0)
                     )
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildToggleItem(
                       label: 'مانجا',
@@ -198,7 +198,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
             // Content
             Expanded(
@@ -264,8 +264,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             childAspectRatio: 0.7,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 11,
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
@@ -285,13 +285,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           // SVG Image
           SvgPicture.asset(
             'assets/images/anime_favorites.svg',
-            width: 200, // Adjust size
+            width: 150,
           ),
           const SizedBox(height: 24),
           const Text(
             'لا توجد عناصر مفضلة',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -304,14 +304,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.grey[400],
-              fontSize: 16,
+              fontSize: 14,
             ),
           ),
           const SizedBox(height: 32),
           // Explore Button
           SizedBox(
             width: 200,
-            height: 48,
+            height: 42,
             child: ElevatedButton(
               onPressed: () {
                  // Navigate to ExploreScreen with the correct tab selected
@@ -331,7 +331,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -362,7 +362,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             child: Stack(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                   child: Image.network(
                     item['image_url'] ?? '',
                     width: double.infinity,
@@ -416,7 +416,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 5),
           Text(
             item['title'] ?? '',
             maxLines: 1,
@@ -424,7 +424,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 12,
             ),
           ),
         ],

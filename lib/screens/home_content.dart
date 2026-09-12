@@ -276,7 +276,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
     final item = featuredContent[_currentCarouselIndex]; // Use current index
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
-    final double heroHeight = (screenHeight * 0.34).clamp(230.0, 360.0);
+    final double heroHeight = (screenHeight * 0.30).clamp(210.0, 320.0);
 
     return SizedBox(
       height: heroHeight,
@@ -367,7 +367,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         'AniTV',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 22,
+                          fontSize: 19,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -423,7 +423,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 26, // Reduced slightly more
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Roboto',
                           color: Colors.white,
@@ -449,8 +449,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
                           // Play/Read Button
                           SizedBox(
-                            width: 140, // Slightly smaller button
-                            height: 45, 
+                            width: 124,
+                            height: 40,
                             child: ElevatedButton(
                               onPressed: () {
                                 if (item['type'] == 'anime') {
@@ -467,7 +467,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                                 child: Text(
                                 item['type'] == 'comic' ? 'اقرأ' : 'شاهد',
                                 style: const TextStyle(
-                                  fontSize: 16, 
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold, 
                                   color: Colors.white,
                                   height: 1.2, 
@@ -527,9 +527,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   Widget _buildCategoryToggle() {
     return Padding(
       // Increased spacing to 20.0 for more separation
-      padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 12.0), 
+      padding: const EdgeInsets.fromLTRB(14.0, 14.0, 14.0, 10.0),
       child: Container(
-        height: 45,
+        height: 40,
         decoration: BoxDecoration(
            color: const Color(0xFF333333), // Dark grey background for container
            borderRadius: BorderRadius.circular(8),
@@ -623,9 +623,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             shrinkWrap: true,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              childAspectRatio: 0.58,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 16,
+              childAspectRatio: 0.64,
+              crossAxisSpacing: 9,
+              mainAxisSpacing: 12,
             ),
             itemCount: items.length,
             itemBuilder: (context, index) {
@@ -692,7 +692,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 5),
                     SizedBox(
                       height: 32,
                       child: Text(
@@ -701,7 +701,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
+                          fontSize: 12,
                           height: 1.25,
                           fontWeight: FontWeight.w500,
                         ),
