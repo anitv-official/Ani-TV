@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/password_reset_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/anime_details_screen.dart';
 import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
@@ -88,6 +89,18 @@ class _MyAppState extends State<MyApp> {
     if (uri == null) return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
+    if (uri.scheme == 'anitv' && uri.host == 'verify-email' && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await appNavigatorKey.currentContext?.read<AppStateProvider>().confirmEmailVerification(userId: userId, secret: secret);
+          appNavigatorKey.currentState?.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+          ToastUtils.show('تم تأكيد البريد الإلكتروني بنجاح.', backgroundColor: Colors.green);
+        } catch (_) {
+          ToastUtils.show('تعذر تأكيد البريد الإلكتروني. افتح رابطًا جديدًا وحاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
+        }
+      });
+      return;
+    }
     if (userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
       final key = '$userId:$secret';
       if (_lastRecoveryLink == key) return;

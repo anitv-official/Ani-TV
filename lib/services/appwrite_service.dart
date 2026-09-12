@@ -47,6 +47,15 @@ class AppwriteService {
     return account.get();
   }
 
+  Future<void> sendEmailVerification() async {
+    await account.createVerification(url: 'anitv://verify-email');
+  }
+
+  Future<models.User> confirmEmailVerification({required String userId, required String secret}) async {
+    await account.updateVerification(userId: userId, secret: secret);
+    return account.get();
+  }
+
   Future<void> logout() async => account.deleteSession(sessionId: 'current');
 
   Future<void> ping() async => client.ping();

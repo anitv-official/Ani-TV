@@ -9,6 +9,7 @@ class AppStateProvider extends ChangeNotifier {
   String _username = '';
   String _email = '';
   bool _isLoggedIn = false;
+  bool _emailVerified = false;
   bool _isDarkMode = true;
   final AppwriteService _appwrite = AppwriteService.instance;
   String? _userId;
@@ -27,6 +28,7 @@ class AppStateProvider extends ChangeNotifier {
   String get username => _username;
   String get email => _email;
   bool get isLoggedIn => _isLoggedIn;
+  bool get emailVerified => _emailVerified;
   bool get isDarkMode => _isDarkMode;
   List<dynamic> get favoriteAnime => _favoriteAnime;
   List<dynamic> get favoriteComics => _favoriteComics;
@@ -64,8 +66,9 @@ class AppStateProvider extends ChangeNotifier {
     _userId = user.$id as String;
     _username = (user.name as String?)?.trim() ?? '';
     _email = (user.email as String?)?.trim() ?? '';
-    _isLoggedIn = true;
-    if (syncCloud) await _syncAccountFromCloud();
+    _emailVerified = user.emailVerification == true;
+    _isLoggedIn = _emailVerified;
+    if (syncCloud && _emailVerified) await _syncAccountFromCloud();
   }
 
   Future<void> _syncAccountFromCloud() async {
@@ -118,6 +121,7 @@ class AppStateProvider extends ChangeNotifier {
   void _clearUser() {
     _username = '';
     _email = '';
+    _emailVerified = false;
     _userId = null;
     _profileDocumentId = null;
     _profileImageId = null;
@@ -131,8 +135,8 @@ class AppStateProvider extends ChangeNotifier {
       final user = await _appwrite.login(email: email, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
-      await _applyAuthenticatedUser(user, syncCloud: true);
-      await _loadFavorites();
+      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      if (user.emailVerification == true) await _loadFavorites();
       notifyListeners();
     } catch (_) {
       _clearUser();
@@ -143,13 +147,29 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> register({required String email, required String password, required String name}) async {
     try {
       final user = await _appwrite.register(email: email, password: password, name: name);
-      await _applyAuthenticatedUser(user, syncCloud: true);
-      await _loadFavorites();
+      await _applyAuthenticatedUser(user, syncCloud: false);
       notifyListeners();
     } catch (_) {
       _clearUser();
       rethrow;
     }
+  }
+
+  Future<void> sendEmailVerification() => _appwrite.sendEmailVerification();
+
+  Future<void> confirmEmailVerification({required String userId, required String secret}) async {
+    final user = await _appwrite.confirmEmailVerification(userId: userId, secret: secret);
+    await _applyAuthenticatedUser(user, syncCloud: true);
+    await _loadFavorites();
+    notifyListeners();
+  }
+
+  Future<void> refreshEmailVerification() async {
+    final user = await _appwrite.getCurrentUser();
+    if (user == null) return;
+    await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+    if (user.emailVerification == true) await _loadFavorites();
+    notifyListeners();
   }
 
   Future<void> updateUserData({String? username, String? email, bool? isLoggedIn, bool? isDarkMode}) async {
