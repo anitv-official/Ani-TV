@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#090909" />
+  <title>تأكيد البريد الإلكتروني — AniTV</title>
+  <link rel="icon" href="/assets/anitv_app_icon.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="page-title">
+      <p class="eyebrow">حساب AniTV</p>
+      <h1 id="page-title">تأكيد البريد الإلكتروني</h1>
+      <p id="message" class="auth-lede">جارٍ تجهيز تأكيد البريد…</p>
+      <div id="status" class="status" role="status" aria-live="polite" hidden></div>
+      <a id="open-app" class="button primary auth-submit" href="#" hidden>فتح تطبيق AniTV</a>
+      <a class="button secondary auth-submit" href="/">العودة إلى موقع AniTV</a>
+    </section>
+  </main>
+  <script>
+    const params = new URLSearchParams(`${window.location.search}${window.location.hash.replace(/^#/, '&')}`);
+    const userId = params.get('userId') || '';
+    const secret = params.get('secret') || '';
+    const message = document.getElementById('message');
+    const status = document.getElementById('status');
+    const openApp = document.getElementById('open-app');
+    const appUrl = `anitv://verify-email?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(secret)}`;
+
+    function showStatus(text, type) {
+      status.textContent = text;
+      status.className = `status ${type}`;
+      status.hidden = false;
+    }
+
+    if (!userId || !secret) {
+      message.textContent = 'رابط تأكيد البريد غير مكتمل أو انتهت صلاحيته.';
+      showStatus('اطلب رسالة تحقق جديدة من تطبيق AniTV.', 'error');
+    } else {
+      message.textContent = 'تم فتح رابط التحقق. اضغط الزر للعودة إلى التطبيق وإكمال العملية.';
+      showStatus('سيتم إكمال التحقق داخل تطبيق AniTV.', 'success');
+      openApp.href = appUrl;
+      openApp.hidden = false;
+      window.setTimeout(() => { window.location.href = appUrl; }, 350);
+    }
+  </script>
+</body>
+</html>

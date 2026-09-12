@@ -1,5 +1,6 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
@@ -21,6 +22,7 @@ class AppwriteService {
   static const String profilesTableId = '6aa58dec001acc5ce962';
   static const String favoritesTableId = '6aa58e3a003b23556872';
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
+  static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
 
   final Client client = Client();
   late final Account account;
@@ -48,7 +50,14 @@ class AppwriteService {
   }
 
   Future<void> sendEmailVerification() async {
-    await account.createVerification(url: 'anitv://verify-email');
+    try {
+      await account.createVerification(url: emailVerificationUrl);
+    } on AppwriteException catch (error) {
+      // Keep the user-facing message generic, but preserve the real Appwrite
+      // response in debug logs so URL/platform/rate-limit errors are visible.
+      debugPrint('Appwrite createVerification failed: code=${error.code}, type=${error.type}, message=${error.message}');
+      rethrow;
+    }
   }
 
   Future<models.User> confirmEmailVerification({required String userId, required String secret}) async {
