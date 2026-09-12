@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _forgotPassword() async {
-    final uri = Uri.parse('https://anitv-tau.vercel.app/reset-password');
+    final uri = Uri.parse('https://anitv-manga-lord.vercel.app/reset-password');
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
