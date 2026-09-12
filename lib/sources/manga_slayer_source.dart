@@ -116,8 +116,12 @@ class MangaSlayerSource extends ContentSource {
       _resolveMap(extractor['fields'], {'manga': mangaId}),
     );
     final html = _htmlFromResponse(response);
+    // The reference APK uses a CSS selector over the returned HTML.  Keep the
+    // equivalent class extraction here, but do not depend on the exact outer
+    // <ul> markup because the source has changed whitespace/attributes over
+    // time.
     final root = extractor['root_selector']?.toString() ?? 'li.wp-manga-chapter';
-    final className = root.split('.').last;
+    final className = root.split('.').last.trim();
     final pattern = RegExp(
       '<li[^>]*class=["\\\'][^"\\\']*${RegExp.escape(className)}[^"\\\']*["\\\'][^>]*>([\\s\\S]*?)</li>',
       caseSensitive: false,
@@ -133,6 +137,8 @@ class MangaSlayerSource extends ContentSource {
       final releaseDate = RegExp('<(?:i|span)[^>]*>([\\s\\S]*?)</(?:i|span)>', caseSensitive: false).firstMatch(block)?.group(1) ?? '';
       if (href.isEmpty || title.isEmpty) continue;
       final absolute = HtmlParse.absUrl('https://$domain/', href);
+      // APK behavior: chapter numbers are read from Arabic/Latin digits and
+      // fall back to the site's displayed order when a title has no number.
       final number = _chapterNumber(title, blocks.length - index - 1);
       final chapterId = _chapterSlug(absolute);
       final internalUrl = 'mangaslayer://chapter?chapter_url=${Uri.encodeComponent(absolute)}&post_id=$mangaId&chapter=${Uri.encodeComponent(chapterId)}';
@@ -212,7 +218,12 @@ class MangaSlayerSource extends ContentSource {
   Future<dynamic> _sourcePost(Map<String, dynamic> config, String url, Map<String, String> fields) async {
     final response = await http.post(
       Uri.parse(url),
-      headers: {'User-Agent': _userAgent, 'Referer': _fallbackSite, 'Host': _configDomain(config)},
+      headers: {
+        'User-Agent': _userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+        'Referer': _fallbackSite,
+      },
       body: fields,
     ).timeout(const Duration(seconds: 25));
     if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('Manga Slayer source request failed');
@@ -237,10 +248,12 @@ class MangaSlayerSource extends ContentSource {
   String _htmlFromResponse(dynamic value) {
     var current = value;
     for (var depth = 0; depth < 5; depth++) {
-      if (current is Map && current.containsKey('data')) {
-        current = current['data'];
-      } else if (current is Map && current.containsKey('content')) {
+      // chapter_navigate_page returns {data:{data:{content:<html>}}};
+      // tolerate the older {data:<html>} response as well.
+      if (current is Map && current['content'] != null) {
         current = current['content'];
+      } else if (current is Map && current.containsKey('data')) {
+        current = current['data'];
       } else {
         break;
       }
@@ -251,7 +264,7 @@ class MangaSlayerSource extends ContentSource {
   List<String> _images(String html, String base, String selector, Map<String, dynamic> config, Map<String, dynamic> extractor) {
     final transformations = extractor['url_transformations'];
     final urls = <String>{};
-    for (final match in RegExp('<img[^>]+(?:src|data-src)=["\\\']([^"\\\']+)', caseSensitive: false).allMatches(html)) {
+    for (final match in RegExp('<img[^>]+(?:src|data-src|data-lazy-src)=["\\\']([^"\\\']+)', caseSensitive: false).allMatches(html)) {
       var url = HtmlParse.absUrl(base, match.group(1) ?? '');
       url = _transformUrl(url, transformations);
       if (url.isNotEmpty) urls.add(_imageUrl(url, config));
