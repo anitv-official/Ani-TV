@@ -1,15 +1,18 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
 
-import 'html_client.dart';
 import 'source_base.dart';
 
-/// Animefy adapter. The API has had several compatible v4 response shapes;
-/// this adapter keeps the request/normalisation boundary isolated from the UI.
+/// Animefy API adapter.
+///
+/// Animefy's Xamarin client posts form fields with their original casing. Keep
+/// that boundary explicit: sending guessed aliases makes the API return an
+/// empty body instead of a catalog.
 class AnimefySource extends ContentSource {
   static const _base = 'https://animeify.net/animeify/apis_v4';
-  static const _files = 'https://animeify.net/animeify/files';
+  static const _thumbnailBase = 'https://animeify.net/animeify/files/thumbnails/';
   static const _ua = 'AniTV/1.0 (Android)';
 
   @override
@@ -32,28 +35,38 @@ class AnimefySource extends ContentSource {
     final value = query.trim();
     if (value.isEmpty) return const [];
     final decoded = await _api('anime/load_anime_list_v2.php', {
-      'search': value,
-      'query': value,
-      'q': value,
-      'page': '1',
-      'limit': '50',
+      'FilterType': 'Search',
+      'FilterData': '',
+      'AnimeListMode': 'NAME',
+      'SearchText': value,
     });
     return _items(decoded).map(_anime).where(_isValid).toList();
   }
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    final decoded = await _api('anime/load_latest_anime.php', {'page': '$page', 'limit': '50'});
-    return _items(decoded).map(_anime).where(_isValid).toList();
+    // The API returns the complete sorted catalog; pagination is performed by
+    // the existing application layer. AnimeListMode is the APK sort value.
+    final decoded = await _api('anime/load_anime_list_v2.php', {
+      'FilterType': '',
+      'FilterData': '',
+      'AnimeListMode': 'NAME',
+      'SearchText': '',
+    });
+    final all = _items(decoded).map(_anime).where(_isValid).toList();
+    const pageSize = 50;
+    final start = (page - 1) * pageSize;
+    return start >= all.length ? const [] : all.skip(start).take(pageSize).toList();
   }
 
   @override
   Future<Map<String, dynamic>> details(String url) async {
     final uri = Uri.tryParse(url);
-    final id = uri?.queryParameters['id'] ?? uri?.pathSegments.lastOrNull ?? '';
+    final id = uri?.queryParameters['id'] ?? '';
     if (id.isEmpty) throw Exception('تعذر تحميل تفاصيل الأنمي');
-    final decoded = await _api('anime/load_anime_details.php', {'id': id, 'anime_id': id, 'animeId': id});
-    final raw = _firstMap(decoded) ?? <String, dynamic>{'id': id};
+
+    final decoded = await _api('anime/load_anime_details.php', {'AnimeID': id});
+    final raw = _firstMap(decoded) ?? <String, dynamic>{'AnimeID': id};
     final result = _anime(raw);
     result['url'] = url;
     result['episodes'] = await _episodes(id, raw);
@@ -67,29 +80,24 @@ class AnimefySource extends ContentSource {
     if (uri == null || uri.scheme != 'animefy') return null;
     final animeId = uri.queryParameters['anime'] ?? '';
     final episodeId = uri.queryParameters['episode'] ?? '';
-    if (episodeId.isEmpty) return null;
+    if (animeId.isEmpty || episodeId.isEmpty) return null;
+
     final decoded = await _api('anime/load_servers.php', {
-      'id': episodeId,
-      'episode_id': episodeId,
-      'episodeId': episodeId,
-      'anime_id': animeId,
-      'animeId': animeId,
+      'AnimeID': animeId,
+      'Episode': episodeId,
     });
     final candidates = <Map<String, dynamic>>[];
     for (final map in _mapsDeep(decoded)) {
-      final name = _text(map['name'] ?? map['server'] ?? map['title'] ?? 'Animefy');
-      final quality = _text(map['quality'] ?? map['resolution'] ?? map['quality_name'] ?? '');
-      for (final raw in _stringsDeep(map)) {
-        final value = _decodeUrl(raw);
+      final serverName = _text(map['servers_name_ma'] ?? map['server_name'] ?? map['name'] ?? 'Animefy');
+      for (final key in const [
+        'server_a', 'server_b', 'server_c', 'server_d', 'server_e', 'server_f',
+        'server_g', 'server_hd', 'server_sd', 'server_fhd', 'WatchLink',
+        'StreamLink', 'DownloadLink',
+      ]) {
+        final value = _decodeUrl(_text(map[key]));
         if (!_looksLikeUrl(value)) continue;
-        if (_isMedia(value)) {
-          candidates.add({'url': value, 'quality': quality, 'server': name, 'name': name});
-        } else {
-          final resolved = await _extract(value);
-          for (final media in resolved) {
-            candidates.add({'url': media, 'quality': quality, 'server': name, 'name': name, 'headers': {'Referer': value}});
-          }
-        }
+        final quality = key.contains('fhd') ? 'FHD' : key.contains('hd') ? 'HD' : key.contains('sd') ? 'SD' : '';
+        candidates.add({'url': value, 'quality': quality, 'server': serverName, 'name': serverName});
       }
     }
     final unique = <String>{};
@@ -105,23 +113,20 @@ class AnimefySource extends ContentSource {
   }
 
   Future<List<Map<String, dynamic>>> _episodes(String animeId, Map<String, dynamic> details) async {
-    final decoded = await _api('episodes/load_episodes.php', {
-      'id': animeId,
-      'anime_id': animeId,
-      'animeId': animeId,
-      'page': '1',
-      'limit': '10000',
-    });
-    final rawItems = _items(decoded);
-    final sourceItems = rawItems.isNotEmpty ? rawItems : _items(details['episodes']);
+    final decoded = await _api('episodes/load_episodes.php', {'AnimeID': animeId});
+    final sourceItems = _items(decoded).isNotEmpty ? _items(decoded) : _items(details['Episodes']);
     final episodes = <Map<String, dynamic>>[];
     for (var index = 0; index < sourceItems.length; index++) {
       final raw = sourceItems[index];
-      final id = _text(raw['id'] ?? raw['episode_id'] ?? raw['episodeId'] ?? raw['ep_id'] ?? raw['number'] ?? '${index + 1}');
-      final number = _number(raw['episode_number'] ?? raw['episode'] ?? raw['number'] ?? raw['ep'], index + 1);
-      final rawTitle = _text(raw['title'] ?? raw['name'] ?? raw['episode_name'] ?? raw['ep_name']);
-      final title = 'الحلقة $number${rawTitle.isEmpty || _looksGeneric(rawTitle, number) ? '' : ' - ${SourceUtils.cleanTitle(rawTitle)}'}';
-      final internal = Uri(scheme: 'animefy', host: 'episode', queryParameters: {'anime': animeId, 'episode': id, 'title': title}).toString();
+      final id = _text(raw['Episode'] ?? raw['EpisodeNumber'] ?? raw['id'] ?? '${index + 1}');
+      final number = _number(raw['EpisodeNumber'] ?? raw['Episode'], index + 1);
+      final title = 'الحلقة $number';
+      final internal = Uri(scheme: 'animefy', host: 'episode', queryParameters: {
+        'anime': animeId,
+        'episode': id,
+        'title': title,
+      }).toString();
+      final image = _image(raw['Thumbnail']);
       episodes.add({
         'id': id,
         'episode_id': id,
@@ -129,8 +134,8 @@ class AnimefySource extends ContentSource {
         'episode_number': number,
         'title': title,
         'name': title,
-        'image': _image(raw['image'] ?? raw['thumbnail'] ?? raw['thumb']),
-        'thumbnail': _image(raw['image'] ?? raw['thumbnail'] ?? raw['thumb']),
+        'image': image,
+        'thumbnail': image,
         'url': internal,
       });
     }
@@ -139,66 +144,66 @@ class AnimefySource extends ContentSource {
   }
 
   Map<String, dynamic> _anime(Map<String, dynamic> raw) {
-    final id = _text(raw['id'] ?? raw['anime_id'] ?? raw['animeId'] ?? raw['slug'] ?? raw['mal_id']);
-    final title = _text(raw['title'] ?? raw['name'] ?? raw['anime_name'] ?? raw['english_title']);
-    final details = raw['details'] is Map ? Map<String, dynamic>.from(raw['details']) : const <String, dynamic>{};
+    final id = _text(raw['AnimeID'] ?? raw['AnimeId'] ?? raw['RelationId'] ?? raw['AnimeRelationId'] ?? raw['id']);
+    final arabic = _text(raw['ARTitle']);
+    final english = _text(raw['ENTitle']);
+    final title = arabic.isNotEmpty ? arabic : (english.isNotEmpty ? english : _text(raw['JPTitle']));
     final item = this.item(
       title: title.isEmpty ? 'بدون عنوان' : title,
       url: Uri(scheme: 'animefy', host: 'anime', queryParameters: {'id': id}).toString(),
-      image: _image(raw['image'] ?? raw['poster'] ?? raw['cover'] ?? raw['thumbnail'] ?? raw['poster_url']),
+      image: _image(raw['Thumbnail'] ?? raw['catalogthumbnail']),
       type: 'anime',
-      genres: _list(raw['genres'] ?? raw['categories'] ?? raw['tags']),
-      description: _text(raw['description'] ?? raw['story'] ?? raw['synopsis'] ?? details['description']),
-      rating: _text(raw['rating'] ?? raw['score']),
+      genres: _list(raw['Genres'] ?? raw['Tags']),
+      description: _text(raw['Description'] ?? raw['Synopsis'] ?? raw['Story']),
+      rating: _text(raw['Rating'] ?? raw['Score']),
     );
     item.addAll({
       'anime_id': id,
       'doc_id': id,
-      'alternative_title': _text(raw['alternative_title'] ?? raw['other_name'] ?? raw['romaji_title']),
-      'status': _text(raw['status'] ?? raw['state']),
-      'year': _text(raw['year'] ?? raw['release_year']),
-      'total_episodes': _number(raw['episodes_count'] ?? raw['episode_count'] ?? raw['total_episodes'], 0),
-      'studio': _list(raw['studio'] ?? raw['studios']),
+      'alternative_title': english,
+      'japanese_title': _text(raw['JPTitle']),
+      'arabic_title': arabic,
+      'synonyms': _list(raw['Synonyms']),
+      'season': _text(raw['Season']),
+      'duration': _text(raw['Duration']),
+      'premiered': _text(raw['Premiered']),
+      'aired': _text(raw['Aired']),
+      'trailer': _text(raw['Trailer'] ?? raw['YTTrailer']),
+      'creators': _list(raw['Creators']),
+      'total_episodes': _number(raw['Episodes'], 0),
+      'rank': _text(raw['Rank']),
+      'popularity': _text(raw['Popularity']),
+      'relation_id': _text(raw['RelationId'] ?? raw['AnimeRelationId']),
     });
     return item;
   }
 
   Future<dynamic> _api(String endpoint, Map<String, String> params) async {
     final uri = Uri.parse('$_base/$endpoint');
-    final headers = {'User-Agent': _ua, 'Accept': 'application/json, text/plain, */*', 'Referer': 'https://animeify.net/'};
-    final attempts = <Future<http.Response>>[
-      http.post(uri, headers: {...headers, 'Content-Type': 'application/x-www-form-urlencoded'}, body: params),
-      http.post(uri, headers: {...headers, 'Content-Type': 'application/json'}, body: jsonEncode(params)),
-      http.get(uri.replace(queryParameters: params), headers: headers),
-    ];
-    for (final request in attempts) {
-      try {
-        final response = await request.timeout(const Duration(seconds: 20));
-        if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) continue;
-        final body = utf8.decode(response.bodyBytes, allowMalformed: false).trim();
-        final parsed = jsonDecode(body);
-        if (parsed is Map || parsed is List) return parsed;
-      } catch (_) {}
-    }
-    return const <dynamic>[];
-  }
-
-  Future<List<String>> _extract(String pageUrl) async {
+    final response = await http.post(uri, headers: {
+      'User-Agent': _ua,
+      'Accept': 'application/json, text/plain, */*',
+      'Referer': 'https://animeify.net/',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+    }, body: params).timeout(const Duration(seconds: 20));
+    final body = utf8.decode(response.bodyBytes, allowMalformed: false).trim();
+    developer.log('Animefy $endpoint method=POST status=${response.statusCode} bytes=${body.length}', name: 'AnimefySource');
+    if (response.statusCode < 200 || response.statusCode >= 300 || body.isEmpty) return const <dynamic>[];
     try {
-      final html = await HtmlClient.getHtml(pageUrl);
-      return SourceUtils.extractMediaUrls(html, pageUrl).where(_isMedia).toList();
+      final parsed = jsonDecode(body);
+      developer.log('Animefy $endpoint items=${_items(parsed).length}', name: 'AnimefySource');
+      return parsed is Map || parsed is List ? parsed : const <dynamic>[];
     } catch (_) {
-      return const [];
+      return const <dynamic>[];
     }
   }
 
   List<Map<String, dynamic>> _items(dynamic value) {
     if (value is List) return value.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
     if (value is Map) {
-      for (final key in ['data', 'results', 'items', 'anime', 'animes', 'episodes', 'servers', 'list']) {
-        final nested = value[key];
-        final items = _items(nested);
-        if (items.isNotEmpty) return items;
+      for (final key in const ['data', 'results', 'items', 'anime', 'animes', 'episodes', 'servers', 'list']) {
+        final nested = _items(value[key]);
+        if (nested.isNotEmpty) return nested;
       }
       return [Map<String, dynamic>.from(value)];
     }
@@ -214,45 +219,26 @@ class AnimefySource extends ContentSource {
     if (value is Map) {
       final map = Map<String, dynamic>.from(value);
       yield map;
-      for (final child in map.values) {
-        yield* _mapsDeep(child);
-      }
+      for (final child in map.values) yield* _mapsDeep(child);
     } else if (value is List) {
       for (final child in value) yield* _mapsDeep(child);
     }
   }
 
-  Iterable<String> _stringsDeep(dynamic value) sync* {
-    if (value is String) {
-      yield value;
-    } else if (value is Map) {
-      for (final child in value.values) yield* _stringsDeep(child);
-    } else if (value is List) {
-      for (final child in value) yield* _stringsDeep(child);
-    }
-  }
-
   String _decodeUrl(String value) {
-    var result = value.trim();
-    for (var i = 0; i < 2; i++) {
-      try {
-        final decoded = utf8.decode(base64Url.decode(base64Url.normalize(result)));
-        if (_looksLikeUrl(decoded)) result = decoded;
-      } catch (_) {}
-      try {
-        final decoded = Uri.decodeComponent(result);
-        if (decoded == result) break;
-        result = decoded;
-      } catch (_) {}
-    }
-    return result.replaceAll('\\/', '/').replaceAll('&amp;', '&');
+    var result = value.trim().replaceAll('\\/', '/').replaceAll('&amp;', '&');
+    try {
+      final decoded = Uri.decodeComponent(result);
+      if (_looksLikeUrl(decoded)) result = decoded;
+    } catch (_) {}
+    return result;
   }
 
   String _image(dynamic value) {
     final raw = _text(value);
     if (raw.isEmpty) return '';
     if (raw.startsWith('http')) return raw;
-    return '$_files/thumbnails/${raw.replaceFirst(RegExp(r'^/+'), '')}';
+    return '$_thumbnailBase${raw.replaceFirst(RegExp(r'^/+'), '')}';
   }
 
   List<dynamic> _list(dynamic value) => value is List ? value.map(_text).where((e) => e.isNotEmpty).toList() : (value == null ? const [] : [_text(value)]);
@@ -260,10 +246,4 @@ class AnimefySource extends ContentSource {
   int _number(dynamic value, int fallback) => value is num ? value.toInt() : int.tryParse(_text(value)) ?? fallback;
   bool _isValid(Map<String, dynamic> value) => _text(value['title']).isNotEmpty && _text(value['url']).isNotEmpty;
   bool _looksLikeUrl(String value) => value.startsWith('http://') || value.startsWith('https://');
-  bool _isMedia(String value) => RegExp(r'\.(?:mp4|m3u8|mkv|webm)(?:[?#].*)?$', caseSensitive: false).hasMatch(value) || value.contains('.m3u8?') || value.contains('manifest');
-  bool _looksGeneric(String title, int number) => title == '$number' || title.toLowerCase() == 'episode $number' || title == 'الحلقة $number';
-}
-
-extension _AnimefyLastOrNull<T> on List<T> {
-  T? get lastOrNull => isEmpty ? null : last;
 }
