@@ -1,4 +1,5 @@
 import 'anime3rb_source.dart';
+import 'anyplay_source.dart';
 import 'animefy_source.dart';
 import 'anime4up_source.dart';
 import 'anime_slayer_source.dart';
@@ -16,6 +17,7 @@ class SourceRegistry {
   static const Duration _cacheDuration = Duration(minutes: 3);
   static final Map<String, _RegistryCache> _cache = {};
   static final List<ContentSource> all = [
+    AnyPlaySource(),
     AnimeSlayerSource(),
     RistoAnimeSource(),
     AnimefySource(),
