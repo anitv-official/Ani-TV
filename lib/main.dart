@@ -116,7 +116,7 @@ class _MyAppState extends State<MyApp> {
         } catch (_) {
           final navigator = appNavigatorKey.currentState;
           if (navigator != null) {
-            navigator.pushAndRemoveUntil(const MaterialPageRoute(builder: (_) => LoginScreen()), (_) => false);
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
           }
           ToastUtils.show('تعذر تأكيد البريد الإلكتروني. سجّل الدخول وحاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
         } finally {
