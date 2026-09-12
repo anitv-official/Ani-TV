@@ -77,7 +77,7 @@ class AppStateProvider extends ChangeNotifier {
     final userId = _userId;
     if (userId == null) return;
     try {
-      final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
+      final profile = await _appwrite.ensureProfile(userId: userId, username: _usernameCandidate(userId));
       _profileDocumentId = profile.$id;
       final data = profile.data;
       final cloudName = (data['username'] ?? '').toString().trim();
@@ -103,6 +103,14 @@ class AppStateProvider extends ChangeNotifier {
       debugPrint('Favorites cloud sync failed for current user: $_');
       _setErrorMessage('تعذر مزامنة بياناتك. ستبقى التغييرات محفوظة محليًا.');
     }
+  }
+
+  String _usernameCandidate(String userId) {
+    final base = _username.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_|_$'), '');
+    final safeBase = base.isEmpty ? 'user' : base;
+    final suffix = userId.length > 5 ? userId.substring(userId.length - 5).toLowerCase() : userId.toLowerCase();
+    final value = '${safeBase}_$suffix';
+    return value.length <= 100 ? value : value.substring(0, 100);
   }
 
   Map<String, dynamic> _favoriteFromDocument(dynamic document) {
@@ -149,10 +157,29 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loginWithUsername({required String username, required String password}) async {
+    try {
+      final user = await _appwrite.loginWithUsername(username: username, password: password);
+      _favoriteAnime = [];
+      _favoriteComics = [];
+      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
+    }
+  }
+
   Future<void> register({required String email, required String password, required String name}) async {
     try {
       final user = await _appwrite.register(email: email, password: password, name: name);
       await _applyAuthenticatedUser(user, syncCloud: false);
+      if (_userId != null) {
+        final profile = await _appwrite.ensureProfile(userId: _userId!, username: _usernameCandidate(_userId!));
+        _profileDocumentId = profile.$id;
+        final savedUsername = (profile.data['username'] ?? '').toString().trim();
+        if (savedUsername.isNotEmpty) _username = savedUsername;
+      }
       notifyListeners();
     } catch (_) {
       _clearUser();

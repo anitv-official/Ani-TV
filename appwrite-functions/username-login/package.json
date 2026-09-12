@@ -1,0 +1,9 @@
+{
+  "name": "anitv-username-login",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Secure Appwrite username/password login resolver for AniTV",
+  "main": "src/main.js",
+  "engines": { "node": ">=22.0.0" },
+  "dependencies": { "node-appwrite": "^18.0.0" }
+}

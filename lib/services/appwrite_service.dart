@@ -2,6 +2,7 @@ import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
+import 'dart:convert';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -12,6 +13,7 @@ class AppwriteService {
     account = Account(client);
     databases = Databases(client);
     storage = Storage(client);
+    functions = Functions(client);
   }
 
   static final AppwriteService instance = AppwriteService._internal();
@@ -23,11 +25,16 @@ class AppwriteService {
   static const String favoritesTableId = '6aa58e3a003b23556872';
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
   static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
+  static const String usernameLoginFunctionId = String.fromEnvironment(
+    'APPWRITE_USERNAME_LOGIN_FUNCTION_ID',
+    defaultValue: 'username-login',
+  );
 
   final Client client = Client();
   late final Account account;
   late final Databases databases;
   late final Storage storage;
+  late final Functions functions;
 
   Future<models.User?> getCurrentUser() async {
     try {
@@ -46,6 +53,23 @@ class AppwriteService {
 
   Future<models.User> login({required String email, required String password}) async {
     await account.createEmailPasswordSession(email: email, password: password);
+    return account.get();
+  }
+
+  Future<models.User> loginWithUsername({required String username, required String password}) async {
+    final execution = await functions.createExecution(
+      functionId: usernameLoginFunctionId,
+      body: jsonEncode({'username': username.trim(), 'password': password}),
+      xasync: false,
+    );
+    final response = jsonDecode(execution.responseBody);
+    if (response is! Map || response['ok'] != true) {
+      throw Exception('Invalid username or password.');
+    }
+    final userId = response['userId']?.toString() ?? '';
+    final secret = response['secret']?.toString() ?? '';
+    if (userId.isEmpty || secret.isEmpty) throw Exception('Invalid username or password.');
+    await account.createSession(userId: userId, secret: secret);
     return account.get();
   }
 
@@ -91,7 +115,12 @@ class AppwriteService {
 
   Future<models.Document> ensureProfile({required String userId, required String username}) async {
     final existing = await getProfile(userId);
-    if (existing != null) return existing;
+    if (existing != null) {
+      if ((existing.data['username'] ?? '').toString().trim().isEmpty && username.trim().isNotEmpty) {
+        return updateProfile(documentId: existing.$id, username: username);
+      }
+      return existing;
+    }
     return databases.createDocument(
       databaseId: databaseId,
       collectionId: profilesTableId,
