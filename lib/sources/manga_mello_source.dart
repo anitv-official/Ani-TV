@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'html_client.dart';
 import 'source_base.dart';
 
 class MangaMelloSource extends ContentSource {
@@ -49,7 +50,7 @@ class MangaMelloSource extends ContentSource {
   Future<Map<String, dynamic>?> chapterImages(String url) async {
     final ids = _parse(url);
     if (ids == null || ids.chapter == null) return null;
-    var data = await _request('/items/${Uri.encodeComponent(ids.item)}/parts/${Uri.encodeComponent(ids.chapter!)}');
+    var data = await _request('/items/${Uri.encodeComponent(ids.item)}/parts/${Uri.encodeComponent(ids.chapter!)}', {});
     var images = _images(data);
     if (images.isEmpty) {
       data = await _request('/items/parts/${Uri.encodeComponent(ids.chapter!)}/refresh-images-json', {}, method: 'POST');
@@ -149,4 +150,3 @@ class MangaMelloSource extends ContentSource {
 }
 
 class _MelloIds { final String item; final String? chapter; _MelloIds(this.item, this.chapter); }
-
