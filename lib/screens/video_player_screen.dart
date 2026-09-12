@@ -317,7 +317,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         print('Initializing video player with URL: $_currentUrl');
         _videoPlayerController = _currentUrl.startsWith('/')
             ? VideoPlayerController.file(File(_currentUrl))
-            : VideoPlayerController.networkUrl(Uri.parse(_currentUrl));
+            : VideoPlayerController.networkUrl(
+                Uri.parse(_currentUrl),
+                httpHeaders: widget.headers,
+              );
 
         // Add timeout for initialization
         await _videoPlayerController!.initialize().timeout(

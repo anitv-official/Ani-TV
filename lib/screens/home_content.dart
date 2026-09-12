@@ -278,11 +278,13 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
     final double heroHeight = (screenHeight * 0.30).clamp(210.0, 320.0);
 
-    return SizedBox(
-      height: heroHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
           // Background Slider
           CarouselSlider(
             options: CarouselOptions(
@@ -490,7 +492,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

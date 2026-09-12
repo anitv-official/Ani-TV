@@ -485,7 +485,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: Image.network(
-                      anime['image_url'] ?? '', // Ideally episode['image'] if available
+                      (episode['image'] ?? episode['thumbnail'] ?? anime['image_url'] ?? '').toString(),
                       width: 120,
                       height: 68,
                       fit: BoxFit.cover,
