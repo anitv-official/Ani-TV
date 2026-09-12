@@ -10,17 +10,17 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(22),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
           child: Container(
-            height: 76,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            height: 64,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(0xFF171219).withOpacity(.92),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Colors.white.withOpacity(.10)),
               boxShadow: [BoxShadow(color: Colors.black.withOpacity(.42), blurRadius: 22, offset: const Offset(0, 10))],
             ),
@@ -48,15 +48,15 @@ class CustomBottomNavBar extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 3),
           padding: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(color: isActive ? const Color(0xFFE53935).withOpacity(.18) : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
             AnimatedScale(
               scale: isActive ? 1.08 : 1,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutBack,
-              child: Icon(isActive ? activeIcon : inactiveIcon, size: 30, color: isActive ? const Color(0xFFE53935) : Colors.white70),
+              child: Icon(isActive ? activeIcon : inactiveIcon, size: 24, color: isActive ? const Color(0xFFE53935) : Colors.white70),
             ),
             const SizedBox(height: 1),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 10, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 9, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
           ]),
         ),
       ),

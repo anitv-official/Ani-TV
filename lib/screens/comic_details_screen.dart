@@ -189,16 +189,16 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                           children: [
                             _buildHeader(context, _comicData!),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 14.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _buildInfo(context, _comicData!),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 12),
                                   _buildActionButtons(context, _comicData!),
-                                  const SizedBox(height: 24),
+                                  const SizedBox(height: 18),
                                   _buildChaptersList(context, _comicData!),
-                                  const SizedBox(height: 32),
+                                  const SizedBox(height: 24),
                                 ],
                               ),
                             ),
@@ -214,9 +214,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-             double aspectRatio = 16 / 9;
+             double aspectRatio = 2.15;
             if (constraints.maxWidth > 800) {
-              aspectRatio = 21 / 9; 
+              aspectRatio = 2.6;
             }
             return AspectRatio(
               aspectRatio: aspectRatio,
@@ -252,7 +252,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           start: 16,
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
           ),
         ),
       ],
@@ -268,7 +268,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           comic['title'] ?? 'بدون عنوان',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 24,
+            fontSize: 21,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -311,7 +311,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
              ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _ExpandableDetails(comic: comic),
       ],
     );
@@ -476,10 +476,10 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                ),
             ],
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         if (filteredChapters.isEmpty)
            Padding(
-             padding: const EdgeInsets.all(16.0),
+             padding: const EdgeInsets.all(12.0),
              child: Text('No chapters found', style: TextStyle(color: Colors.grey[500])),
            )
         else
@@ -487,7 +487,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: filteredChapters.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final chapter = filteredChapters[index];
             final originalIndex = chapters.indexOf(chapter);
@@ -520,13 +520,13 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     borderRadius: BorderRadius.circular(4),
                     child: Image.network(
                       comic['image_url'] ?? '',
-                      width: 120,
-                      height: 68,
+                      width: 96,
+                      height: 54,
                       fit: BoxFit.cover,
-                      errorBuilder: (_,__,___) => Container(width: 120, height: 68, color: Colors.grey[800]),
+                      errorBuilder: (_,__,___) => Container(width: 96, height: 54, color: Colors.grey[800]),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

@@ -16,10 +16,10 @@ class AppTheme {
   static const Color glassColor = Color(0x33FFFFFF); // Glass effect overlay
   
   // Border radius constants for consistency
-  static const double radiusSmall = 12.0;
-  static const double radiusMedium = 16.0;
-  static const double radiusLarge = 20.0;
-  static const double radiusXLarge = 24.0;
+  static const double radiusSmall = 10.0;
+  static const double radiusMedium = 13.0;
+  static const double radiusLarge = 16.0;
+  static const double radiusXLarge = 20.0;
   
   // Shadow constants for depth
   static List<BoxShadow> get subtleShadow => [
@@ -143,7 +143,7 @@ class AppTheme {
   // Dark theme (Netflix inspired)
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
-    visualDensity: VisualDensity.standard,
+    visualDensity: VisualDensity.compact,
     primaryColor: primaryColor,
     colorScheme: ColorScheme.dark(
       primary: primaryColor,
@@ -243,7 +243,7 @@ class AppTheme {
       ),
       titleLarge: TextStyle(
         color: Colors.white,
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.15,
       ),
@@ -261,14 +261,14 @@ class AppTheme {
       ),
       bodyLarge: TextStyle(
         color: Colors.white,
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: FontWeight.normal,
         letterSpacing: 0.15,
         height: 1.5,
       ),
       bodyMedium: TextStyle(
         color: Colors.white,
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.normal,
         letterSpacing: 0.25,
         height: 1.4,
@@ -302,9 +302,10 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        minimumSize: const Size(0, 42),
+        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
         textStyle: TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
         ),
@@ -317,9 +318,10 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+        minimumSize: const Size(0, 40),
+        padding: EdgeInsets.symmetric(vertical: 9, horizontal: 18),
         textStyle: TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
@@ -360,7 +362,7 @@ class AppTheme {
       ),
       labelStyle: TextStyle(color: textSecondaryColor),
       hintStyle: TextStyle(color: textSecondaryColor.withOpacity(0.7)),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     ),
     cardTheme: CardTheme(
       elevation: 0,
@@ -376,7 +378,7 @@ class AppTheme {
       labelStyle: TextStyle(color: Colors.white),
       secondaryLabelStyle: TextStyle(color: Colors.white),
       brightness: Brightness.dark,
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radiusSmall),
       ),

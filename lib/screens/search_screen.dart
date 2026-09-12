@@ -289,7 +289,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       title: Text(
         'السجل',
         style: TextStyle(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white
         ),
@@ -321,7 +321,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       children: [
         SizedBox(height: 16),
         _buildHistoryToggle(),
-        SizedBox(height: 24),
+        SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
@@ -333,7 +333,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             ),
           ),
         ),
-        SizedBox(height: 16),
+        SizedBox(height: 12),
         Expanded(
           child: historyList.isEmpty
               ? _buildEmptyHistoryView()
@@ -437,7 +437,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
-      height: 80,
+      height: 72,
       decoration: BoxDecoration(
         color: Color(0xFF3F3B6C), // Purple-ish card background from design
         borderRadius: BorderRadius.circular(12),
@@ -476,30 +476,30 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               child: (item['image_url'] ?? item['image']) != null
                   ? Image.network(
                       item['image_url'] ?? item['image'] ?? '',
-                      width: 80,
-                      height: 80,
+                      width: 72,
+                      height: 72,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        width: 80,
-                        height: 80,
+                        width: 72,
+                        height: 72,
                         color: Colors.grey[800],
                         child: Icon(Icons.broken_image, color: Colors.white54),
                       ),
                     )
                   : Container(
-                      width: 80,
-                      height: 80,
+                      width: 72,
+                      height: 72,
                       color: Colors.grey[800],
                       child: Icon(Icons.image_not_supported, color: Colors.white54),
                     ),
             ),
 
-            SizedBox(width: 16),
+            SizedBox(width: 12),
 
             // Title & Subtitle Logic
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                padding: const EdgeInsets.symmetric(vertical: 9.0),
                 child: (() {
                   // Calculate Cleaned Title (Series Name)
                   final originalTitle = (item['title'] ?? 'Unknown Title').toString();
@@ -530,7 +530,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.w500,
                         ),
@@ -551,7 +551,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
             // Play Button Icon
             Container(
-              margin: EdgeInsets.only(right: 16),
+              margin: EdgeInsets.only(right: 12),
               width: 32,
               height: 32,
               decoration: BoxDecoration(

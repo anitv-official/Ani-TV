@@ -229,7 +229,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     ),
                     _buildCategoryToggle(),
                     _buildContentGrid(MediaQuery.of(context).size.width),
-                    SizedBox(height: 130 + MediaQuery.of(context).padding.bottom),
+                    SizedBox(height: 92 + MediaQuery.of(context).padding.bottom),
                   ],
                 ),
               ),
@@ -276,7 +276,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
     final item = featuredContent[_currentCarouselIndex]; // Use current index
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
-    final double heroHeight = (screenHeight * 0.48).clamp(320.0, 520.0); 
+    final double heroHeight = (screenHeight * 0.40).clamp(260.0, 420.0);
 
     return SizedBox(
       height: heroHeight,
