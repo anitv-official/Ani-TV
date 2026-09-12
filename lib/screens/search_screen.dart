@@ -11,6 +11,12 @@ import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
+import '../widgets/ui/app_search_bar.dart';
+import '../widgets/ui/content_card.dart';
+import '../widgets/ui/content_grid.dart';
+import '../widgets/ui/poster_image.dart';
+import '../widgets/ui/segmented_toggle.dart';
+import '../widgets/ui/state_views.dart';
 
 class SearchScreen extends StatefulWidget {
   final bool autoFocus;
@@ -265,39 +271,25 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         backgroundColor: AppTheme.backgroundColor,
         elevation: 0,
         titleSpacing: 0,
-        title: SizedBox(
-        height: 42,
+        title: Padding(
+          padding: const EdgeInsetsDirectional.only(end: 12),
           child: _buildSearchField(),
         ),
         leading: IconButton(
-            icon: const Icon(Icons.arrow_back, size: 21),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: _toggleSearchMode,
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list, size: 21),
-            onPressed: () => _showInfoDialog('الفلاتر', 'يمكنك اختيار نوع المحتوى من الأزرار الظاهرة.'),
-            tooltip: 'Filter results',
-          ),
-        ],
       );
     }
 
     return AppBar(
       backgroundColor: AppTheme.backgroundColor,
       elevation: 0,
-      title: Text(
-        'السجل',
-        style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white
-        ),
-      ),
+      title: const Text('السجل'),
       actions: [
         IconButton(
           tooltip: 'بحث',
-          icon: const Icon(Icons.search, size: 22, color: Colors.white),
+          icon: const Icon(Icons.search_rounded, color: Colors.white),
           onPressed: () {
             if (!_isSearching) {
               setState(() => _isSearching = true);
@@ -307,7 +299,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             }
           },
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -319,26 +311,22 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: 16),
+        const SizedBox(height: 8),
         _buildHistoryToggle(),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
             _showAnimeHistory ? 'آخر ما تمت مشاهدته' : 'آخر ما تمت قراءته',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         Expanded(
           child: historyList.isEmpty
               ? _buildEmptyHistoryView()
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   itemCount: historyList.length,
                   itemBuilder: (context, index) {
                     final item = historyList[index];
@@ -353,46 +341,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   Widget _buildHistoryToggle() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildToggleItem(
-              label: 'ANIME',
-              isActive: _showAnimeHistory,
-              onTap: () => setState(() => _showAnimeHistory = true),
-            ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: _buildToggleItem(
-              label: 'مانجا',
-              isActive: !_showAnimeHistory,
-              onTap: () => setState(() => _showAnimeHistory = false),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleItem({required String label, required bool isActive, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isActive ? AppTheme.primaryColor : const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
+      child: SegmentedToggle(
+        labels: const ['أنمي', 'مانجا'],
+        index: _showAnimeHistory ? 0 : 1,
+        onChanged: (i) => setState(() => _showAnimeHistory = i == 0),
       ),
     );
   }
@@ -436,11 +388,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      height: 72,
+      margin: const EdgeInsets.only(bottom: 10),
+      height: 84,
       decoration: BoxDecoration(
-        color: Color(0xFF3F3B6C), // Purple-ish card background from design
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
       ),
       child: InkWell(
         onTap: () {
@@ -468,30 +421,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         child: Row(
           children: [
             // Image
-            ClipRRect(
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
+            PosterImage(
+              url: (item['image_url'] ?? item['image'])?.toString(),
+              width: 62,
+              height: 84,
+              borderRadius: const BorderRadiusDirectional.only(
+                topStart: Radius.circular(14),
+                bottomStart: Radius.circular(14),
               ),
-              child: (item['image_url'] ?? item['image']) != null
-                  ? Image.network(
-                      item['image_url'] ?? item['image'] ?? '',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 72,
-                        height: 72,
-                        color: Colors.grey[800],
-                        child: Icon(Icons.broken_image, color: Colors.white54),
-                      ),
-                    )
-                  : Container(
-                      width: 72,
-                      height: 72,
-                      color: Colors.grey[800],
-                      child: Icon(Icons.image_not_supported, color: Colors.white54),
-                    ),
             ),
 
             SizedBox(width: 12),
@@ -551,15 +488,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
             // Play Button Icon
             Container(
-              margin: EdgeInsets.only(right: 12),
-              width: 32,
-              height: 32,
+              margin: const EdgeInsetsDirectional.only(end: 12),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(.16),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: AppTheme.primaryColor.withOpacity(.45)),
               ),
               child: Icon(
-                Icons.play_arrow_rounded,
+                item['type'] == 'anime' ? Icons.play_arrow_rounded : Icons.menu_book_rounded,
                 color: Colors.white,
                 size: 20,
               ),
@@ -571,61 +509,32 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildEmptyHistoryView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.history, size: 60, color: Colors.white24),
-          SizedBox(height: 16),
-          Text(
-            'Belum ada riwayat',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: Icons.history_rounded,
+      title: 'لا يوجد سجل بعد',
+      message: _showAnimeHistory ? 'ستظهر هنا الأنميات التي شاهدتها.' : 'ستظهر هنا المانجا التي قرأتها.',
     );
   }
 
   // --- EXISTING SEARCH WIDGETS (Slightly modified) ---
 
   Widget _buildSearchField() {
-    return TextField(
+    return AppSearchBar(
       controller: _searchController,
       focusNode: _searchFocusNode,
-      style: TextStyle(color: Colors.white, fontSize: 16),
-      decoration: InputDecoration(
-        isDense: true,
-        filled: true,
-        fillColor: AppTheme.surfaceColor,
-        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondaryColor),
-        hintText: 'ابحث عن أنمي أو مانجا...',
-        hintStyle: TextStyle(color: AppTheme.textSecondaryColor.withOpacity(0.7)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30), // Pill shape for search bar
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-                icon: Icon(Icons.clear, color: AppTheme.textSecondaryColor),
-                onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                         _searchResults = [];
-                         _hasSearched = false;
-                    });
-                },
-              )
-            : null,
-      ),
+      hintText: 'ابحث عن أنمي أو مانجا...',
       onSubmitted: (query) {
-        setState(() {
-          _selectedChip = '';
-        });
+        setState(() => _selectedChip = '');
         _performSearch(query);
       },
       onChanged: _onSearchChanged,
-      textInputAction: TextInputAction.search,
+      onClear: () {
+        _searchController.clear();
+        setState(() {
+          _searchResults = [];
+          _hasSearched = false;
+        });
+      },
     );
   }
 
@@ -686,49 +595,27 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildLoadingView() {
-    return Center(
-      child: CustomLoadingWidget(
-        message: 'جارٍ البحث...',
-        size: 150,
-      ),
-    );
+    return const LoadingView(message: 'جارٍ البحث...', size: 72);
   }
 
   Widget _buildNoResultsView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text(
-            'لم يتم العثور على نتائج',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      icon: Icons.search_off_rounded,
+      title: 'لم يتم العثور على نتائج',
+      message: 'جرّب كلمات بحث مختلفة أو تصنيفاً آخر.',
     );
   }
 
   Widget _buildInitialSearchView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search, size: 64, color: AppTheme.primaryColor.withOpacity(0.5)),
-          SizedBox(height: 16),
-          Text(
-            'اكتب للبحث...',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
-          ),
-          SizedBox(height: 32),
-          _buildPopularSearches(),
-        ],
-      ),
+    return Column(
+      children: [
+        const SizedBox(height: 36),
+        const Icon(Icons.search_rounded, size: 48, color: AppTheme.textMutedColor),
+        const SizedBox(height: 12),
+        const Text('اكتب للبحث عن أنمي أو مانجا', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
+        const SizedBox(height: 24),
+        _buildPopularSearches(),
+      ],
     );
   }
 
@@ -737,15 +624,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       if (_isLoadingGenres) return SizedBox();
 
       return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
+            runSpacing: 8,
             children: _genres.take(6).map((genre) {
                  return ActionChip(
                    label: Text(genre['name']),
-                   backgroundColor: Colors.white10,
-                   labelStyle: TextStyle(color: Colors.white),
+                   backgroundColor: AppTheme.elevatedColor,
+                   labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                    onPressed: () {
                         setState(() {
                             _selectedChip = genre['name'];
@@ -759,14 +647,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildSearchResultsGrid() {
-    return GridView.builder(
-      padding: EdgeInsets.all(12),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
+    return ContentGrid(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final item = _searchResults[index];
@@ -792,81 +674,15 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
     }
 
-    return InkWell(
-        onTap: () {
-            if (targetScreen != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => targetScreen!),
-                );
-            }
-        },
-        child: Stack(
-          children: [
-            // Background Image
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  item['image_url'] ?? item['image'] ?? '',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[900],
-                    child: Icon(Icons.broken_image, color: Colors.white24),
-                  ),
-                ),
-              ),
-            ),
-            // Type Badge
-            if (item['type'] != null)
-              Positioned(
-                top: 4,
-                left: 4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 1))
-                    ],
-                  ),
-                  child: Text(
-                    (item['type'] as String).toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-            // Gradient and Text Overlay
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black87],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
-                ),
-                child: Text(
-                  item['title'] ?? '',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
+    return ContentCard(
+      title: item['title']?.toString(),
+      imageUrl: (item['image_url'] ?? item['image'])?.toString(),
+      badge: item['type']?.toString() ?? category,
+      onTap: () {
+        if (targetScreen != null) {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => targetScreen!));
+        }
+      },
     );
   }
   /* Direct Play Logic copied/adapted from AnimeDetailsScreen */
@@ -874,7 +690,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
      // Show loading
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -882,7 +698,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading streams...", size: 80),
+          child: CustomLoadingWidget(message: 'جارٍ تحميل المصادر...', size: 80),
         ),
       ),
     );
@@ -894,7 +710,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       if (mounted) Navigator.pop(context); // Close loading
 
       if (streams == null) {
-        ToastUtils.show('No streams found', backgroundColor: Colors.orange);
+        ToastUtils.show('لا توجد مصادر تشغيل', backgroundColor: Colors.orange);
         return;
       }
 
@@ -909,7 +725,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       if (mounted) {
         showModalBottomSheet(
           context: context,
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: AppTheme.surfaceColor,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
@@ -920,13 +736,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-
                    const Text(
-                     'Select Resolution',
+                     'اختر الجودة',
                      style: TextStyle(
                        color: Colors.white,
                        fontSize: 18,
-                       fontWeight: FontWeight.bold,
+                       fontWeight: FontWeight.w800,
                      ),
                    ),
                    const SizedBox(height: 16),
@@ -938,8 +753,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                          if (streamUrl.isNotEmpty)
                            ListTile(
                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
-                             title: const Text('Auto (Recommended)', style: TextStyle(color: Colors.white)),
-                             subtitle: const Text('Adaptive quality', style: TextStyle(color: Colors.grey)),
+                              title: const Text('تلقائي (موصى به)', style: TextStyle(color: Colors.white)),
+                              subtitle: const Text('جودة متكيفة', style: TextStyle(color: Colors.grey)),
                              onTap: () => _playVideo(context, streamUrl, 'Auto', streams, historyItem),
                            ),
 
@@ -962,7 +777,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('Error loading streams: $e', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Colors.red);
     }
   }
 
@@ -999,7 +814,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(
-        child: CustomLoadingWidget(message: "Finding episode...", size: 100),
+          child: CustomLoadingWidget(message: 'جارٍ البحث عن الحلقة...', size: 100),
       ),
     );
 
@@ -1035,7 +850,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       Navigator.pop(context); // Ensure loading is closed
-      ToastUtils.show('Failed to load episode details', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل تفاصيل الحلقة', backgroundColor: Colors.red);
       // Fallback
       if (mounted) {
          Navigator.push(

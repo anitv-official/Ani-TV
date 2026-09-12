@@ -28,39 +28,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _currentNavIndex = 0;
-  int _previousNavIndex = 0; // Track previous index for exit animation
+  int _previousNavIndex = 0;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
   late List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    
-    // Animation Controller
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 260),
     );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    );
-
+    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05), // Slight vertical slide (approx 10-20px depending on height)
+      begin: const Offset(0, 0.03),
       end: Offset.zero,
     ).animate(_fadeAnimation);
-
-    _animationController.forward(); // Show initial page
-
-    // Check for app updates logic moved here
+    _animationController.forward();
     _checkForAppUpdate();
-
-    // Initialize pages
     _pages = [
       HomeContent(
         preloadedAnime: widget.preloadedAnime,
@@ -68,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         preloadedFeaturedContent: widget.preloadedFeaturedContent,
       ),
       ExploreScreen(showBackButton: false),
-      FavoritesScreen(showBackButton: false), // Hide back button for bottom nav
+      FavoritesScreen(showBackButton: false),
       ProfileScreen(),
     ];
   }
@@ -79,15 +66,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  // Check for app updates
   Future<void> _checkForAppUpdate() async {
     try {
       final isUpdateAvailable = await AppVersionService.isUpdateAvailable();
       if (isUpdateAvailable && mounted) {
         final versionData = await AppVersionService.getAppVersion();
         final changelog = await AppVersionService.getChangelog();
-        
-        // Show update dialog after a short delay to ensure UI is ready
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             UpdateBottomSheet.show(
@@ -105,31 +89,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _handleNavigation(int index) {
     if (index == _currentNavIndex) return;
-
     setState(() {
       _previousNavIndex = _currentNavIndex;
       _currentNavIndex = index;
     });
-    
     _animationController.forward(from: 0.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    
-    // For Desktop logic
-    final isDesktop = screenWidth > 900;
-
-    // The main content stack (reused for both layouts)
+    final isDesktop = MediaQuery.of(context).size.width > 900;
     final bodyContent = Stack(
       children: List.generate(_pages.length, (index) {
         final isCurrent = index == _currentNavIndex;
         final isPrevious = index == _previousNavIndex;
         final isAnimating = _animationController.isAnimating;
-        
         final bool isVisible = isCurrent || (isPrevious && isAnimating);
-        
         return Offstage(
           offstage: !isVisible,
           child: TickerMode(
@@ -141,19 +116,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   if (isCurrent) {
                     return FadeTransition(
                       opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: _pages[index],
-                      ),
+                      child: SlideTransition(position: _slideAnimation, child: _pages[index]),
                     );
                   } else if (isPrevious && isAnimating) {
                     return FadeTransition(
                       opacity: Tween<double>(begin: 1.0, end: 0.0).animate(_fadeAnimation),
                       child: _pages[index],
                     );
-                  } else {
-                    return _pages[index];
                   }
+                  return _pages[index];
                 },
               ),
             ),
@@ -161,43 +132,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         );
       }),
     );
-    
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.black, // Set to black
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
+      value: AppTheme.systemOverlay,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        extendBody: true,
-        // Desktop: Row (SideNav + Body) vs Mobile: Body only
         body: isDesktop
             ? Row(
                 children: [
-                  CustomSideNavBar(
-                    currentIndex: _currentNavIndex,
-                    onTap: _handleNavigation,
-                  ),
+                  CustomSideNavBar(currentIndex: _currentNavIndex, onTap: _handleNavigation),
                   Expanded(child: bodyContent),
                 ],
               )
             : bodyContent,
-        
-        // Desktop: Null vs Mobile: BottomNavBar
         bottomNavigationBar: isDesktop
             ? null
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomBottomNavBar(
-                    currentIndex: _currentNavIndex,
-                    onTap: _handleNavigation,
-                  ),
-                ],
-              ),
+            : CustomBottomNavBar(currentIndex: _currentNavIndex, onTap: _handleNavigation),
       ),
     );
   }

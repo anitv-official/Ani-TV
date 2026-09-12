@@ -16,6 +16,10 @@ import '../services/app_version_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'sources_screen.dart';
 import 'downloads_screen.dart';
+import '../widgets/ui/app_scaffold_header.dart';
+import '../widgets/ui/primary_button.dart';
+import '../widgets/ui/setting_tile.dart';
+import '../widgets/ui/state_views.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -26,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String username = '';
   String email = '';
   bool isLoggedIn = false;
-  bool isDarkMode = true; // Default to dark as per design
+  bool isDarkMode = true;
   bool isLoading = true;
   bool _streamCellular = false;
   bool _showMatureContent = false;
@@ -48,7 +52,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
       await appStateProvider.initialize();
-
       setState(() {
         username = appStateProvider.username;
         email = appStateProvider.email;
@@ -88,21 +91,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showErrorDialog(String title, String message) {
-    CustomErrorDialog.show(
-      context,
-      title: title,
-      message: message,
-      onRetry: _loadUserData,
-    );
+    CustomErrorDialog.show(context, title: title, message: message, onRetry: _loadUserData);
   }
 
   Future<void> _logout() async {
     try {
       final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
       await appStateProvider.logout();
-
-      ToastUtils.show('تم تسجيل الخروج بنجاح', backgroundColor: AppTheme.accentColor);
-
+      ToastUtils.show('تم تسجيل الخروج بنجاح', backgroundColor: AppTheme.primaryColor);
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LandingScreen()),
         (route) => false,
@@ -126,17 +122,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: const Text('حول AniTV', style: TextStyle(color: Colors.white)),
+        title: const Text('حول AniTV'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            Text('الإصدار الحالي: $version', style: const TextStyle(color: Colors.white70)),
-            Text('Version Code: $buildNumber', style: const TextStyle(color: Colors.white70)),
-            const Text('توافق Android: 5.0 وما بعده', style: TextStyle(color: Colors.white70)),
+            Text('الإصدار الحالي: $version', style: const TextStyle(color: AppTheme.textSecondaryColor)),
+            Text('Version Code: $buildNumber', style: const TextStyle(color: AppTheme.textSecondaryColor)),
+            const Text('توافق Android: 5.0 وما بعده', style: TextStyle(color: AppTheme.textSecondaryColor)),
             const SizedBox(height: 18),
             const Text('الخصوصية والأمان', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -144,10 +139,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.privacy_tip_outlined, color: AppTheme.primaryColor),
               title: const Text('سياسة الخصوصية', style: TextStyle(color: Colors.white)),
-              subtitle: const Text('عرض السياسة الرسمية', style: TextStyle(color: Colors.white60)),
+              subtitle: const Text('عرض السياسة الرسمية', style: TextStyle(color: AppTheme.textSecondaryColor)),
               onTap: _openPrivacyPolicy,
             ),
-            const Text('الأمان: لا يحتوي التطبيق على مفاتيح API خاصة أو أسرار OAuth.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+            const Text('الأمان: لا يحتوي التطبيق على مفاتيح API خاصة أو أسرار OAuth.', style: TextStyle(color: AppTheme.textMutedColor, fontSize: 12)),
           ],
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
@@ -159,22 +154,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: const Text('مصادر التطبيق', style: TextStyle(color: Colors.white)),
+        title: const Text('مصادر التطبيق'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('مصادر المحتوى المفعّلة', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+            const Text('مصادر المحتوى المفعّلة', style: TextStyle(color: AppTheme.textSecondaryColor, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             ...SourceRegistry.all.map((source) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(children: [
-                Icon(source.kind == 'anime' ? Icons.movie_outlined : Icons.menu_book_outlined,
-                    color: AppTheme.primaryColor, size: 20),
+                Icon(source.kind == 'anime' ? Icons.movie_outlined : Icons.menu_book_outlined, color: AppTheme.primaryColor, size: 20),
                 const SizedBox(width: 8),
-                Expanded(child: Text('${source.name} (${source.kind == 'anime' ? 'أنمي' : 'مانجا'})',
-                    style: const TextStyle(color: Colors.white))),
+                Expanded(child: Text('${source.name} (${source.kind == 'anime' ? 'أنمي' : 'مانجا'})', style: const TextStyle(color: Colors.white))),
               ]),
             )),
           ],
@@ -197,9 +189,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(message, style: TextStyle(color: Colors.grey[300])),
+        title: Text(title),
+        content: Text(message),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('حسنًا'))],
       ),
     );
@@ -210,8 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text(title, style: const TextStyle(color: Colors.white)),
+        title: Text(title),
         content: TextField(controller: controller, obscureText: obscure, autofocus: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'القيمة الجديدة')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
@@ -234,8 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: const Text('تغيير كلمة المرور', style: TextStyle(color: Colors.white)),
+        title: const Text('تغيير كلمة المرور'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: oldController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور الحالية')),
           TextField(controller: newController, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة')),
@@ -247,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             try {
               await context.read<AppStateProvider>().updatePassword(password: newController.text, oldPassword: oldController.text);
               if (mounted) Navigator.pop(context);
-              if (mounted) ToastUtils.show('تم تغيير كلمة المرور', backgroundColor: AppTheme.accentColor);
+              if (mounted) ToastUtils.show('تم تغيير كلمة المرور', backgroundColor: AppTheme.primaryColor);
             } catch (error) {
               if (mounted) _showInfoDialog('تعذر تغيير كلمة المرور', authErrorMessage(error, registering: false));
             }
@@ -266,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         try {
           await context.read<AppStateProvider>().updateProfileName(value);
           if (mounted) setState(() => username = value);
-          if (mounted) ToastUtils.show('تم تحديث الاسم', backgroundColor: AppTheme.accentColor);
+          if (mounted) ToastUtils.show('تم تحديث الاسم', backgroundColor: AppTheme.primaryColor);
         } catch (error) {
           if (mounted) _showInfoDialog('تعذر تحديث الاسم', authErrorMessage(error, registering: false));
         }
@@ -280,230 +269,135 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: isLoading
-            ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
-                child: Column(
-                  children: [
-                    // Header Title
-                    Center(
-                      child: Text(
-                        'الملف الشخصي',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+            ? const LoadingView(message: 'جارٍ تحميل الحساب...', size: 64)
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                children: [
+                  const AppScaffoldHeader(title: 'الحساب'),
+                  _buildProfileCard(),
+                  const SizedBox(height: 22),
+                  SettingsGroup(
+                    title: 'الحساب',
+                    children: isLoggedIn
+                        ? [
+                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
+                            SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: username.isEmpty ? 'غير متوفر' : username, onTap: _showEditNameDialog),
+                            SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
+                            SettingTile(icon: Icons.alternate_email, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
+                          ]
+                        : [
+                            SettingTile(icon: Icons.login_rounded, title: 'تسجيل الدخول', subtitle: 'للوصول إلى ملفك الشخصي', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),
+                            SettingTile(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
+                          ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'المحتوى والمصادر',
+                    children: [
+                      SettingTile(icon: Icons.hub_outlined, title: 'المصادر', subtitle: 'تصفح مصادر الأنمي والمانجا', onTap: _showSourcesDialog),
+                      SettingTile(icon: Icons.download_for_offline_outlined, title: 'التنزيلات', subtitle: 'الحلقات والفصول المحفوظة', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'المظهر واللغة',
+                    children: [
+                      SettingSwitchTile(
+                        icon: Icons.dark_mode_outlined,
+                        title: 'الوضع الداكن',
+                        subtitle: 'واجهة داكنة مع لمسة حمراء',
+                        value: isDarkMode,
+                        onChanged: (val) async {
+                          setState(() => isDarkMode = val);
+                          await context.read<AppStateProvider>().updateUserData(isDarkMode: val);
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Neutral avatar: no profile image is shown unless Appwrite provides one.
-                    GestureDetector(
-                      onTap: _pickAvatar,
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: AppTheme.surfaceColor,
-                        backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync() ? FileImage(File(_avatarPath!)) : null,
-                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? const Icon(Icons.person_outline, size: 43, color: AppTheme.textSecondaryColor) : null,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(username.isEmpty ? 'زائر' : username, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    TextButton.icon(onPressed: _pickAvatar, icon: const Icon(Icons.edit, size: 16), label: const Text('تغيير صورة الملف الشخصي')),
-
-                    const SizedBox(height: 22),
-
-                    if (!isLoggedIn)
-                      _buildSectionContainer(
-                        children: [
-                          const ListTile(
-                            leading: Icon(Icons.person_outline, color: Colors.white70),
-                            title: Text('زائر', style: TextStyle(color: Colors.white)),
-                            subtitle: Text('سجّل الدخول للوصول إلى ملفك الشخصي', style: TextStyle(color: Colors.white60)),
-                          ),
-                          _buildMenuItem('تسجيل الدخول', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),
-                          _buildMenuItem('إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
-                        ],
-                      )
-                    else
-                      _buildSectionContainer(
-                        children: [
-                          _buildMenuItem('بيانات الحساب', trailing: email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
-                          _buildMenuItem('تعديل الاسم الظاهر', onTap: _showEditNameDialog),
-                          _buildMenuItem('تغيير كلمة المرور', onTap: _showChangePasswordDialog),
-                          _buildMenuItem('المصادر', onTap: _showSourcesDialog),
-                        ],
-                      ),
-
-                    const SizedBox(height: 24),
-
-                    // Preferences Title
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                        child: Text(
-                          'التفضيلات',
-                          style: TextStyle(
-                            color: Colors.white,
-                          fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Preferences Section
-                    _buildSectionContainer(
-                      children: [
-                        _buildMenuItem('المصادر', onTap: _showSourcesDialog),
-                        _buildMenuItem('التنزيلات', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
-                        _buildSwitchItem('إشعارات التحديث', _notificationsEnabled, (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
-                        _buildSwitchItem('استخدام بيانات الهاتف', _streamCellular, (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
-                        _buildSwitchItem('عرض محتوى البالغين (+18)', _showMatureContent, (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                        child: Text('حول التطبيق', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    _buildSectionContainer(
-                      children: [
-                        _buildMenuItem('حول AniTV', onTap: _showAboutDialog),
-                        _buildMenuItem('الخصوصية والأمان', onTap: _showAboutDialog),
-                        _buildMenuItem('سياسة الخصوصية', onTap: _openPrivacyPolicy),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Account action
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: isLoggedIn
-                            ? _showLogoutDialog
-                            : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor, // merah
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 10,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(999), // pill shape
-                          ),
-                        ),
-                        child: Text(
-                          isLoggedIn ? 'تسجيل الخروج' : 'تسجيل الدخول',
-                          style: TextStyle(
-                            color: Colors.white,
-                          fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 86),
-                  ],
-                ),
+                      const SettingTile(icon: Icons.language, title: 'اللغة', value: 'العربية'),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'الإشعارات',
+                    children: [
+                      SettingSwitchTile(icon: Icons.notifications_outlined, title: 'إشعارات التحديث', value: _notificationsEnabled, onChanged: (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'التخزين والتشغيل',
+                    children: [
+                      SettingSwitchTile(icon: Icons.signal_cellular_alt, title: 'استخدام بيانات الهاتف', subtitle: 'السماح بالتشغيل عبر الشبكة الخلوية', value: _streamCellular, onChanged: (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
+                      SettingSwitchTile(icon: Icons.visibility_outlined, title: 'عرض محتوى البالغين', subtitle: 'محتوى +18', value: _showMatureContent, onChanged: (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'الخصوصية',
+                    children: [
+                      SettingTile(icon: Icons.privacy_tip_outlined, title: 'سياسة الخصوصية', onTap: _openPrivacyPolicy),
+                      SettingTile(icon: Icons.security_outlined, title: 'الخصوصية والأمان', onTap: _showAboutDialog),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SettingsGroup(
+                    title: 'حول',
+                    children: [
+                      SettingTile(icon: Icons.info_outline, title: 'حول AniTV', onTap: _showAboutDialog),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  PrimaryButton(
+                    expanded: true,
+                    label: isLoggedIn ? 'تسجيل الخروج' : 'تسجيل الدخول',
+                    onPressed: isLoggedIn ? _showLogoutDialog : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
       ),
     );
   }
 
-  Widget _buildSectionContainer({required List<Widget> children}) {
+  Widget _buildProfileCard() {
+    final hasAvatar = _avatarPath != null && File(_avatarPath!).existsSync();
     return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: Colors.white.withOpacity(.07)),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.borderColor),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Column(
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(String title, {String? trailing, VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(children: [
-              Icon(_menuIcon(title), color: AppTheme.primaryColor, size: 21),
-              const SizedBox(width: 12),
-              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[200], fontSize: 14, fontWeight: FontWeight.w500)),
-            ]),
-            Row(
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _pickAvatar,
+            child: CircleAvatar(
+              radius: 34,
+              backgroundColor: AppTheme.elevatedColor,
+              backgroundImage: hasAvatar ? FileImage(File(_avatarPath!)) : null,
+              child: hasAvatar ? null : const Icon(Icons.person_outline, size: 34, color: AppTheme.textSecondaryColor),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (trailing != null) ...[
-                  Text(
-                    trailing,
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                    fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.grey[600],
-                    size: 14,
+                Text(username.isEmpty ? 'زائر' : username, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(
+                  isLoggedIn ? (email.isEmpty ? 'حساب متصل' : email) : 'سجّل الدخول لإدارة حسابك',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12),
+                ),
+                TextButton(
+                  onPressed: _pickAvatar,
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
+                  child: const Text('تغيير الصورة'),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _menuIcon(String title) {
-    if (title.contains('مصادر')) return Icons.hub_outlined;
-    if (title.contains('تنزيل')) return Icons.download_for_offline_outlined;
-    if (title.contains('كلمة')) return Icons.lock_outline;
-    if (title.contains('اسم')) return Icons.edit_outlined;
-    if (title.contains('خصوصية')) return Icons.privacy_tip_outlined;
-    if (title.contains('حول')) return Icons.info_outline;
-    if (title.contains('بيانات')) return Icons.person_outline;
-    return Icons.chevron_left;
-  }
-
-  Widget _buildSwitchItem(String title, bool value, Function(bool) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.grey[200],
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Colors.white,
-            activeTrackColor: AppTheme.primaryColor, // Red track
-            inactiveThumbColor: Colors.white,
-            inactiveTrackColor: Colors.grey[700],
           ),
         ],
       ),
@@ -514,20 +408,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: Text('تسجيل الخروج', style: TextStyle(color: Colors.white)),
-        content: Text('هل أنت متأكد من تسجيل الخروج؟', style: TextStyle(color: Colors.grey[400])),
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('إلغاء', style: TextStyle(color: Colors.grey)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _logout();
             },
-            child: Text('تسجيل الخروج', style: TextStyle(color: const Color(0xFFE53935))),
+            child: const Text('تسجيل الخروج', style: TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),

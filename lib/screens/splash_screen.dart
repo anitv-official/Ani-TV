@@ -140,35 +140,23 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Logo
-              Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.5),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(28),
                 child: Image.asset(
                   'assets/images/anitv_app_icon.png',
+                  width: 104,
+                  height: 104,
                   fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 22),
-              // App Name
-              Text(
+              const Text(
                 'AniTV',
                 style: TextStyle(
                   fontSize: 36,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                   color: Colors.white,
-                  letterSpacing: 1.5,
+                  letterSpacing: 1.2,
                 ),
               ),
               const SizedBox(height: 6),

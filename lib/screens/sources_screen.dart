@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../sources/source_base.dart';
 import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui/content_card.dart';
+import '../widgets/ui/content_grid.dart';
+import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 
@@ -15,8 +18,6 @@ class SourcesScreen extends StatelessWidget {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('مصادر المحتوى'),
-        backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: Colors.white,
       ),
       body: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -49,7 +50,7 @@ class _SourceTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(.08)),
+          border: Border.all(color: AppTheme.borderColor),
         ),
         child: Row(
           children: [
@@ -138,63 +139,42 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Text(widget.source.name),
-        backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: Colors.white,
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _content,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingView(message: 'جارٍ تحميل المحتوى...', size: 64);
           }
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(mainAxisSize: MainAxisSize.min, children: const [
-                  Icon(Icons.inventory_2_outlined, color: Colors.white38, size: 48),
-                  SizedBox(height: 14),
-                  Text('لا يوجد محتوى متاح من هذا المصدر حاليًا', textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
-                ]),
-              ),
+          if (snapshot.hasError) {
+            return ErrorState(onRetry: () => setState(() => _content = widget.source.latest()));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const EmptyState(
+              icon: Icons.inventory_2_outlined,
+              title: 'لا يوجد محتوى حالياً',
+              message: 'حاول التحديث لاحقاً.',
             );
           }
           final items = snapshot.data!;
           return RefreshIndicator(
+            color: AppTheme.primaryColor,
             onRefresh: () async => setState(() => _content = widget.source.latest()),
-            child: GridView.builder(
+            child: ContentGrid(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: items.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: MediaQuery.of(context).size.width >= 600 ? 4 : 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 18,
-                childAspectRatio: MediaQuery.of(context).size.width >= 600 ? .68 : .62,
-              ),
               itemBuilder: (context, index) {
                 final item = items[index];
-                return InkWell(
+                return ContentCard(
+                  title: item['title']?.toString(),
+                  imageUrl: item['image_url']?.toString(),
+                  badge: isAnime ? 'أنمي' : item['type']?.toString(),
                   onTap: () => Navigator.push(context, MaterialPageRoute(
                     builder: (_) => isAnime
                         ? AnimeDetailsScreen(url: item['url'].toString())
                         : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()),
                   )),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(item['image_url']?.toString() ?? '', fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, __, ___) => Container(color: AppTheme.surfaceColor,
-                              child: const Center(child: Icon(Icons.image_not_supported_outlined, color: Colors.white38))),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.25, fontWeight: FontWeight.w500)),
-                  ]),
                 );
               },
             ),
@@ -216,11 +196,11 @@ class SourceSummary extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('مصادر المحتوى', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text('مصادر المحتوى', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
           TextButton(onPressed: onPressed, child: const Text('عرض الكل')),
         ]),
         SizedBox(
-          height: 96,
+          height: 92,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: sources.length,
@@ -229,24 +209,24 @@ class SourceSummary extends StatelessWidget {
               onTap: onPressed,
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                width: 150,
+                width: 156,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [AppTheme.surfaceColor, AppTheme.surfaceColor.withOpacity(.72)]),
+                  color: AppTheme.surfaceColor,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.primaryColor.withOpacity(.18)),
+                  border: Border.all(color: AppTheme.borderColor),
                 ),
                 child: Row(children: [
                   CircleAvatar(
-                    radius: 19,
+                    radius: 18,
                     backgroundColor: AppTheme.primaryColor.withOpacity(.16),
-                    child: Icon(sources[index].kind == 'anime' ? Icons.movie_filter_outlined : Icons.menu_book_outlined, color: AppTheme.primaryColor, size: 20),
+                    child: Icon(sources[index].kind == 'anime' ? Icons.movie_outlined : Icons.menu_book_outlined, color: AppTheme.primaryColor, size: 18),
                   ),
                   const SizedBox(width: 9),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                     const SizedBox(height: 4),
-                    Text(sources[index].kind == 'anime' ? 'أنمي' : 'مانجا', style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                    Text(sources[index].kind == 'anime' ? 'أنمي' : 'مانجا', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
                   ])),
                 ]),
               ),

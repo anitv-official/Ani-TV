@@ -14,51 +14,63 @@ class CustomBottomNavBar extends StatelessWidget {
       (icon: Icons.favorite_border_rounded, active: Icons.favorite_rounded, label: 'المفضلة'),
       (icon: Icons.person_outline_rounded, active: Icons.person_rounded, label: 'حسابي'),
     ];
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-      child: Container(
-        height: 62,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface.withOpacity(.98),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(.08)),
-          boxShadow: AppTheme.mediumShadow,
-        ),
-        child: Row(
-          children: List.generate(items.length, (index) {
-            final item = items[index];
-            final selected = index == currentIndex;
-            return Expanded(
-              child: Semantics(
-                button: true,
-                selected: selected,
-                label: item.label,
-                child: InkWell(
-                  onTap: () => onTap(index),
-                  borderRadius: BorderRadius.circular(14),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOut,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: selected ? AppTheme.primaryColor.withOpacity(.14) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor.withOpacity(.97),
+        border: const Border(top: BorderSide(color: AppTheme.borderColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+              final selected = index == currentIndex;
+              return Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: selected,
+                  label: item.label,
+                  child: InkWell(
+                    onTap: () => onTap(index),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(selected ? item.active : item.icon, size: 21, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor),
-                        const SizedBox(height: 3),
-                        Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, height: 1, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: selected ? 22 : 8,
+                          height: 3,
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: selected ? AppTheme.primaryColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                        Icon(
+                          selected ? item.active : item.icon,
+                          size: 22,
+                          color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            height: 1,
+                            color: selected ? Colors.white : AppTheme.textSecondaryColor,
+                            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ),
-            );
-          }),
+              );
+            }),
+          ),
         ),
       ),
     );

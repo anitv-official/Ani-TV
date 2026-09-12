@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/download_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui/poster_image.dart';
+import '../widgets/ui/state_views.dart';
 import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
 
@@ -47,12 +49,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final anime = _group('anime');
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: const Text('التنزيلات'), backgroundColor: AppTheme.backgroundColor),
+      appBar: AppBar(title: const Text('التنزيلات')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingView(message: 'جارٍ تحميل التنزيلات...', size: 64)
           : _items.isEmpty
-              ? const Center(child: Text('لا توجد تنزيلات محفوظة', style: TextStyle(color: Colors.white70)))
-              : ListView(padding: const EdgeInsets.fromLTRB(12, 8, 12, 110), children: [
+              ? const EmptyState(
+                  icon: Icons.download_outlined,
+                  title: 'لا توجد تنزيلات محفوظة',
+                  message: 'ستظهر هنا الحلقات والفصول التي تقوم بتنزيلها.',
+                )
+              : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), children: [
                   if (manga.isNotEmpty) _section('المانجا المنزلة', manga, true),
                   if (anime.isNotEmpty) _section('الأنمي المنزّل', anime, false),
                 ]),
@@ -62,9 +68,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   Widget _section(String title, Map<String, List<Map<String, dynamic>>> groups, bool isManga) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Padding(padding: const EdgeInsets.only(bottom: 7), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))),
+      Padding(padding: const EdgeInsets.only(bottom: 10, top: 6), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800))),
       ...groups.entries.map((entry) => _seriesCard(entry.value, isManga)),
-      const SizedBox(height: 20),
+      const SizedBox(height: 16),
     ],
   );
 
@@ -73,29 +79,34 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final key = '${first['source_id'] ?? ''}:${first['title'] ?? ''}';
     final open = _expanded.contains(key);
     final cover = first['cover_url']?.toString() ?? '';
-    return Card(
-      color: AppTheme.surfaceColor,
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
       child: Column(children: [
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          leading: cover.isNotEmpty ? Image.network(cover, width: 44, height: 58, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _icon(isManga)) : _icon(isManga),
-          title: Text(first['title']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-          subtitle: Text('${items.length} ${isManga ? 'فصل' : 'حلقة'} محفوظة', style: const TextStyle(color: Colors.white60)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          leading: PosterImage(url: cover, width: 46, height: 62, fallbackIcon: isManga ? Icons.menu_book : Icons.movie_outlined, borderRadius: BorderRadius.circular(8)),
+          title: Text(first['title']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+          subtitle: Text('${items.length} ${isManga ? 'فصل' : 'حلقة'} محفوظة', style: const TextStyle(color: AppTheme.textSecondaryColor)),
           trailing: IconButton(icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: Colors.white), onPressed: () => setState(() => open ? _expanded.remove(key) : _expanded.add(key))),
         ),
-        if (open) ...items.map((item) => ListTile(
-          dense: true,
-          leading: Icon(isManga ? Icons.menu_book : Icons.play_circle_outline, color: AppTheme.primaryColor),
-          title: Text((isManga ? item['chapter'] : item['episode'])?.toString() ?? '', style: const TextStyle(color: Colors.white)),
-          trailing: File(item['path']?.toString() ?? '').existsSync() ? const Icon(Icons.check_circle, color: Colors.green) : const Icon(Icons.error_outline, color: Colors.orange),
-          onTap: () => _open(item, isManga),
-        )),
+        if (open) ...items.map((item) {
+          final exists = File(item['path']?.toString() ?? '').existsSync() || (isManga && Directory(item['path']?.toString() ?? '').existsSync());
+          return ListTile(
+            dense: true,
+            leading: Icon(isManga ? Icons.menu_book : Icons.play_circle_outline, color: AppTheme.primaryColor),
+            title: Text((isManga ? item['chapter'] : item['episode'])?.toString() ?? '', style: const TextStyle(color: Colors.white)),
+            trailing: Icon(exists ? Icons.check_circle : Icons.error_outline, color: exists ? AppTheme.successColor : AppTheme.warningColor),
+            onTap: () => _open(item, isManga),
+          );
+        }),
       ]),
     );
   }
-
-  Widget _icon(bool isManga) => Icon(isManga ? Icons.menu_book : Icons.movie, color: AppTheme.primaryColor, size: 38);
 
   Future<void> _open(Map<String, dynamic> item, bool isManga) async {
     final path = item['path']?.toString() ?? '';

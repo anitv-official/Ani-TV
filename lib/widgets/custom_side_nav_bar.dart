@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 
 class CustomSideNavBar extends StatelessWidget {
@@ -10,45 +9,70 @@ class CustomSideNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final radius = BorderRadius.horizontal(
-      left: isRtl ? const Radius.circular(18) : Radius.zero,
-      right: isRtl ? Radius.zero : const Radius.circular(18),
-    );
+    final items = <({IconData icon, IconData active, String label})>[
+      (icon: Icons.home_outlined, active: Icons.home_rounded, label: 'الرئيسية'),
+      (icon: Icons.explore_outlined, active: Icons.explore_rounded, label: 'استكشاف'),
+      (icon: Icons.favorite_border_rounded, active: Icons.favorite_rounded, label: 'المفضلة'),
+      (icon: Icons.person_outline_rounded, active: Icons.person_rounded, label: 'حسابي'),
+    ];
     return Container(
-      width: 76,
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: radius, border: Border.all(color: Colors.white.withOpacity(.06))),
+      width: 88,
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor,
+        border: Border(
+          left: isRtl ? const BorderSide(color: AppTheme.borderColor) : BorderSide.none,
+          right: isRtl ? BorderSide.none : const BorderSide(color: AppTheme.borderColor),
+        ),
+      ),
       child: SafeArea(
         left: !isRtl,
         right: isRtl,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildNavItem(0, 'assets/icons/home.svg', 'assets/icons/home_red.svg'),
             const SizedBox(height: 18),
-            _buildNavItem(1, 'assets/icons/explore.svg', 'assets/icons/explore_red.svg'),
-            const SizedBox(height: 18),
-            _buildNavItem(2, 'assets/icons/favorite.svg', 'assets/icons/favorite_red.svg'),
-            const SizedBox(height: 18),
-            _buildNavItem(3, 'assets/icons/profile.svg', 'assets/icons/profile_red.svg'),
+            const Text('AniTV', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w900, fontSize: 14)),
+            const Spacer(),
+            for (var i = 0; i < items.length; i++) ...[
+              _item(items[i].icon, items[i].active, items[i].label, i),
+              const SizedBox(height: 10),
+            ],
+            const Spacer(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, String inactiveIcon, String activeIcon) {
-    final active = currentIndex == index;
+  Widget _item(IconData icon, IconData active, String label, int index) {
+    final selected = currentIndex == index;
     return Semantics(
       button: true,
-      selected: active,
+      selected: selected,
+      label: label,
       child: InkWell(
         onTap: () => onTap(index),
         borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: active ? AppTheme.primaryColor.withOpacity(.14) : Colors.transparent, borderRadius: BorderRadius.circular(14)),
-          child: SvgPicture.asset(active ? activeIcon : inactiveIcon, width: 23, height: 23, colorFilter: active ? null : const ColorFilter.mode(AppTheme.textSecondaryColor, BlendMode.srcIn)),
+          width: 64,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primaryColor.withOpacity(.14) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? AppTheme.primaryColor.withOpacity(.35) : Colors.transparent),
+          ),
+          child: Column(
+            children: [
+              Icon(selected ? active : icon, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: selected ? Colors.white : AppTheme.textSecondaryColor, fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       ),
     );

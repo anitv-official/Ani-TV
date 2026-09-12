@@ -93,10 +93,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const AuthBranding(),
-                const Text('إنشاء حساب جديد', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                const Text('إنشاء حساب جديد', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                const Text('أنشئ حسابك للمتابعة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 16)),
-                const SizedBox(height: 32),
+                const Text('أنشئ حسابك لحفظ المفضلة والسجل', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
+                const SizedBox(height: 28),
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,

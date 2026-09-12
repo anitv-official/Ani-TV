@@ -8,8 +8,12 @@ import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'manga_reader_screen.dart';
 import '../utils/toast_utils.dart';
-import '../widgets/custom_loading_widget.dart';
-import '../widgets/download_action_button.dart';
+import '../widgets/ui/episode_tile.dart';
+import '../widgets/ui/favorite_button.dart';
+import '../widgets/ui/poster_image.dart';
+import '../widgets/ui/primary_button.dart';
+import '../widgets/ui/source_badge.dart';
+import '../widgets/ui/state_views.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
   final String url;
@@ -46,6 +50,12 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   }
 
   Future<void> _loadComicData() async {
+    if (mounted && !_isLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final data = await ApiService.fetchComicDetails(widget.url);
       
@@ -175,13 +185,13 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppTheme.backgroundColor,
       body: _isLoading
-          ? const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل المانجا...', size: 100))
+          ? const LoadingView(message: 'جارٍ تحميل التفاصيل...', size: 64)
           : _error != null
-              ? const Center(child: Text('تعذر تحميل التفاصيل. حاول مرة أخرى.', style: TextStyle(color: Colors.white)))
+              ? ErrorState(onRetry: _loadComicData)
               : _comicData == null
-                  ? const Center(child: Text('لا توجد بيانات', style: TextStyle(color: Colors.white)))
+                  ? const EmptyState(icon: Icons.menu_book_outlined, title: 'لا توجد بيانات')
                   : SafeArea(
                       child: SingleChildScrollView(
                         child: Column(
@@ -220,10 +230,11 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             }
             return AspectRatio(
               aspectRatio: aspectRatio,
-              child: Image.network(
-                comic['image_url'] ?? '',
+              child: PosterImage(
+                url: comic['image_url']?.toString(),
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+                fallbackIcon: Icons.menu_book_outlined,
+                borderRadius: BorderRadius.zero,
               ),
             );
           }
@@ -248,11 +259,14 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         ),
         // Back Button
         PositionedDirectional(
-          top: 16,
-          start: 16,
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+          top: 8,
+          start: 8,
+          child: SafeArea(
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.45)),
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            ),
           ),
         ),
       ],
@@ -266,49 +280,37 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       children: [
         Text(
           comic['title'] ?? 'بدون عنوان',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 21,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.25),
         ),
         const SizedBox(height: 8),
         Row(children: [
-          const Icon(Icons.language, size: 15, color: AppTheme.primaryColor),
-          const SizedBox(width: 5),
-          Text('المصدر: ${comic['source'] ?? 'AniTV'}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+          SourceBadge(label: comic['source']?.toString() ?? 'AniTV', compact: false),
+          const SizedBox(width: 8),
+          if ((comic['type'] ?? '').toString().isNotEmpty)
+            SourceBadge(label: comic['type']?.toString()),
         ]),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(
-              comic['year'] ?? '2022', // Assuming year data or placeholder
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(4),
+            if ((comic['year'] ?? comic['status'] ?? '').toString().trim().isNotEmpty)
+              Text(
+                (comic['year'] ?? comic['status']).toString(),
+                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
               ),
-              child: const Text(
-                '16+', // Hardcoded rating
-                style: TextStyle(color: Colors.white, fontSize: 11),
-              ),
-            ),
-            const SizedBox(width: 8),
             Text(
               '${chapters.length} فصل',
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
             ),
-             const SizedBox(width: 8),
-             const Icon(Icons.star, size: 14, color: Colors.amber),
-             const SizedBox(width: 4),
-             Text(
-               comic['rating']?.toString() ?? 'N/A',
-               style: TextStyle(color: Colors.grey[400], fontSize: 13),
-             ),
+            if ((comic['rating'] ?? '').toString().trim().isNotEmpty) ...[
+              const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+              Text(
+                comic['rating'].toString(),
+                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 10),
@@ -323,41 +325,33 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
+              child: PrimaryButton(
+                label: 'اقرأ',
+                icon: Icons.menu_book_rounded,
                 onPressed: () {
-                   // Read first chapter (which is typically the last in the list for manga sites, or first if reversed)
-                   // The API usually returns latest first. So we might want the last index.
-                   // But logic depends on source. Let's assume we want the "First Chapter" which might appear last in list.
                    final chapters = comic['chapters'] as List<dynamic>? ?? [];
                    if (chapters.isNotEmpty) {
-                      final firstChapter = chapters.last; // Assuming list is descending
-                 (() {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => MangaReaderScreen(
-                              url: firstChapter['url'],
-                              comicImageUrl: comic['image_url'],
-                              title: firstChapter['title'],
-                              chapterId: '1', // Simplified
-                            ),
+                      final firstChapter = chapters.last;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MangaReaderScreen(
+                            url: firstChapter['url'],
+                            comicImageUrl: comic['image_url'],
+                            title: firstChapter['title'],
+                            chapterId: '1',
                           ),
-                        );
-                      });
+                        ),
+                      );
                    }
                 },
-                icon: const Icon(Icons.menu_book, color: Colors.white),
-                label: const Text('اقرأ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF393053),
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF6F4FA4)),
-                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton.icon(
+              child: SecondaryButton(
+                label: 'تنزيل',
+                icon: Icons.download_rounded,
                 onPressed: () {
                   final chapters = comic['chapters'] as List<dynamic>? ?? [];
                   if (chapters.isNotEmpty) {
@@ -366,13 +360,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     ToastUtils.show('لا توجد فصول متاحة للتنزيل', backgroundColor: AppTheme.primaryColor);
                   }
                 },
-                icon: const Icon(Icons.download, color: Colors.white),
-                label: const Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[800],
-                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
               ),
             ),
           ],
@@ -381,28 +368,15 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-             _FavoriteIconAction(comic: comic, url: widget.url),
-             _buildIconAction(Icons.share, 'مشاركة', _shareComic),
-             _buildIconAction(Icons.link, 'نسخ الرابط', _copyComicLink),
+              _FavoriteIconAction(comic: comic, url: widget.url),
+              IconAction(icon: Icons.share_outlined, label: 'مشاركة', onTap: _shareComic),
+              IconAction(icon: Icons.link_rounded, label: 'نسخ الرابط', onTap: _copyComicLink),
           ],
         ),
       ],
     );
   }
   
-  Widget _buildIconAction(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 10)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildChaptersList(BuildContext context, Map<String, dynamic> comic) {
     final chapters = comic['chapters'] as List<dynamic>? ?? [];
     
@@ -425,7 +399,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                   autofocus: true,
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Search chapter...',
+                    hintText: 'ابحث عن فصل...',
                     hintStyle: TextStyle(color: Colors.grey[600]),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -460,8 +434,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                 Row(
                  children: [
                     const Text(
-                      'Chapters',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      'الفصول',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
@@ -480,7 +454,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         if (filteredChapters.isEmpty)
            Padding(
              padding: const EdgeInsets.all(12.0),
-             child: Text('No chapters found', style: TextStyle(color: Colors.grey[500])),
+             child: const Text('لا توجد فصول', style: TextStyle(color: AppTheme.textSecondaryColor)),
            )
         else
         ListView.separated(
@@ -490,75 +464,27 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final chapter = filteredChapters[index];
-            final originalIndex = chapters.indexOf(chapter);
-            
-            // Try to extract chapter number from title
-            String title = chapter['title'] ?? 'Chapter ?';
+            String title = chapter['title'] ?? 'فصل';
             String displayTitle = title;
             
-            return GestureDetector(
+            return ChapterTile(
+              title: displayTitle,
+              subtitle: (chapter['update_time'] ?? chapter['date'])?.toString(),
+              imageUrl: comic['image_url']?.toString(),
               onTap: () {
-                 (() {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MangaReaderScreen(
-                          url: chapter['url'],
-                          comicImageUrl: comic['image_url'],
-                          title: title,
-                          chapterId: '$index',
-                        ),
-                      ),
-                    );
-                 })();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MangaReaderScreen(
+                      url: chapter['url'],
+                      comicImageUrl: comic['image_url'],
+                      title: title,
+                      chapterId: '$index',
+                    ),
+                  ),
+                );
               },
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Thumbnail (using comic image as fallback)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      comic['image_url'] ?? '',
-                      width: 96,
-                      height: 54,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_,__,___) => Container(width: 96, height: 54, color: Colors.grey[800]),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          displayTitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        // You could add release date here if available
-                        Text(
-                           chapter['update_time'] ?? chapter['date'] ?? '',
-                           style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  DownloadActionButton(
-                    size: 20,
-                    onDownload: () => _downloadChapter(Map<String, dynamic>.from(chapter as Map)),
-                  ),
-                ],
-              ),
+              onDownload: () => _downloadChapter(Map<String, dynamic>.from(chapter as Map)),
             );
           },
         ),
@@ -582,8 +508,9 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
     final appStateProvider = Provider.of<AppStateProvider>(context);
     final isFavorited = appStateProvider.favoriteComics.any((item) => item['url'] == widget.url);
     
-    return GestureDetector(
-      onTap: () async {
+    return FavoriteButton(
+      isFavorite: isFavorited,
+      onPressed: () async {
          try {
                  final provider = Provider.of<AppStateProvider>(context, listen: false);
                  await provider.initialize();
@@ -591,7 +518,7 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                final items = provider.favoriteComics.where((x) => x['url'] == widget.url).toList();
                if(items.isNotEmpty) {
                  await provider.removeFromFavorites(items.first['id'], false);
-                 ToastUtils.show('Removed from My List', backgroundColor: Colors.red);
+                 ToastUtils.show('تمت الإزالة من المفضلة', backgroundColor: AppTheme.primaryColor);
                }
             } else {
                await provider.addToFavorites({
@@ -602,21 +529,12 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                   'type': widget.comic['type'],
                   'genres': widget.comic['genres'],
                }, false);
-               ToastUtils.show('Added to My List', backgroundColor: Colors.green);
+               ToastUtils.show('تمت الإضافة إلى المفضلة', backgroundColor: AppTheme.primaryColor);
             }
-            // Force rebuild is handled by Provider listener usually, but here we depend on parent rebuild or local state
-            // Ideally rely on consumer/provider updates. The parent build method fetches `isFavorited` from provider.
          } catch (e) {
-            ToastUtils.show('Error: $e', backgroundColor: Colors.red);
+            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Colors.red);
          }
       },
-      child: Column(
-        children: [
-          Icon(isFavorited ? Icons.favorite : Icons.favorite_border, color: isFavorited ? Colors.redAccent : Colors.white, size: 24),
-          const SizedBox(height: 4),
-          Text('المفضلة', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
-        ],
-      ),
     );
   }
 }
@@ -716,7 +634,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           child: Row(
             children: [
               Text(
-                _isExpanded ? 'Show Less' : 'Show More',
+                _isExpanded ? 'عرض أقل' : 'عرض المزيد',
                 style: const TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.bold,
@@ -741,7 +659,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.comic['alternative_titles'] != null && (widget.comic['alternative_titles'] as List).isNotEmpty) ...[
-          const Text('Alternative Titles:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text('عناوين أخرى:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 4),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,7 +676,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           const SizedBox(height: 12),
         ],
         if (widget.comic['genres'] != null) ...[
-          const Text('Genres:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text('التصنيفات:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -779,12 +697,12 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildInfoRow('Author', widget.comic['author']),
-        _buildInfoRow('Illustrator', widget.comic['illustrator']),
-        _buildInfoRow('Demographic', widget.comic['demographic']),
-        _buildInfoRow('Type', widget.comic['type']),
-        _buildInfoRow('Status', widget.comic['status']),
-        _buildInfoRow('Last Updated', widget.comic['last_updated']),
+        _buildInfoRow('الكاتب', widget.comic['author']),
+        _buildInfoRow('الرسام', widget.comic['illustrator']),
+        _buildInfoRow('الجمهور', widget.comic['demographic']),
+        _buildInfoRow('النوع', widget.comic['type']),
+        _buildInfoRow('الحالة', widget.comic['status']),
+        _buildInfoRow('آخر تحديث', widget.comic['last_updated']),
       ],
     );
   }

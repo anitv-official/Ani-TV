@@ -1,10 +1,5 @@
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dart:math';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
@@ -14,7 +9,12 @@ import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
-import '../widgets/download_action_button.dart';
+import '../widgets/ui/episode_tile.dart';
+import '../widgets/ui/favorite_button.dart';
+import '../widgets/ui/poster_image.dart';
+import '../widgets/ui/primary_button.dart';
+import '../widgets/ui/source_badge.dart';
+import '../widgets/ui/state_views.dart';
 
 class AnimeDetailsScreen extends StatefulWidget {
   final String url;
@@ -48,16 +48,16 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Pure black background like reference
+      backgroundColor: AppTheme.backgroundColor,
       body: FutureBuilder(
         future: _animeDetailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CustomLoadingWidget(message: 'جارٍ تحميل تفاصيل الأنمي...', size: 58));
+            return const LoadingView(message: 'جارٍ تحميل التفاصيل...', size: 64);
           } else if (snapshot.hasError) {
-            return const Center(child: Text('تعذر تحميل التفاصيل. حاول مرة أخرى.', style: TextStyle(color: Colors.white)));
+            return ErrorState(onRetry: () => setState(() => _animeDetailsFuture = ApiService.fetchAnimeDetails(widget.url)));
           } else if (!snapshot.hasData) {
-            return const Center(child: Text('لا توجد بيانات', style: TextStyle(color: Colors.white)));
+            return const EmptyState(icon: Icons.movie_outlined, title: 'لا توجد بيانات');
           }
 
           final anime = snapshot.data!;
@@ -102,13 +102,13 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
               aspectRatio = 21 / 9; // Ultra-wide for desktop
             }
             return ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 285),
+              constraints: const BoxConstraints(maxHeight: 300),
               child: AspectRatio(
                 aspectRatio: aspectRatio,
-                child: Image.network(
-                  anime['image_url'] ?? '',
+                child: PosterImage(
+                  url: anime['image_url']?.toString(),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+                  borderRadius: BorderRadius.zero,
                 ),
               ),
             );
@@ -134,20 +134,27 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         ),
         // Back Button
         PositionedDirectional(
-          top: 16,
-          start: 16,
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 23),
+          top: 8,
+          start: 8,
+          child: SafeArea(
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.45)),
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            ),
           ),
         ),
-        // Center Play Icon (Decoration)
         Positioned.fill(
           child: Center(
-            child: SvgPicture.asset(
-              'assets/icons/play.svg',
-              width: 48,
-              height: 48,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(.45),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white24),
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 34),
             ),
           ),
         ),
@@ -161,49 +168,37 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       children: [
         Text(
           anime['title'] ?? 'بدون عنوان',
-          style: const TextStyle(
-            color: Colors.white,
-             fontSize: 19,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.25),
         ),
         const SizedBox(height: 8),
         Row(children: [
-          const Icon(Icons.language, size: 15, color: AppTheme.primaryColor),
-          const SizedBox(width: 5),
-          Text('المصدر: ${anime['source'] ?? 'AniTV'}', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+          SourceBadge(label: anime['source']?.toString() ?? 'AniTV', compact: false),
+          const SizedBox(width: 8),
+          if ((anime['status'] ?? '').toString().isNotEmpty)
+            SourceBadge(label: anime['status']?.toString()),
         ]),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
+            if ((anime['release_date'] ?? '').toString().trim().isNotEmpty)
+              Text(
+                anime['release_date'].toString().split(',').last.trim(),
+                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
+              ),
             Text(
-              anime['release_date']?.toString().split(',').last.trim() ?? '2022', // Rough year extraction
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
+              '${anime['total_episodes'] ?? (anime['episodes'] as List?)?.length ?? 0} حلقة',
+              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(4),
+            if ((anime['rating'] ?? '').toString().trim().isNotEmpty) ...[
+              const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
+              Text(
+                anime['rating'].toString(),
+                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
               ),
-              child: const Text(
-                '16+', // Hardcoded rating
-                style: TextStyle(color: Colors.white, fontSize: 11),
-              ),
-            ),
-            const SizedBox(width: 8),
-             Text(
-              '${anime['total_episodes'] ?? '?'} حلقة',
-              style: TextStyle(color: Colors.grey[400], fontSize: 13),
-            ),
-             const SizedBox(width: 8),
-             Icon(Icons.star, size: 14, color: Colors.amber),
-             const SizedBox(width: 4),
-             Text(
-               anime['rating']?.toString() ?? 'N/A',
-               style: TextStyle(color: Colors.grey[400], fontSize: 13),
-             ),
+            ],
           ],
         ),
         const SizedBox(height: 12),
@@ -283,24 +278,21 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
+              child: PrimaryButton(
+                label: 'تشغيل',
+                icon: Icons.play_arrow_rounded,
                 onPressed: () {
                    if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
                       _showStreamBottomSheet(context, anime['episodes'][0], anime);
                    }
                 },
-                icon: const Icon(Icons.play_arrow, color: Colors.white),
-                label: const Text('تشغيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF393053),
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF6F4FA4)),
-                ),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton.icon(
+              child: SecondaryButton(
+                label: 'تنزيل',
+                icon: Icons.download_rounded,
                 onPressed: () {
                    if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
                       _showDownloadBottomSheet(context, anime['episodes'][0]);
@@ -308,13 +300,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                        ToastUtils.show('لا توجد حلقات متاحة للتنزيل', backgroundColor: Colors.orange);
                    }
                 },
-                icon: Icon(Icons.download, color: Colors.white),
-                label: const Text('تنزيل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[800],
-                   padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
               ),
             ),
           ],
@@ -324,25 +309,12 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
 
-             _FavoriteIconAction(anime: anime, url: widget.url),
-             _buildIconAction(Icons.share, 'مشاركة', () => _shareAnime(anime['title']?.toString() ?? 'أنمي')),
-             _buildIconAction(Icons.link, 'نسخ الرابط', _copyAnimeLink),
+              _FavoriteIconAction(anime: anime, url: widget.url),
+              IconAction(icon: Icons.share_outlined, label: 'مشاركة', onTap: () => _shareAnime(anime['title']?.toString() ?? 'أنمي')),
+              IconAction(icon: Icons.link_rounded, label: 'نسخ الرابط', onTap: _copyAnimeLink),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildIconAction(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 24),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 10)),
-        ],
-      ),
     );
   }
 
@@ -371,7 +343,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                   autofocus: true,
                   style: TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Search episode...',
+                    hintText: 'ابحث عن حلقة...',
                     hintStyle: TextStyle(color: Colors.grey[600]),
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -405,9 +377,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             children: [
                Row(
                  children: [
-                    Text(
+                    const Text(
                       'الحلقات',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
@@ -421,49 +393,25 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                  ],
                ),
               // Dummy dropdown for season
-              InkWell(
-                borderRadius: BorderRadius.circular(4),
-                onTap: () {
-                  // اختيار الحلقة
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF393053), // fill
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFF6F4FA4), // stroke
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Text(
-                        '1–100',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(width: 2),
-                      Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ],
-                  ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.elevatedColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Text(
+                  '${filteredEpisodes.length} حلقة',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
                 ),
               )
             ],
           ),
         const SizedBox(height: 16),
         if (filteredEpisodes.isEmpty)
-           Padding(
-             padding: const EdgeInsets.all(16.0),
-             child: Text('No episodes found', style: TextStyle(color: Colors.grey[500])),
+            const Padding(
+             padding: EdgeInsets.all(16.0),
+             child: Text('لا توجد حلقات', style: TextStyle(color: AppTheme.textSecondaryColor)),
            )
         else
         ListView.separated(
@@ -473,61 +421,14 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           separatorBuilder: (_, __) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
             final episode = filteredEpisodes[index];
-            // Must find original index for display
-            final originalIndex = episodes.indexOf(episode);
 
-            return GestureDetector(
+            return EpisodeTile(
+              title: episode['title']?.toString() ?? 'حلقة',
+              subtitle: episode['duration']?.toString() ?? anime['duration']?.toString(),
+              description: anime['synopsis']?.toString(),
+              imageUrl: (episode['image'] ?? episode['thumbnail'] ?? anime['image_url'])?.toString(),
               onTap: () => _showStreamBottomSheet(context, episode, anime),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Thumbnail (using anime image as fallback since ep image might not exist)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      (episode['image'] ?? episode['thumbnail'] ?? anime['image_url'] ?? '').toString(),
-                      width: 120,
-                      height: 68,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_,__,___) => Container(width: 120, height: 68, color: Colors.grey[800]),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          episode['title'] ?? 'Episode',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          episode['duration'] ?? anime['duration'] ?? '?',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          anime['synopsis'] ?? '', // Placeholder snippet
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[500], fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  DownloadActionButton(
-                    onDownload: () => _downloadEpisodeFromButton(context, episode),
-                  ),
-                ],
-              ),
+              onDownload: () => _downloadEpisodeFromButton(context, episode),
             );
           },
         ),
@@ -539,7 +440,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
      // Show loading
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -547,7 +448,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading streams...", size: 80),
+          child: CustomLoadingWidget(message: 'جارٍ تحميل المصادر...', size: 80),
         ),
       ),
     );
@@ -558,7 +459,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (context.mounted) Navigator.pop(context); // Close loading
 
       if (streams == null) {
-        ToastUtils.show('No streams found', backgroundColor: Colors.orange);
+        ToastUtils.show('لا توجد مصادر تشغيل', backgroundColor: Colors.orange);
         return;
       }
 
@@ -585,7 +486,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (context.mounted) {
         showModalBottomSheet(
           context: context,
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: AppTheme.surfaceColor,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
@@ -597,11 +498,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                    const Text(
-                     'Select Resolution',
+                     'اختر الجودة',
                      style: TextStyle(
                        color: Colors.white,
                        fontSize: 18,
-                       fontWeight: FontWeight.bold,
+                       fontWeight: FontWeight.w800,
                      ),
                    ),
                    const SizedBox(height: 16),
@@ -613,8 +514,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                          if (streamUrl.isNotEmpty)
                            ListTile(
                              leading: const Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
-                             title: const Text('Auto (Recommended)', style: TextStyle(color: Colors.white)),
-                             subtitle: const Text('Adaptive quality', style: TextStyle(color: Colors.grey)),
+                              title: const Text('تلقائي (موصى به)', style: TextStyle(color: Colors.white)),
+                              subtitle: const Text('جودة متكيفة', style: TextStyle(color: Colors.grey)),
                              onTap: () => _playVideo(context, streamUrl, 'Auto', streams, anime),
                            ),
 
@@ -638,7 +539,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('Error loading streams: $e', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Colors.red);
     }
   }
 
@@ -687,7 +588,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     // Show loading
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: AppTheme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -695,7 +596,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         heightFactor: 1,
         child: Padding(
           padding: EdgeInsets.all(32.0),
-          child: CustomLoadingWidget(message: "Loading links...", size: 80),
+          child: CustomLoadingWidget(message: 'جارٍ تحميل روابط التنزيل...', size: 80),
         ),
       ),
     );
@@ -705,21 +606,21 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       Navigator.pop(context); // Close loading
 
       if (streams == null || streams['download_links'] == null) {
-        ToastUtils.show('No download links found', backgroundColor: Colors.orange);
+        ToastUtils.show('لا توجد روابط تنزيل', backgroundColor: Colors.orange);
         return;
       }
 
       final downloadLinks = streams['download_links'] as Map<String, dynamic>;
 
       if (downloadLinks.isEmpty) {
-        ToastUtils.show('No download links found', backgroundColor: Colors.orange);
+        ToastUtils.show('لا توجد روابط تنزيل', backgroundColor: Colors.orange);
         return;
       }
 
       if (context.mounted) {
         showModalBottomSheet(
           context: context,
-          backgroundColor: const Color(0xFF1E1E1E),
+          backgroundColor: AppTheme.surfaceColor,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
@@ -731,11 +632,11 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                    const Text(
-                     'Download Links',
+                     'روابط التنزيل',
                      style: TextStyle(
                        color: Colors.white,
                        fontSize: 18,
-                       fontWeight: FontWeight.bold,
+                       fontWeight: FontWeight.w800,
                      ),
                    ),
                    const SizedBox(height: 16),
@@ -753,7 +654,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                              collapsedIconColor: Colors.white,
                              iconColor: AppTheme.primaryColor,
                              title: Text(
-                               'Quality: $quality',
+                                'الجودة: $quality',
                                style: const TextStyle(color: Colors.white),
                              ),
                              children: links.map<Widget>((link) {
@@ -784,7 +685,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('Error loading links: $e', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل روابط التنزيل', backgroundColor: Colors.red);
     }
   }
 
@@ -792,17 +693,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     return sourceId == 'risto' || sourceId == 'anime3rb' || sourceId == 'anime4up';
   }
 
-  Future<void> _launchUrl(String url) async {
-    try {
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        ToastUtils.show('Could not launch url', backgroundColor: Colors.red);
-      }
-    } catch (e) {
-      ToastUtils.show('Error launching url: $e', backgroundColor: Colors.red);
-    }
-  }
 }
 
 class _FavoriteIconAction extends StatefulWidget {
@@ -820,18 +710,16 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
     final appStateProvider = Provider.of<AppStateProvider>(context);
     final isFavorited = appStateProvider.favoriteAnime.any((item) => item['url'] == widget.url);
 
-    return GestureDetector(
-      onTap: () async {
+    return FavoriteButton(
+      isFavorite: isFavorited,
+      onPressed: () async {
          try {
-            // Logic duplicated from original _FavoriteButton but simplified
             final provider = Provider.of<AppStateProvider>(context, listen: false);
             await provider.initialize();
-            // ... (Simple toggle logic)
             if (isFavorited) {
-               // Must find ID
                final item = provider.favoriteAnime.firstWhere((x) => x['url'] == widget.url);
                await provider.removeFromFavorites(item['id'], true);
-               ToastUtils.show('Removed from My List', backgroundColor: Colors.red);
+               ToastUtils.show('تمت الإزالة من المفضلة', backgroundColor: AppTheme.primaryColor);
             } else {
                await provider.addToFavorites({
                   'title': widget.anime['title'] ?? 'No Title',
@@ -839,20 +727,13 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                   'url': widget.url,
                   'rating': widget.anime['rating'],
                }, true);
-               ToastUtils.show('Added to My List', backgroundColor: Colors.green);
+               ToastUtils.show('تمت الإضافة إلى المفضلة', backgroundColor: AppTheme.primaryColor);
             }
             setState((){});
          } catch (e) {
-            ToastUtils.show('Error: $e', backgroundColor: Colors.red);
+            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Colors.red);
          }
       },
-      child: Column(
-        children: [
-          Icon(isFavorited ? Icons.favorite : Icons.favorite_border, color: isFavorited ? Colors.redAccent : Colors.white, size: 24),
-          const SizedBox(height: 4),
-          Text('المفضلة', style: TextStyle(color: Colors.grey[400], fontSize: 10)),
-        ],
-      ),
     );
   }
 }
@@ -904,7 +785,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           child: Row(
             children: [
               Text(
-                _isExpanded ? 'Show Less' : 'Show More',
+                _isExpanded ? 'عرض أقل' : 'عرض المزيد',
                 style: const TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.bold,
@@ -929,7 +810,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.anime['genres'] != null) ...[
-          const Text('Genres:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text('التصنيفات:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
@@ -950,12 +831,12 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildInfoRow('Studio', widget.anime['studio']),
-        _buildInfoRow('Producer', widget.anime['producer']),
-        _buildInfoRow('Status', widget.anime['status']),
-        _buildInfoRow('Type', widget.anime['type']),
-        _buildInfoRow('Duration', widget.anime['duration']),
-        _buildInfoRow('Japanese', widget.anime['japanese']),
+        _buildInfoRow('الاستوديو', widget.anime['studio']),
+        _buildInfoRow('المنتج', widget.anime['producer']),
+        _buildInfoRow('الحالة', widget.anime['status']),
+        _buildInfoRow('النوع', widget.anime['type']),
+        _buildInfoRow('المدة', widget.anime['duration']),
+        _buildInfoRow('اليابانية', widget.anime['japanese']),
       ],
     );
   }
