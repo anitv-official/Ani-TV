@@ -41,7 +41,9 @@ class AppStateProvider extends ChangeNotifier {
     if (_initialized) return;
     _initialized = true;
     await _loadUserData();
-    await _loadFavorites();
+    // Authenticated users are hydrated by _syncAccountFromCloud. Reading the
+    // local cache afterwards used to overwrite that cloud snapshot.
+    if (!_isLoggedIn) await _loadFavorites();
     await _loadHistory();
   }
 
@@ -98,6 +100,7 @@ class AppStateProvider extends ChangeNotifier {
       await prefs.setString(_favoritesKey('favorite_anime'), jsonEncode(anime));
       await prefs.setString(_favoritesKey('favorite_comics'), jsonEncode(comics));
     } catch (_) {
+      debugPrint('Favorites cloud sync failed for current user: $_');
       _setErrorMessage('تعذر مزامنة بياناتك. ستبقى التغييرات محفوظة محليًا.');
     }
   }
@@ -136,7 +139,9 @@ class AppStateProvider extends ChangeNotifier {
       _favoriteAnime = [];
       _favoriteComics = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
-      if (user.emailVerification == true) await _loadFavorites();
+      // _applyAuthenticatedUser already hydrates the account from Appwrite.
+      // Loading SharedPreferences after that used to overwrite fresh cloud
+      // data with an old/empty local snapshot.
       notifyListeners();
     } catch (_) {
       _clearUser();
@@ -227,8 +232,10 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadFavorites() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _favoriteAnime = jsonDecode(prefs.getString(_favoritesKey('favorite_anime')) ?? '[]');
-      _favoriteComics = jsonDecode(prefs.getString(_favoritesKey('favorite_comics')) ?? '[]');
+      final anime = jsonDecode(prefs.getString(_favoritesKey('favorite_anime')) ?? '[]');
+      final comics = jsonDecode(prefs.getString(_favoritesKey('favorite_comics')) ?? '[]');
+      _favoriteAnime = anime is List ? List<dynamic>.from(anime) : <dynamic>[];
+      _favoriteComics = comics is List ? List<dynamic>.from(comics) : <dynamic>[];
       notifyListeners();
     } catch (_) { _setErrorMessage('تعذر تحميل المفضلة. حاول مرة أخرى.'); }
   }
@@ -247,7 +254,9 @@ class AppStateProvider extends ChangeNotifier {
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
       notifyListeners();
-      final userId = _userId;
+      // Do not write favorites for a session that has not completed the
+      // application's authenticated/verified state.
+      final userId = _isLoggedIn ? _userId : null;
       if (userId != null) {
         try {
           final existing = await _appwrite.findFavorite(userId: userId, itemId: itemId);
@@ -259,7 +268,10 @@ class AppStateProvider extends ChangeNotifier {
             newItem['id'] = document.$id;
             await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
           }
-        } catch (_) { _setErrorMessage('حُفظت المفضلة محليًا وستتم مزامنتها عند توفر الاتصال.'); }
+        } catch (_) {
+          debugPrint('Favorite cloud insert failed for $userId/$itemId: $_');
+          _setErrorMessage('حُفظت المفضلة محليًا وستتم مزامنتها عند توفر الاتصال.');
+        }
       }
     } catch (_) { _setErrorMessage('تعذر الإضافة إلى المفضلة. حاول مرة أخرى.'); }
   }
@@ -273,11 +285,14 @@ class AppStateProvider extends ChangeNotifier {
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
       notifyListeners();
-      if (_userId != null && removed != null) {
+      if (_isLoggedIn && _userId != null && removed != null) {
         try {
           final document = await _appwrite.findFavorite(userId: _userId!, itemId: (removed['url'] ?? removed['itemId']).toString());
           if (document != null) await _appwrite.deleteFavorite(document.$id);
-        } catch (_) { _setErrorMessage('تمت الإزالة محليًا وتعذر تحديث السحابة مؤقتًا.'); }
+        } catch (_) {
+          debugPrint('Favorite cloud delete failed for ${_userId}/${removed['itemId'] ?? removed['url']}: $_');
+          _setErrorMessage('تمت الإزالة محليًا وتعذر تحديث السحابة مؤقتًا.');
+        }
       }
     } catch (_) { _setErrorMessage('تعذر إزالة العنصر من المفضلة. حاول مرة أخرى.'); }
   }
