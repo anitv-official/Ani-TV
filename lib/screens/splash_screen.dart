@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Setup animation
     _controller = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1100),
       vsync: this,
     );
 
@@ -141,8 +141,8 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               // Logo
               Container(
-                width: 150,
-                height: 150,
+                width: 112,
+                height: 112,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -160,32 +160,32 @@ class _SplashScreenState extends State<SplashScreen>
                   fit: BoxFit.cover,
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 22),
               // App Name
               Text(
                 'AniTV',
                 style: TextStyle(
-                  fontSize: 42,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 1.5,
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 'شاهد الأنمي واقرأ المانجا',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   color: AppTheme.textSecondaryColor,
                   letterSpacing: 0.5,
                 ),
               ),
-              SizedBox(height: 48),
+              const SizedBox(height: 28),
               // Loading Animation
               Lottie.asset(
                 'assets/animations/loading_animation.json',
-                width: 100,
-                height: 100,
+                width: 64,
+                height: 64,
                 fit: BoxFit.contain,
               ),
             ],

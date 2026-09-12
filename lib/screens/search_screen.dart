@@ -266,16 +266,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         elevation: 0,
         titleSpacing: 0,
         title: SizedBox(
-          height: 46,
+        height: 42,
           child: _buildSearchField(),
         ),
         leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, size: 21),
             onPressed: _toggleSearchMode,
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.filter_list, color: Colors.white),
+            icon: const Icon(Icons.filter_list, size: 21),
             onPressed: () => _showInfoDialog('الفلاتر', 'يمكنك اختيار نوع المحتوى من الأزرار الظاهرة.'),
             tooltip: 'Filter results',
           ),
@@ -289,7 +289,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       title: Text(
         'السجل',
         style: TextStyle(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white
         ),
@@ -297,7 +297,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       actions: [
         IconButton(
           tooltip: 'بحث',
-          icon: const Icon(Icons.search, size: 28, color: Colors.white),
+          icon: const Icon(Icons.search, size: 22, color: Colors.white),
           onPressed: () {
             if (!_isSearching) {
               setState(() => _isSearching = true);
@@ -327,7 +327,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           child: Text(
             _showAnimeHistory ? 'آخر ما تمت مشاهدته' : 'آخر ما تمت قراءته',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -338,7 +338,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
           child: historyList.isEmpty
               ? _buildEmptyHistoryView()
               : ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   itemCount: historyList.length,
                   itemBuilder: (context, index) {
                     final item = historyList[index];

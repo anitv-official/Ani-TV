@@ -229,14 +229,14 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     ),
                     _buildCategoryToggle(),
                     _buildContentGrid(MediaQuery.of(context).size.width),
-                    SizedBox(height: 92 + MediaQuery.of(context).padding.bottom),
+                    SizedBox(height: 78 + MediaQuery.of(context).padding.bottom),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        Positioned(top: 78, left: 16, right: 16, child: _buildFloatingSearch()),
+        Positioned(top: 70, left: 16, right: 16, child: _buildFloatingSearch()),
       ],
     );
   }
@@ -245,20 +245,20 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
       child: Container(
-        height: 50,
+        height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(.68),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(.34), width: 1.3),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          border: Border.all(color: Colors.white.withOpacity(.20)),
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, offset: Offset(0, 5))],
         ),
         child: Row(children: [
-          const Icon(Icons.search_rounded, color: Colors.white70, size: 25),
-          const SizedBox(width: 10),
-          Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.78), fontSize: 15)),
+          const Icon(Icons.search_rounded, color: Colors.white70, size: 21),
+          const SizedBox(width: 9),
+          Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.78), fontSize: 13)),
           const Spacer(),
-          Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 20),
+          Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 18),
         ]),
       ),
     );
@@ -267,7 +267,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   Widget _buildLoadingView() {
     return const CustomLoadingWidget(
       message: 'جارٍ تحميل المحتوى...',
-      size: 96,
+      size: 66,
     );
   }
 
@@ -276,7 +276,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
     final item = featuredContent[_currentCarouselIndex]; // Use current index
     // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
-    final double heroHeight = (screenHeight * 0.40).clamp(260.0, 420.0);
+    final double heroHeight = (screenHeight * 0.34).clamp(230.0, 360.0);
 
     return SizedBox(
       height: heroHeight,
@@ -359,7 +359,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               children: [
                 // Header (AniTV + Icons)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -367,7 +367,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         'AniTV',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 24, // Reduced from 24
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

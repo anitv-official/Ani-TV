@@ -282,7 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: isLoading
             ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
             : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 child: Column(
                   children: [
                     // Header Title
@@ -290,22 +290,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Text(
                         'الملف الشخصي',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 18),
 
                     // Neutral avatar: no profile image is shown unless Appwrite provides one.
                     GestureDetector(
                       onTap: _pickAvatar,
                       child: CircleAvatar(
-                        radius: 64,
+                        radius: 48,
                         backgroundColor: AppTheme.surfaceColor,
                         backgroundImage: _avatarPath != null && File(_avatarPath!).existsSync() ? FileImage(File(_avatarPath!)) : null,
-                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? Icon(Icons.person_outline, size: 72, color: AppTheme.textSecondaryColor) : null,
+                        child: _avatarPath == null || !File(_avatarPath!).existsSync() ? const Icon(Icons.person_outline, size: 52, color: AppTheme.textSecondaryColor) : null,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -347,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'التفضيلات',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                          fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -371,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       alignment: Alignment.centerRight,
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                        child: Text('حول التطبيق', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                        child: Text('حول التطبيق', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     _buildSectionContainer(
@@ -394,8 +394,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: AppTheme.primaryColor, // merah
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 40, // lebar tombol
-                            vertical: 14,   // tinggi tombol
+                            horizontal: 28,
+                            vertical: 10,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(999), // pill shape
@@ -405,13 +405,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           isLoggedIn ? 'تسجيل الخروج' : 'تسجيل الدخول',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                          fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 130),
+                    const SizedBox(height: 86),
                   ],
                 ),
               ),
@@ -423,11 +423,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(color: Colors.white.withOpacity(.07)),
         boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18, offset: Offset(0, 8))],
       ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Column(
         children: children,
       ),
@@ -438,14 +438,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(children: [
               Icon(_menuIcon(title), color: AppTheme.primaryColor, size: 21),
               const SizedBox(width: 12),
-              Text(title, style: TextStyle(color: Colors.grey[200], fontSize: 16, fontWeight: FontWeight.w500)),
+              Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[200], fontSize: 14, fontWeight: FontWeight.w500)),
             ]),
             Row(
               children: [
@@ -454,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     trailing,
                     style: TextStyle(
                       color: Colors.grey[500],
-                      fontSize: 14,
+                    fontSize: 12,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -462,7 +462,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icon(
                   Icons.arrow_forward_ios,
                   color: Colors.grey[600],
-                  size: 16,
+                    size: 14,
                 ),
               ],
             ),
@@ -485,7 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildSwitchItem(String title, bool value, Function(bool) onChanged) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -493,7 +493,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title,
             style: TextStyle(
               color: Colors.grey[200],
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),

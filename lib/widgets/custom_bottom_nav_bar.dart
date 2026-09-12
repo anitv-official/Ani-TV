@@ -1,63 +1,64 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  const CustomBottomNavBar({Key? key, required this.currentIndex, required this.onTap}) : super(key: key);
+  const CustomBottomNavBar({super.key, required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final items = <({IconData icon, IconData active, String label})>[
+      (icon: Icons.home_outlined, active: Icons.home_rounded, label: 'الرئيسية'),
+      (icon: Icons.explore_outlined, active: Icons.explore_rounded, label: 'استكشاف'),
+      (icon: Icons.favorite_border_rounded, active: Icons.favorite_rounded, label: 'المفضلة'),
+      (icon: Icons.person_outline_rounded, active: Icons.person_rounded, label: 'حسابي'),
+    ];
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF171219).withOpacity(.92),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white.withOpacity(.10)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.42), blurRadius: 22, offset: const Offset(0, 10))],
-            ),
-            child: Row(children: [
-              _buildNavItem(0, Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
-              _buildNavItem(1, Icons.explore_outlined, Icons.explore, 'استكشاف'),
-              _buildNavItem(2, Icons.favorite_border_rounded, Icons.favorite_rounded, 'المفضلة'),
-              _buildNavItem(3, Icons.person_outline_rounded, Icons.person_rounded, 'الملف الشخصي'),
-            ]),
-          ),
+      minimum: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      child: Container(
+        height: 62,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withOpacity(.98),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withOpacity(.08)),
+          boxShadow: AppTheme.mediumShadow,
         ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData inactiveIcon, IconData activeIcon, String label) {
-    final isActive = currentIndex == index;
-    return Expanded(
-      child: InkWell(
-        onTap: () => onTap(index),
-        borderRadius: BorderRadius.circular(22),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          decoration: BoxDecoration(color: isActive ? const Color(0xFFE53935).withOpacity(.18) : Colors.transparent, borderRadius: BorderRadius.circular(20)),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AnimatedScale(
-              scale: isActive ? 1.08 : 1,
-              duration: const Duration(milliseconds: 220),
-              curve: Curves.easeOutBack,
-              child: Icon(isActive ? activeIcon : inactiveIcon, size: 24, color: isActive ? const Color(0xFFE53935) : Colors.white70),
-            ),
-            const SizedBox(height: 1),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: isActive ? const Color(0xFFE53935) : Colors.white70, fontSize: 9, fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
-          ]),
+        child: Row(
+          children: List.generate(items.length, (index) {
+            final item = items[index];
+            final selected = index == currentIndex;
+            return Expanded(
+              child: Semantics(
+                button: true,
+                selected: selected,
+                label: item.label,
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  borderRadius: BorderRadius.circular(14),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: selected ? AppTheme.primaryColor.withOpacity(.14) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(selected ? item.active : item.icon, size: 21, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor),
+                        const SizedBox(height: 3),
+                        Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, height: 1, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );

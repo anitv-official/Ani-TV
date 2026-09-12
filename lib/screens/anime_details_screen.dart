@@ -101,12 +101,15 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             if (constraints.maxWidth > 800) {
               aspectRatio = 21 / 9; // Ultra-wide for desktop
             }
-            return AspectRatio(
-              aspectRatio: aspectRatio,
-              child: Image.network(
-                anime['image_url'] ?? '',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 330),
+              child: AspectRatio(
+                aspectRatio: aspectRatio,
+                child: Image.network(
+                  anime['image_url'] ?? '',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(color: Colors.grey[900]),
+                ),
               ),
             );
           }
@@ -135,7 +138,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           start: 16,
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+            child: const Icon(Icons.arrow_back, color: Colors.white, size: 23),
           ),
         ),
         // Center Play Icon (Decoration)
@@ -160,7 +163,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           anime['title'] ?? 'بدون عنوان',
           style: const TextStyle(
             color: Colors.white,
-             fontSize: 24,
+             fontSize: 21,
             fontWeight: FontWeight.bold,
           ),
         ),
