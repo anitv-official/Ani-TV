@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'html_client.dart';
 import 'source_base.dart';
 
 /// Manga Slayer source backed by the API and dynamic source configuration used
@@ -142,7 +143,7 @@ class MangaSlayerSource extends ContentSource {
   }
 
   String _htmlFromResponse(dynamic value) => value is Map ? _string(value['data'] is Map ? (value['data']['content'] ?? value['data']) : (value['content'] ?? value['html'] ?? value)) : _string(value);
-  List<String> _images(String html, String base, String selector) => RegExp('<img[^>]+(?:src|data-src)=["\']([^"\']+)', caseSensitive: false).allMatches(html).map((m) => HtmlParse.absUrl(base, m.group(1)!)).where((u) => u.isNotEmpty).toSet().toList();
+  List<String> _images(String html, String base, String selector) => RegExp('<img[^>]+(?:src|data-src)=["\']([^"\']+)', caseSensitive: false).allMatches(html).map((m) => HtmlParse.absUrl(base, m.group(1) ?? '')).where((u) => u.isNotEmpty).toSet().toList();
   Map<String, dynamic>? _extractor(Map<String, dynamic> config, String name) {
     for (final value in config['extractors'] as List? ?? const []) {
       if (value is Map && value['name'] == name) return Map<String, dynamic>.from(value);
