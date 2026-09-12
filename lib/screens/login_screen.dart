@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
+import 'email_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -54,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      final provider = context.read<AppStateProvider>();
       final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
         await prefs.setString('remembered_email', _emailController.text.trim());
@@ -61,6 +63,13 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.remove('remembered_email');
       }
       if (!mounted) return;
+      if (!provider.emailVerified) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: _emailController.text.trim())),
+          (_) => false,
+        );
+        return;
+      }
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (_) => false,
