@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/auth_branding.dart';
