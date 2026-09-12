@@ -37,7 +37,18 @@ class MangaSlayerSource extends ContentSource {
     final response = await _apiRequest(
       'POST',
       '/manga/search?page=1&size=30',
-      body: {'query': value},
+      body: {
+        'query': value,
+        'status': null,
+        'format': null,
+        'year': null,
+        'yearRange': null,
+        'chapterCountRange': null,
+        'countryOrigin': null,
+        'source': null,
+        'genres': null,
+        'tags': null,
+      },
     );
     await _sourceConfig();
     return _asList(response)
@@ -62,6 +73,7 @@ class MangaSlayerSource extends ContentSource {
     final id = _idFrom(url);
     if (id == null) throw Exception('تعذر تحديد المانجا من Manga Slayer');
     final raw = _asMap(await _apiRequest('GET', '/manga/detail/$id'));
+    await _sourceConfig();
     final result = _mangaItem(raw);
     result['url'] = url;
     result['manga_id'] = id;
@@ -118,18 +130,21 @@ class MangaSlayerSource extends ContentSource {
       final href = RegExp('href=["\\\']([^"\\\']+)', caseSensitive: false).firstMatch(block)?.group(1) ?? '';
       final rawTitle = RegExp('<a[^>]*>([\\s\\S]*?)</a>', caseSensitive: false).firstMatch(block)?.group(1) ?? block;
       final title = _normalizeChapterTitle(HtmlParse.stripTags(rawTitle));
+      final releaseDate = RegExp('<(?:i|span)[^>]*>([\\s\\S]*?)</(?:i|span)>', caseSensitive: false).firstMatch(block)?.group(1) ?? '';
       if (href.isEmpty || title.isEmpty) continue;
       final absolute = HtmlParse.absUrl('https://$domain/', href);
       final number = _chapterNumber(title, blocks.length - index - 1);
-      final internalUrl = 'mangaslayer://chapter?chapter_url=${Uri.encodeComponent(absolute)}&post_id=$mangaId&chapter=${Uri.encodeComponent(_chapterSlug(absolute))}';
+      final chapterId = _chapterSlug(absolute);
+      final internalUrl = 'mangaslayer://chapter?chapter_url=${Uri.encodeComponent(absolute)}&post_id=$mangaId&chapter=${Uri.encodeComponent(chapterId)}';
       result.add({
-        'id': '${mangaId}_$index',
-        'chapter_id': '${mangaId}_$index',
+        'id': chapterId,
+        'chapter_id': chapterId,
         'chapter_number': number,
         'number': number,
         'title': title,
         'url': internalUrl,
         'chapter_url': absolute,
+        'release_date': HtmlParse.stripTags(releaseDate),
       });
     }
     return result;
@@ -248,10 +263,9 @@ class MangaSlayerSource extends ContentSource {
     final parsed = Uri.tryParse(url);
     if (parsed == null || parsed.host.isEmpty) return url;
     final mapping = config['ip_mapping'] as Map?;
-    if (config['direct_ip_mode'] == true && mapping != null && !parsed.host.endsWith('lekmanga.site')) {
+    if (config['direct_ip_mode'] == true && mapping != null) {
       final overrides = mapping['overrides'] as Map? ?? const {};
       final host = parsed.host;
-      final subdomain = _string(mapping['subdomain']);
       final key = host.split('.').isNotEmpty ? host.split('.').first : '';
       final ip = _string(overrides[key]) .isNotEmpty ? _string(overrides[key]) : _string(mapping['default']);
       if (ip.isNotEmpty) return url.replaceFirst(host, ip).replaceFirst('https://', 'http://');
@@ -260,9 +274,6 @@ class MangaSlayerSource extends ContentSource {
   }
 
   String _transformUrl(String url, dynamic transformations) {
-    // The current CDN serves s.lekmanga.site directly. The APK's historical
-    // rewrite points to a retired hostname, so retain the verified URL.
-    if (url.contains('lekmanga.site')) return url;
     if (transformations is! List) return url;
     var result = url;
     for (final transformation in transformations.whereType<Map>()) {
