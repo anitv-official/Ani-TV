@@ -16,11 +16,11 @@ class SourceRegistry {
   static const Duration _cacheDuration = Duration(minutes: 3);
   static final Map<String, _RegistryCache> _cache = {};
   static final List<ContentSource> all = [
+    AnimeSlayerSource(),
     RistoAnimeSource(),
     AnimefySource(),
     Anime3rbSource(),
     Anime4UpSource(),
-    AnimeSlayerSource(),
     OlympusSource(),
     AzorafySource(),
       MangaSwatSource(),
@@ -107,7 +107,15 @@ class SourceRegistry {
         if (seen.add(key)) merged.add(item);
       }
     }
+    merged.sort((a, b) => _sourcePriority(a).compareTo(_sourcePriority(b)));
     return merged;
+  }
+
+  static int _sourcePriority(Map<String, dynamic> item) {
+    final source = '${item['source_id'] ?? item['source'] ?? ''}'.toLowerCase();
+    final url = '${item['url'] ?? ''}'.toLowerCase();
+    if (source == 'anime_slayer' || source.contains('anime slayer') || url.contains('anime_slayer')) return 0;
+    return 1;
   }
 
 

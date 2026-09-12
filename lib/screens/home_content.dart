@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
 import '../theme/app_theme.dart';
-import '../providers/app_state_provider.dart';
 import '../widgets/custom_error_dialog.dart';
+import '../widgets/custom_loading_widget.dart';
 import '../widgets/update_bottom_sheet.dart';
-import '../widgets/ui/app_search_bar.dart';
-import '../widgets/ui/content_card.dart';
-import '../widgets/ui/content_grid.dart';
-import '../widgets/ui/poster_image.dart';
-import '../widgets/ui/primary_button.dart';
-import '../widgets/ui/section_header.dart';
-import '../widgets/ui/segmented_toggle.dart';
-import '../widgets/ui/source_badge.dart';
-import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'categories_screen.dart';
@@ -44,10 +36,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
   bool isLoading = true;
-  bool _hasError = false;
   int _currentCarouselIndex = 0;
-  bool _showAnime = true;
-  bool _isUpdateAvailable = false;
+  bool _showAnime = true; // Toggle state
+  bool _isUpdateAvailable = false; // Persistent update indicator
   late final ScrollController _scrollController;
   int _animePage = 1;
   int _comicPage = 1;
@@ -60,7 +51,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _checkForUpdates();
+    _checkForUpdates(); // Check for updates on init
+
+    // Use preloaded content if available
     if (widget.preloadedAnime != null &&
         widget.preloadedComics != null &&
         widget.preloadedFeaturedContent != null) {
@@ -74,6 +67,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       _loadContent();
     }
   }
+
 
   @override
   void dispose() {
@@ -121,10 +115,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Future<void> _loadContent() async {
-    setState(() {
-      isLoading = true;
-      _hasError = false;
-    });
+    setState(() => isLoading = true);
     try {
       final loaded = await Future.wait([
         ApiService.fetchLatestAnime(),
@@ -136,6 +127,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
       if (mounted) {
         setState(() {
+          // Mix anime and comics, but limit to 8 total featured items
+          // Ensure each item has the correct type property
           final featuredAnime = topAnime
               .take(4)
               .map((item) => {
@@ -143,6 +136,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     'type': 'anime',
                   })
               .toList();
+
           final featuredComics = comics
               .take(4)
               .map((item) => {
@@ -150,21 +144,19 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     'type': 'comic',
                   })
               .toList();
-          featuredContent = [...featuredAnime, ...featuredComics]..shuffle();
+
+          // Preserve SourceRegistry priority so Anime Slayer content stays first.
+          featuredContent = [...featuredAnime, ...featuredComics];
           latestAnime = anime;
           latestComics = comics;
           _animePage = 1;
           _comicPage = 1;
           isLoading = false;
-          _hasError = false;
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-          _hasError = true;
-        });
+        setState(() => isLoading = false);
         _showErrorDialog('خطأ في التحميل', 'تعذر تحميل المحتوى. حاول مرة أخرى.');
       }
     }
@@ -173,14 +165,21 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   Future<void> _checkForUpdates() async {
     try {
       final available = await AppVersionService.isUpdateAvailable();
-      if (mounted) setState(() => _isUpdateAvailable = available);
+      if (mounted) {
+        setState(() {
+          _isUpdateAvailable = available;
+        });
+      }
     } catch (_) {}
   }
 
   void _showUpdateSheet() async {
     final versionData = await AppVersionService.getAppVersion();
     final changelog = await AppVersionService.getChangelog();
+    
+    // Android receives the common version field.
     final latestVersion = versionData?['version'];
+
     if (mounted) {
       UpdateBottomSheet.show(
         context: context,
@@ -199,280 +198,525 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     );
   }
 
-  void _openItem(dynamic item, {required bool isAnime}) {
-    if (isAnime || item['type'] == 'anime') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'])));
-    } else {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'], type: item['type'])));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    if (isLoading) return const LoadingView(message: 'جارٍ تحميل المحتوى...', size: 72);
-    if (_hasError && latestAnime.isEmpty && latestComics.isEmpty) {
-      return ErrorState(onRetry: _loadContent);
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    if (isLoading) {
+      return Center(child: _buildLoadingView());
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadContent,
-      color: AppTheme.primaryColor,
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-        slivers: [
-          SliverToBoxAdapter(child: _buildHeroSection()),
-          SliverToBoxAdapter(child: _buildQuickActions()),
-          SliverToBoxAdapter(
-            child: SourceSummary(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen())),
-            ),
-          ),
-          SliverToBoxAdapter(child: _buildContinueSection()),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: SegmentedToggle(
-                labels: const ['أنمي', 'مانجا'],
-                index: _showAnime ? 0 : 1,
-                onChanged: (i) => setState(() => _showAnime = i == 0),
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadContent,
+          color: AppTheme.primaryColor,
+          strokeWidth: 3,
+          child: CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    _buildHeroSection(MediaQuery.of(context).size.width, screenHeight),
+                    SourceSummary(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SourcesScreen()),
+                      ),
+                    ),
+                    _buildCategoryToggle(),
+                    _buildContentGrid(MediaQuery.of(context).size.width),
+                    SizedBox(height: 78 + MediaQuery.of(context).padding.bottom),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              title: _showAnime ? 'أحدث الأنمي' : 'أحدث المانجا',
-            ),
-          ),
-          SliverToBoxAdapter(child: _buildContentGrid()),
-          SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.of(context).padding.bottom)),
-        ],
+        ),
+        Positioned(top: 70, left: 16, right: 16, child: _buildFloatingSearch()),
+      ],
+    );
+  }
+
+  Widget _buildFloatingSearch() {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(.68),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          border: Border.all(color: Colors.white.withOpacity(.20)),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, offset: Offset(0, 5))],
+        ),
+        child: Row(children: [
+          const Icon(Icons.search_rounded, color: Colors.white70, size: 21),
+          const SizedBox(width: 9),
+          Text('ابحث عن أنمي أو مانجا', style: TextStyle(color: Colors.white.withOpacity(.78), fontSize: 13)),
+          const Spacer(),
+          Icon(Icons.tune_rounded, color: Colors.white.withOpacity(.55), size: 18),
+        ]),
       ),
     );
   }
 
-  Widget _buildHeroSection() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final heroHeight = (screenHeight * 0.42).clamp(280.0, 420.0);
-    final item = featuredContent.isEmpty ? null : featuredContent[_currentCarouselIndex];
+  Widget _buildLoadingView() {
+    return const CustomLoadingWidget(
+      message: 'جارٍ تحميل المحتوى...',
+      size: 66,
+    );
+  }
 
-    return SizedBox(
-      height: heroHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (featuredContent.isNotEmpty)
-            CarouselSlider(
-              options: CarouselOptions(
-                height: heroHeight,
-                viewportFraction: 1.0,
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 5),
-                onPageChanged: (index, reason) => setState(() => _currentCarouselIndex = index),
-              ),
-              items: featuredContent.map((contentItem) {
-                return PosterImage(
-                  url: (contentItem['image_url'] ?? '').toString(),
-                  borderRadius: BorderRadius.zero,
-                  width: double.infinity,
-                  height: heroHeight,
-                );
-              }).toList(),
-            )
-          else
-            Container(color: AppTheme.surfaceColor),
-          IgnorePointer(
-            child: Container(decoration: BoxDecoration(gradient: AppTheme.heroOverlay)),
+  Widget _buildHeroSection(double screenWidth, double screenHeight) {
+    if (featuredContent.isEmpty) return SizedBox.shrink();
+
+    final item = featuredContent[_currentCarouselIndex]; // Use current index
+    // Adjusted height: 45% of screen height, but capped at 500px for desktop to avoid taking too much space
+    final double heroHeight = (screenHeight * 0.30).clamp(210.0, 320.0);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: SizedBox(
+        height: heroHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+          // Background Slider
+          CarouselSlider(
+            options: CarouselOptions(
+              height: heroHeight,
+              viewportFraction: 1.0,
+              autoPlay: true,
+              autoPlayInterval: Duration(seconds: 5),
+              onPageChanged: (index, reason) {
+                setState(() {
+                  _currentCarouselIndex = index;
+                });
+              },
+            ),
+            items: featuredContent.map((contentItem) {
+              return Builder(
+                builder: (BuildContext context) {
+                      return CachedNetworkImage(
+                        imageUrl: (contentItem['image_url'] ?? '').toString(),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        placeholder: (_, __) => Container(color: AppTheme.surfaceColor),
+                        errorWidget: (_, __, ___) => Container(color: AppTheme.surfaceColor),
+                      );
+                },
+              );
+            }).toList(),
           ),
+          
+          // Gradient Overlay
+          IgnorePointer(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3), // Darker top for white text
+                    Colors.transparent,
+                    AppTheme.backgroundColor.withOpacity(0.8),
+                    AppTheme.backgroundColor,
+                  ],
+                  stops: [0.0, 0.4, 0.8, 1.0],
+                ),
+              ),
+            ),
+          ),
+          
+          // Top Gradient overlay for status bar and header
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 120, // Covers status bar and header area
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.8),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Content
           SafeArea(
             bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Column(
+              children: [
+                // Header (AniTV + Icons)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'التحديثات',
-                        onPressed: _isUpdateAvailable ? _showUpdateSheet : null,
-                        icon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              _isUpdateAvailable ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
-                              color: Colors.white,
-                            ),
-                            if (_isUpdateAvailable)
-                              Positioned(
-                                right: -1,
-                                top: -1,
-                                child: Container(
-                                  width: 9,
-                                  height: 9,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 1.4),
-                                  ),
-                                ),
-                              ),
-                          ],
+                      Text(
+                        'AniTV',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              if (_isUpdateAvailable) {
+                                _showUpdateSheet();
+                              }
+                            },
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(
+                                  _isUpdateAvailable ? Icons.notifications_active : Icons.notifications_outlined,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                if (_isUpdateAvailable)
+                                  Positioned(
+                                    right: -1,
+                                    top: -1,
+                                    child: Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryColor, // Use primary color for indicator
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 1.5),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  SearchLaunchField(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
+                ),
+
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0), // Bottom padding removed for tight spacing
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title
+                      Text(
+                        item['title'] ?? '',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Roboto',
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(blurRadius: 10, color: Colors.black, offset: Offset(0, 2)) 
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 8), // Reduced from 16
+
+                      // Actions Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Favorites
+                          _buildHeroActionItem(
+                            'assets/icons/favorite.svg', 
+                            'المفضلة',
+                            () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen())),
+                          ),
+
+                          // Play/Read Button
+                          SizedBox(
+                            width: 124,
+                            height: 40,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (item['type'] == 'anime') {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'])));
+                                } else if (item['type'] == 'comic') {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'])));
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFE50914), // Red
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                              ),
+                                child: Text(
+                                item['type'] == 'comic' ? 'اقرأ' : 'شاهد',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold, 
+                                  color: Colors.white,
+                                  height: 1.2, 
+                                )
+                              ),
+                            ),
+                          ),
+
+                          // Categories
+                           _buildHeroActionItem(
+                             'assets/icons/categories.svg', 
+                             'التصنيفات',
+                             () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen())),
+                           ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  if (item != null) ...[
-                    SourceBadge(label: item['type'] == 'comic' ? 'مانجا' : 'أنمي'),
-                    const SizedBox(height: 8),
-                    Text(
-                      item['title'] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, height: 1.2),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        PrimaryButton(
-                          label: item['type'] == 'comic' ? 'اقرأ الآن' : 'شاهد الآن',
-                          icon: item['type'] == 'comic' ? Icons.menu_book_rounded : Icons.play_arrow_rounded,
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime'),
-                        ),
-                        const SizedBox(width: 10),
-                        SecondaryButton(
-                          label: 'التفاصيل',
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Row(
-        children: [
-          _quickAction(Icons.favorite_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.category_rounded, 'التصنيفات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.hub_outlined, 'المصادر', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.search_rounded, 'بحث', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)))),
-        ],
-      ),
-    );
-  }
-
-  Widget _quickAction(IconData icon, String label, VoidCallback onTap) {
-    return Expanded(
-      child: Material(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            height: 72,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: AppTheme.primaryColor, size: 20),
-                const SizedBox(height: 6),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                ),
               ],
             ),
           ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildContinueSection() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, _) {
-        final animeItems = appState.animeHistory.take(8).toList();
-        final comicItems = appState.comicHistory.take(8).toList();
-        if (animeItems.isEmpty && comicItems.isEmpty) return const SizedBox.shrink();
-        final items = [
-          ...animeItems.map((item) => Map<String, dynamic>.from(item as Map)..['type'] = 'anime'),
-          ...comicItems.map((item) => Map<String, dynamic>.from(item as Map)..['type'] = 'comic'),
-        ];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: 'متابعة المشاهدة والقراءة',
-              actionLabel: 'السجل',
-              onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-            ),
-            HorizontalContentList(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                final isAnime = item['type'] == 'anime';
-                return ContentCard(
-                  title: item['title']?.toString(),
-                  imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-                  badge: isAnime ? 'أنمي' : 'مانجا',
-                  compactTitle: true,
-                  onTap: () => _openItem(item, isAnime: isAnime),
-                );
-              },
-            ),
-          ],
-        );
-      },
+  Widget _buildHeroActionItem(String iconPath, String label, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture.asset(
+                iconPath,
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildContentGrid() {
-    final items = _showAnime ? latestAnime : latestComics;
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48),
-        child: EmptyState(
-          icon: Icons.inventory_2_outlined,
-          title: 'لا يوجد محتوى حالياً',
-          message: 'حاول التحديث أو تصفح مصدر آخر.',
-          actionLabel: 'تحديث',
-          onAction: _loadContent,
+  Widget _buildCategoryToggle() {
+    return Padding(
+      // Increased spacing to 20.0 for more separation
+      padding: const EdgeInsets.fromLTRB(14.0, 14.0, 14.0, 10.0),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+           color: const Color(0xFF333333), // Dark grey background for container
+           borderRadius: BorderRadius.circular(8),
         ),
-      );
+        padding: const EdgeInsets.all(4),
+        child: Stack(
+          children: [
+            // Sliding Indicator
+            AnimatedAlign(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: _showAnime
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.centerEnd,
+              child: FractionallySizedBox(
+                widthFactor: 0.5,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE50914), // Red
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ),
+            // Text Labels (Transparent overlay)
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _showAnime = true),
+                    behavior: HitTestBehavior.translucent, // Ensure taps are caught
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'أنمي',
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _showAnime = false),
+                    behavior: HitTestBehavior.translucent, // Ensure taps are caught
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'مانجا',
+                        style: TextStyle(
+                          color: Colors.white, 
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentGrid(double maxWidth) {
+    final items = _showAnime ? latestAnime : latestComics;
+    
+    // Responsive grid count calculation
+    int crossAxisCount = 3;
+    if (maxWidth > 1200) {
+      crossAxisCount = 6;
+    } else if (maxWidth > 800) {
+      crossAxisCount = 5;
+    } else if (maxWidth > 600) {
+      crossAxisCount = 4;
     }
-    return ContentGrid(
-      shrinkWrap: true,
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return ContentCard(
-          title: item['title']?.toString(),
-          imageUrl: item['image_url']?.toString(),
-          badge: _showAnime ? item['source']?.toString() : item['type']?.toString(),
-          onTap: () => _openItem(item, isAnime: _showAnime),
-        );
-      },
+
+    // Adjust aspect ratio slightly for wider screens if needed, 
+    // but usually 0.70 is fine for posters.
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: 0.64,
+              crossAxisSpacing: 9,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return GestureDetector(
+                onTap: () {
+                   if (_showAnime) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'])));
+                   } else {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'], type: item['type'])));
+                   }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                              border: Border.all(color: Colors.white.withOpacity(.08)),
+                              boxShadow: AppTheme.subtleShadow,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                              child: Image.network(
+                                item['image_url'] ?? '',
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: AppTheme.cardColor,
+                                  child: const Center(child: Icon(Icons.image_not_supported_outlined, color: Colors.white30)),
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Type Badge
+                          if (!_showAnime && item['type'] != null)
+                            Positioned(
+                              top: 4,
+                              left: 4,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.9), // Brand color
+                                  borderRadius: BorderRadius.circular(4),
+                                  boxShadow: [
+                                    BoxShadow(color: Colors.black26, blurRadius: 2, offset: Offset(0, 1))
+                                  ],
+                                ),
+                                child: Text(
+                                  (item['type'] as String).toUpperCase(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: 32,
+                      child: Text(
+                        item['title'] ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.25,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
