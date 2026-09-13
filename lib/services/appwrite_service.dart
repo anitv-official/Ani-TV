@@ -120,14 +120,24 @@ class AppwriteService {
     final normalized = normalizeUsername(username);
     final existing = await getProfile(userId);
     if (existing != null) {
-      if ((existing.data['username'] ?? '').toString().trim().isEmpty && normalized.isNotEmpty) {
+      final existingUsername = normalizeUsername((existing.data['username'] ?? '').toString());
+      if (existingUsername.isEmpty && normalized.isNotEmpty) {
+        if (!await isUsernameAvailable(normalized, currentDocumentId: existing.$id)) {
+          throw const UsernameTakenException();
+        }
         return updateProfile(documentId: existing.$id, username: normalized);
+      }
+      if (normalized.isNotEmpty && existingUsername != normalized) {
+        throw const UsernameTakenException();
       }
       return existing;
     }
     // A normalized document ID makes creation a server-side atomic claim for
     // new profiles: Lord, lord and LORD cannot claim separate IDs.
     final documentId = normalized.isNotEmpty ? normalized : ID.unique();
+    if (normalized.isNotEmpty && !await isUsernameAvailable(normalized)) {
+      throw const UsernameTakenException();
+    }
     return databases.createDocument(
       databaseId: databaseId,
       collectionId: profilesTableId,
