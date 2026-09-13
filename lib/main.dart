@@ -12,6 +12,7 @@ import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
+import 'services/appwrite_service.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:flutter/services.dart';
@@ -76,6 +77,7 @@ class _MyAppState extends State<MyApp> {
   String? _lastVerificationLink;
   String? _lastContentLink;
   bool _verificationInProgress = false;
+  bool _googleAuthInProgress = false;
 
   @override
   void initState() {
@@ -91,9 +93,36 @@ class _MyAppState extends State<MyApp> {
 
   void _handleUri(Uri? uri) {
     if (uri == null) return;
-    // Appwrite OAuth callbacks are consumed by the OAuth flow itself. They
-    // must never be interpreted as password-recovery links.
-    if (uri.scheme == 'appwrite-callback-6aa4295900094d600163') return;
+    if (uri.scheme == 'appwrite-callback-6aa4295900094d600163') {
+      final userId = uri.queryParameters['userId'] ?? '';
+      final secret = uri.queryParameters['secret'] ?? '';
+      final error = uri.queryParameters['error'] ?? '';
+      if (_googleAuthInProgress) return;
+      _googleAuthInProgress = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final context = appNavigatorKey.currentContext;
+          final navigator = appNavigatorKey.currentState;
+          if (context == null || navigator == null) return;
+          if (error == 'access_denied') throw const GoogleAuthException('CANCELLED');
+          final provider = context.read<AppStateProvider>();
+          await provider.completeGoogleLogin(userId: userId, secret: secret);
+          if (!provider.emailVerified) {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: provider.email)), (_) => false);
+          } else {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+          }
+          ToastUtils.show('تم تسجيل الدخول باستخدام Google بنجاح.', backgroundColor: Colors.green);
+        } catch (error) {
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor);
+        } finally {
+          _googleAuthInProgress = false;
+        }
+      });
+      return;
+    }
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
     final isVerificationCallback = (uri.scheme == 'anitv' && uri.host == 'verify-email') ||

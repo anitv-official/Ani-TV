@@ -213,8 +213,12 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> loginWithGoogle() async {
+    await _appwrite.loginWithGoogle();
+  }
+
+  Future<void> completeGoogleLogin({required String userId, required String secret}) async {
     try {
-      final user = await _appwrite.loginWithGoogle();
+      final user = await _appwrite.completeGoogleLogin(userId: userId, secret: secret);
       _favoriteAnime = [];
       _favoriteComics = [];
       _animeHistory = [];

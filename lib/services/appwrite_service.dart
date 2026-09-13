@@ -4,9 +4,9 @@ import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/src/enums.dart' show HttpMethod;
-import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -65,20 +65,19 @@ class AppwriteService {
     return account.get();
   }
 
-  Future<models.User> loginWithGoogle() async {
-    final callback = await account.createOAuth2Token(
-      provider: enums.OAuthProvider.google,
-      success: 'appwrite-callback-6aa4295900094d600163://auth/success',
-      failure: 'appwrite-callback-6aa4295900094d600163://auth/failure',
+  Future<void> loginWithGoogle() async {
+    const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
+    const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
+    final uri = Uri.parse('$_endpoint/account/sessions/oauth2/google').replace(
+      queryParameters: {'project': _projectId, 'success': success, 'failure': failure},
     );
-    final uri = callback is Uri ? callback : Uri.tryParse(callback.toString());
-    final userId = uri?.queryParameters['userId'] ?? '';
-    final secret = uri?.queryParameters['secret'] ?? '';
-    if (userId.isEmpty || secret.isEmpty) {
-      throw GoogleAuthException(
-        uri?.queryParameters['error'] == 'access_denied' ? 'CANCELLED' : 'INVALID_CALLBACK',
-      );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw const GoogleAuthException('OPEN_FAILED');
     }
+  }
+
+  Future<models.User> completeGoogleLogin({required String userId, required String secret}) async {
+    if (userId.isEmpty || secret.isEmpty) throw const GoogleAuthException('INVALID_CALLBACK');
     await account.createSession(userId: userId, secret: secret);
     return account.get();
   }

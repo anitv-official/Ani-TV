@@ -91,18 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final provider = context.read<AppStateProvider>();
       await provider.loginWithGoogle();
-      if (!mounted) return;
-      if (!provider.emailVerified) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: provider.email)),
-          (_) => false,
-        );
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (_) => false,
-        );
-      }
+      if (mounted) ToastUtils.show('أكمل تسجيل الدخول من نافذة Google.', backgroundColor: Colors.blueGrey);
     } catch (error) {
       if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
     } finally {
