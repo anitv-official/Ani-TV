@@ -541,11 +541,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       // AnyPlay's player is retained, but its embed page must not be able to
       // open popunders or redirect the top-level WebView to an advertisement.
       window.open = () => null;
+      // Prevent common ad SDKs from opening a new tab/window through a
+      // synthetic anchor, form submission, or a delayed click handler.
+      const nativeSubmit = HTMLFormElement.prototype.submit;
+      HTMLFormElement.prototype.submit = function() {
+        const action = String(this.action || '').toLowerCase();
+        if (blocked(action)) return;
+        return nativeSubmit.call(this);
+      };
+      const nativeAnchorClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function() {
+        const href = String(this.href || '').toLowerCase();
+        if (blocked(href) || this.target === '_blank') return;
+        return nativeAnchorClick.call(this);
+      };
       window.alert = () => null;
       window.confirm = () => false;
       const blocked = (value) => {
         const url = String(value || '').toLowerCase();
-        return /doubleclick\.|googlesyndication\.|googleadservices\.|adservice\.|adsystem\.|adserver\.|popads\.|popcash\.|propellerads\.|onclickads\.|exoclick\.|juicyads\.|trafficjunky\.|\/ads\/|\/advert\/|popunder|redirect\?url=/.test(url);
+        return /doubleclick\.|googlesyndication\.|googleadservices\.|adservice\.|adsystem\.|adserver\.|popads\.|popcash\.|propellerads\.|onclickads\.|exoclick\.|juicyads\.|trafficjunky\.|adnxs\.|adskeeper\.|hilltopads\.|\/ads[\/_-]|\/advert[\/_-]|popunder|pop-up|popup|redirect\?url=/.test(url);
+      };
+      const removeAdNodes = (root) => {
+        (root || document).querySelectorAll('[id*="ad" i], [class*="ad" i], [id*="popup" i], [class*="popup" i], [id*="popunder" i], [class*="popunder" i]').forEach((node) => {
+          if (node.matches('video, video *, .vjs-control-bar, [class*="play" i]')) return;
+          const text = String(node.id || '') + ' ' + String(node.className || '');
+          if (/ad|popup|popunder/i.test(text)) node.remove();
+        });
       };
       const clean = (root) => {
         (root || document).querySelectorAll('script[src], iframe, a, form').forEach((node) => {
@@ -553,12 +574,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           if (blocked(value)) node.remove();
           if (node.tagName === 'A') node.target = '_self';
         });
+        removeAdNodes(root);
       };
       clean(document);
       new MutationObserver(() => clean(document)).observe(document.documentElement, {childList: true, subtree: true});
       document.addEventListener('click', (event) => {
         const link = event.target && event.target.closest ? event.target.closest('a') : null;
-        if (link && blocked(link.href)) { event.preventDefault(); event.stopPropagation(); }
+        if (link && (blocked(link.href) || link.target === '_blank')) { event.preventDefault(); event.stopPropagation(); }
+      }, true);
+      document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (form && blocked(form.action)) { event.preventDefault(); event.stopPropagation(); }
       }, true);
     } catch (_) {}
   })();''';
