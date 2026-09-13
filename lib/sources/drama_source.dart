@@ -116,7 +116,7 @@ class DramaSource extends ContentSource {
       'source_id': id,
       'stream_url': links.first['url'],
       'direct_stream_urls': links,
-      'headers': {'Referer': baseUrl, 'Accept': 'application/json'},
+      'headers': {'Referer': baseUrl, 'Accept': '*/*'},
       'download_links': <String, dynamic>{},
     };
   }

@@ -85,7 +85,12 @@ class SourceRegistry {
       final value = link['url']?.toString() ?? '';
       final isEmbeddedPlayer = (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
           (source.id == 'anime3rb' && value.contains('anime3rb.com/embed/'));
-      return value.isNotEmpty && value != url && (isEmbeddedPlayer || !value.contains(Uri.parse(url).host));
+      final sourceHost = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+      final linkHost = Uri.tryParse(value)?.host.toLowerCase() ?? '';
+      // A CDN subdomain such as s.drslayer.com is a valid media host. The
+      // previous contains() check incorrectly rejected it because it contains
+      // the source host string drslayer.com.
+      return value.isNotEmpty && value != url && (isEmbeddedPlayer || linkHost != sourceHost);
     });
     return playable ? result : null;
   }
