@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:http/http.dart' as http;
 
 import 'source_base.dart';
@@ -13,6 +16,8 @@ import 'source_base.dart';
 class DramaSource extends ContentSource {
   static const String baseUrl = 'https://drslayer.com/drama/public/';
   static const String clientId = 'drama-android-app';
+  static const String clientSecret = '7befba6263cc14c90e2f1d6da2c5cf9b251bfbbd';
+  static const String _cryptoSid = '9>E>VBa=X%;[5BX~=Q~K';
   static const Duration timeout = Duration(seconds: 20);
   static final http.Client _client = http.Client();
 
@@ -118,6 +123,7 @@ class DramaSource extends ContentSource {
     final uri = Uri.parse('$baseUrl$path').replace(queryParameters: query);
     final response = await _client.get(uri, headers: const {
       'Client-Id': clientId,
+      'Client-Secret': clientSecret,
       'Accept': 'application/json',
       'Accept-Language': 'ar,en;q=0.8',
       'User-Agent': 'okhttp/3.12.12',
@@ -127,14 +133,14 @@ class DramaSource extends ContentSource {
     }
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map && decoded['result'] is String && (decoded['result'] as String).isNotEmpty) {
-      throw const DramaApiException('Drama API response is encrypted; decryption key is intentionally not bundled');
+      return _decryptResponse(decoded['result'] as String);
     }
     return decoded;
   }
 
   List<Map<String, dynamic>> _records(dynamic json) {
     final root = _object(json);
-    final candidates = [root['data'], root['series'], root['episodes'], root['items']];
+    final candidates = [root['response'], root['data'], root['series'], root['episodes'], root['items']];
     for (final candidate in candidates) {
       if (candidate is List) return candidate.whereType<Map>().map(Map<String, dynamic>.from).toList();
       if (candidate is Map && candidate['data'] is List) {
@@ -144,7 +150,58 @@ class DramaSource extends ContentSource {
     return root.isEmpty ? <Map<String, dynamic>>[] : [root];
   }
 
-  Map<String, dynamic> _object(dynamic json) => json is Map ? Map<String, dynamic>.from(json) : <String, dynamic>{};
+  Map<String, dynamic> _object(dynamic json) {
+    if (json is! Map) return <String, dynamic>{};
+    final root = Map<String, dynamic>.from(json);
+    final response = root['response'];
+    return response is Map ? Map<String, dynamic>.from(response) : root;
+  }
+
+  dynamic _decryptResponse(String value) {
+    try {
+      final payload = base64.decode(value);
+      if (payload.length < 2 + 8 + 8 + 16 + 32) throw const FormatException('RNCryptor payload is too short');
+      final header = payload.sublist(0, 2);
+      if (header[0] != 3) throw FormatException('Unsupported RNCryptor version ${header[0]}');
+      final encryptionSalt = payload.sublist(2, 10);
+      final hmacSalt = payload.sublist(10, 18);
+      final iv = payload.sublist(18, 34);
+      final ciphertext = payload.sublist(34, payload.length - 32);
+      final suppliedHmac = payload.sublist(payload.length - 32);
+      final encryptionKey = _pbkdf2(_cryptoSid, encryptionSalt, 10000, 32);
+      final hmacKey = _pbkdf2(_cryptoSid, hmacSalt, 10000, 32);
+      final signed = payload.sublist(0, payload.length - 32);
+      final computedHmac = Hmac(sha256, hmacKey).convert(signed).bytes;
+      if (!_constantTimeEquals(computedHmac, suppliedHmac)) throw const FormatException('RNCryptor HMAC mismatch');
+      final decryptor = enc.Encrypter(enc.AES(enc.Key(Uint8List.fromList(encryptionKey)), mode: enc.AESMode.cbc));
+      final clear = decryptor.decrypt(enc.Encrypted(Uint8List.fromList(ciphertext)), iv: enc.IV(Uint8List.fromList(iv)));
+      final json = jsonDecode(clear);
+      return json is Map && json['response'] != null ? json : {'response': json};
+    } catch (error) {
+      throw DramaApiException('Drama API response could not be decrypted: $error');
+    }
+  }
+
+  List<int> _pbkdf2(String password, List<int> salt, int rounds, int length) {
+    final result = <int>[];
+    for (var block = 1; result.length < length; block++) {
+      var u = Hmac(sha1, utf8.encode(password)).convert([...salt, (block >> 24) & 255, (block >> 16) & 255, (block >> 8) & 255, block & 255]).bytes;
+      final t = List<int>.from(u);
+      for (var i = 1; i < rounds; i++) {
+        u = Hmac(sha1, utf8.encode(password)).convert(u).bytes;
+        for (var j = 0; j < t.length; j++) t[j] ^= u[j];
+      }
+      result.addAll(t);
+    }
+    return result.sublist(0, length);
+  }
+
+  bool _constantTimeEquals(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    var difference = 0;
+    for (var i = 0; i < left.length; i++) difference |= left[i] ^ right[i];
+    return difference == 0;
+  }
 
   Map<String, dynamic> _mapSeries(Map raw) {
     final idValue = _text(raw['drama_id']);
