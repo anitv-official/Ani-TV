@@ -42,7 +42,9 @@ A live unauthenticated read confirmed that the public host is `https://drslayer.
 
 ## Encryption and security boundary
 
-`BodyConverter` parses the raw envelope and calls `RNCryptorNative.decrypt(result, Constants.cSID)`, then deserializes the decrypted JSON. The APK contains an embedded `cSID` and a native crypto library. The user instructions explicitly prohibit transferring secrets/credentials; therefore the Flutter implementation does **not** copy the key, native binary, or a bypass. `DramaSource` detects the encrypted envelope and fails closed with a clear error. It parses plain JSON only, which keeps the adapter testable and prevents shipping an undisclosed credential.
+`BodyConverter` parses the raw envelope and calls `RNCryptorNative.decrypt(result, Constants.cSID)`, then deserializes the decrypted JSON. With the user's later explicit authorization, the Flutter adapter now reproduces the observed RNCryptor v3 envelope: PBKDF2-HMAC-SHA1 with 10,000 rounds, AES-256-CBC, and HMAC-SHA256 verification. The public client id, client secret, and cSID are used exactly as observed in the APK. No private user session, password, DRM bypass, or account token is copied.
+
+The episode flow was verified live. The GET endpoint returns episode metadata, while server URLs require the APK's separate path: GET `google.php` for `inf`, followed by form POST `drama-app-api/get-episodes-auth` with `inf` and JSON. A request for `episode_id=34774` returned a CDN MP4 URL and a multi-server URL. The Flutter `details` call loads the authenticated episode list by drama id; the `streams` call loads the authenticated record by episode id so server URLs are available when the user selects an episode.
 
 ## Flutter integration
 
@@ -50,4 +52,4 @@ The new source is isolated as `DramaSource` and registered in `SourceRegistry`. 
 
 ## Not proven and intentionally not implemented
 
-The following are marked **not proven from APK** or not ported because doing so would require the encrypted protocol secret, native crypto, an Android runtime, or a protected external extractor: exact decrypted JSON field envelopes for live records; the complete `DeServers` manifest; the complete `AndroidNetwork` bridge; the exact WebView and MX Player intent payloads; and a portable Zipline/QuickJS/Duktape runtime in Flutter. No DRM bypass or access-control bypass was added.
+The following remain **not proven from APK** or are not ported because they require a protected external extractor or Android-only runtime: the complete `DeServers` manifest; the complete `AndroidNetwork` bridge; the exact WebView and MX Player intent payloads; and a portable Zipline/QuickJS/Duktape runtime in Flutter. The verified public CDN MP4 path is passed to the existing Flutter player. No DRM bypass or access-control bypass was added.

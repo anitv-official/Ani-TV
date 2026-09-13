@@ -71,8 +71,9 @@ class DramaSource extends ContentSource {
     final json = await _get('drama-app-api/get-published-drama-info', {'drama_id': '$idValue'});
     final raw = _object(json);
     final result = _mapSeries({...raw, 'drama_id': idValue});
-    final episodesJson = await _get('drama-app-api/get-published-drama-episodes', {
-      'json': jsonEncode({'drama_id': int.tryParse(idValue) ?? idValue}),
+    final episodesJson = await _postForm('drama-app-api/get-episodes-auth', {
+      'inf': await _getPlainText('google.php'),
+      'json': jsonEncode({'drama_id': idValue}),
     });
     final episodes = _records(episodesJson).map((episode) {
       final episodeId = _text(episode['episode_id']);
@@ -93,7 +94,8 @@ class DramaSource extends ContentSource {
   Future<Map<String, dynamic>?> streams(String url) async {
     final episodeId = _episodeId(url);
     if (episodeId == null) return null;
-    final json = await _get('drama-app-api/get-published-drama-episodes', {
+    final json = await _postForm('drama-app-api/get-episodes-auth', {
+      'inf': await _getPlainText('google.php'),
       'json': jsonEncode({'episode_id': episodeId}),
     });
     final episodes = _records(json);
@@ -130,6 +132,39 @@ class DramaSource extends ContentSource {
     }).timeout(timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw DramaApiException('Drama API HTTP ${response.statusCode}', statusCode: response.statusCode);
+    }
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is Map && decoded['result'] is String && (decoded['result'] as String).isNotEmpty) {
+      return _decryptResponse(decoded['result'] as String);
+    }
+    return decoded;
+  }
+
+  Future<String> _getPlainText(String path) async {
+    final response = await _client.get(Uri.parse('$baseUrl$path'), headers: const {
+      'Client-Id': clientId,
+      'Client-Secret': clientSecret,
+      'Accept': 'text/plain,application/json',
+      'User-Agent': 'okhttp/3.12.12',
+    }).timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw DramaApiException('Drama token HTTP ${response.statusCode}', statusCode: response.statusCode);
+    }
+    final value = utf8.decode(response.bodyBytes).trim();
+    if (value.isEmpty) throw const DramaApiException('Drama token is empty');
+    return value;
+  }
+
+  Future<dynamic> _postForm(String path, Map<String, String> fields) async {
+    final response = await _client.post(Uri.parse('$baseUrl$path'), headers: const {
+      'Client-Id': clientId,
+      'Client-Secret': clientSecret,
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'okhttp/3.12.12',
+    }, body: fields).timeout(timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw DramaApiException('Drama episodes HTTP ${response.statusCode}', statusCode: response.statusCode);
     }
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is Map && decoded['result'] is String && (decoded['result'] as String).isNotEmpty) {
@@ -209,7 +244,7 @@ class DramaSource extends ContentSource {
     return item(
       title: title,
       url: '$baseUrl/drama-details?drama_id=$idValue',
-      image: _text(raw['drama_cover_image_url']),
+      image: _text(raw['drama_cover_image_url'], fallback: _text(raw['drama_cover_image'])),
       type: 'anime',
       genres: _split(raw['drama_genres']),
       description: _text(raw['drama_description']),
