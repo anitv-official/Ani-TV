@@ -83,7 +83,8 @@ class SourceRegistry {
     final links = (result['direct_stream_urls'] as List?)?.whereType<Map>().toList() ?? [];
     final playable = links.any((link) {
       final value = link['url']?.toString() ?? '';
-      return value.isNotEmpty && value != url && !value.contains(Uri.parse(url).host);
+      final isAnyPlayEmbed = source.id == 'anyplay' && value.contains('anyplay.stream/embed/');
+      return value.isNotEmpty && value != url && (isAnyPlayEmbed || !value.contains(Uri.parse(url).host));
     });
     return playable ? result : null;
   }

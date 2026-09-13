@@ -38,7 +38,7 @@ class _SourceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isAnime = source.kind == 'anime';
+    final isVideo = source.kind != 'manga';
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.push(
@@ -56,7 +56,7 @@ class _SourceTile extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: AppTheme.primaryColor.withOpacity(.18),
-              child: Icon(isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+              child: Icon(isVideo ? Icons.movie_outlined : Icons.menu_book_outlined,
                   color: AppTheme.primaryColor),
             ),
             const SizedBox(width: 14),
@@ -67,7 +67,7 @@ class _SourceTile extends StatelessWidget {
                   Text(source.name,
                       style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(isAnime ? 'أنمي' : 'مانجا', style: const TextStyle(color: Colors.white70)),
+                  Text(source.kind == 'drama' ? 'أفلام ومسلسلات' : (isVideo ? 'أنمي' : 'مانجا'), style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 4),
                   Text(source.hosts.join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.white38, fontSize: 12)),
@@ -145,7 +145,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAnime = widget.source.kind == 'anime';
+    final isVideo = widget.source.kind != 'manga';
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -198,9 +198,9 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
                 return ContentCard(
                   title: item['title']?.toString(),
                   imageUrl: item['image_url']?.toString(),
-                  badge: isAnime ? 'أنمي' : item['type']?.toString(),
+                  badge: widget.source.kind == 'drama' ? 'دراما' : (isVideo ? 'أنمي' : item['type']?.toString()),
                   onTap: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => isAnime
+                    builder: (_) => isVideo
                         ? AnimeDetailsScreen(url: item['url'].toString())
                         : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()),
                   )),
@@ -250,13 +250,13 @@ class SourceSummary extends StatelessWidget {
                   CircleAvatar(
                     radius: 18,
                     backgroundColor: AppTheme.primaryColor.withOpacity(.16),
-                    child: Icon(sources[index].kind == 'anime' ? Icons.movie_outlined : Icons.menu_book_outlined, color: AppTheme.primaryColor, size: 18),
+                    child: Icon(sources[index].kind == 'manga' ? Icons.menu_book_outlined : Icons.movie_outlined, color: AppTheme.primaryColor, size: 18),
                   ),
                   const SizedBox(width: 9),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                     const SizedBox(height: 4),
-                    Text(sources[index].kind == 'anime' ? 'أنمي' : 'مانجا', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
+                    Text(sources[index].kind == 'drama' ? 'أفلام ومسلسلات' : (sources[index].kind == 'anime' ? 'أنمي' : 'مانجا'), style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
                   ])),
                 ]),
               ),

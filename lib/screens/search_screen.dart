@@ -494,7 +494,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 border: Border.all(color: AppTheme.primaryColor.withOpacity(.45)),
               ),
               child: Icon(
-                item['type'] == 'anime' ? Icons.play_arrow_rounded : Icons.menu_book_rounded,
+                item['type'] == 'anime' || item['type'] == 'drama' ? Icons.play_arrow_rounded : Icons.menu_book_rounded,
                 color: Colors.white,
                 size: 20,
               ),
@@ -665,7 +665,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
        if (t == 'comic' || t == 'manga' || t == 'manhwa' || t == 'manhua') category = 'comic';
     }
 
-    if (category == 'anime') {
+    if (category == 'anime' || category == 'drama') {
       targetScreen = AnimeDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);

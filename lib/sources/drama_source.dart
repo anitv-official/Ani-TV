@@ -245,7 +245,7 @@ class DramaSource extends ContentSource {
       title: title,
       url: '$baseUrl/drama-details?drama_id=$idValue',
       image: _text(raw['drama_cover_image_url'], fallback: _text(raw['drama_cover_image'])),
-      type: 'anime',
+      type: 'drama',
       genres: _split(raw['drama_genres']),
       description: _text(raw['drama_description']),
       rating: _text(raw['drama_rating']),

@@ -146,7 +146,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               .take(4)
               .map((item) => {
                     ...item,
-                    'type': 'anime',
+                    'type': item['type'] ?? 'anime',
                   })
               .toList();
           final featuredComics = comics
@@ -207,7 +207,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   void _openItem(dynamic item, {required bool isAnime}) {
-    if (isAnime || item['type'] == 'anime') {
+    final isVideoContent = isAnime || item['type'] == 'anime' || item['type'] == 'drama' || item['category'] == 'drama';
+    if (isVideoContent) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'])));
     } else {
       Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'], type: item['type'])));
@@ -348,7 +349,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                   ),
                   const Spacer(),
                   if (item != null) ...[
-                    SourceBadge(label: item['type'] == 'comic' ? 'مانجا' : 'أنمي'),
+                    SourceBadge(label: item['type'] == 'comic' ? 'مانجا' : (item['category'] == 'drama' ? 'دراما' : 'أنمي')),
                     const SizedBox(height: 8),
                     Text(
                       item['title'] ?? '',
@@ -362,12 +363,12 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                         PrimaryButton(
                           label: item['type'] == 'comic' ? 'اقرأ الآن' : 'شاهد الآن',
                           icon: item['type'] == 'comic' ? Icons.menu_book_rounded : Icons.play_arrow_rounded,
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime'),
+                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'),
                         ),
                         const SizedBox(width: 10),
                         SecondaryButton(
                           label: 'التفاصيل',
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime'),
+                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'),
                         ),
                       ],
                     ),
@@ -461,11 +462,11 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
-                final isAnime = item['type'] == 'anime';
+                final isAnime = item['type'] == 'anime' || item['type'] == 'drama' || item['category'] == 'drama';
                 return ContentCard(
                   title: item['title']?.toString(),
                   imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-                  badge: isAnime ? 'أنمي' : 'مانجا',
+                  badge: item['type'] == 'drama' ? 'دراما' : (isAnime ? 'أنمي' : 'مانجا'),
                   compactTitle: true,
                   onTap: () => _openItem(item, isAnime: isAnime),
                 );

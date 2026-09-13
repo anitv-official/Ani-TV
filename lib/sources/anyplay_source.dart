@@ -37,7 +37,7 @@ class AnyPlaySource extends ContentSource {
   String get name => 'AnyPlay';
 
   @override
-  String get kind => 'anime';
+  String get kind => 'drama';
 
   @override
   List<String> get hosts => const ['anyplay.stream'];
@@ -65,7 +65,44 @@ class AnyPlaySource extends ContentSource {
   }
 
   @override
-  Future<List<Map<String, dynamic>>> latest({int page = 1}) async => [];
+  Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
+    // AnyPlay does not expose a single catalogue endpoint. Its home page
+    // loads these public genre feeds, so use the same feeds for the source
+    // catalogue instead of returning an empty list.
+    const movieFeeds = ['action', 'comedy', 'drama', 'horror', 'romance', 'sciFi'];
+    final feeds = [
+      ...movieFeeds.map((genre) => {'path': '/api/movies/genre/$genre', 'isTv': false}),
+      {'path': '/api/tv/popular', 'isTv': true},
+    ];
+    final results = await Future.wait(feeds.map((feed) async {
+      try {
+        final isTv = feed['isTv'] == true;
+        final data = await _getJson(feed['path'] as String);
+        final rows = data['results'];
+        if (rows is! List) return <Map<String, dynamic>>[];
+        return rows.whereType<Map>().map((raw) {
+          final item = Map<String, dynamic>.from(raw);
+          final title = (isTv ? item['name'] : item['title'])?.toString().trim() ?? '';
+          return _contentItem(
+            title: title.isEmpty ? 'بدون عنوان' : title,
+            url: _contentUrl(isTv ? 'tv' : 'movie', item['id']?.toString() ?? ''),
+            raw: item,
+            isTv: isTv,
+          );
+        }).where((item) => item['external_id'].toString().isNotEmpty).toList();
+      } catch (_) {
+        return <Map<String, dynamic>>[];
+      }
+    }));
+    final merged = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final list in results) {
+      for (final item in list) {
+        if (seen.add('${item['content_type']}:${item['external_id']}')) merged.add(item);
+      }
+    }
+    return merged;
+  }
 
   @override
   Future<Map<String, dynamic>> details(String url) async {
@@ -197,7 +234,7 @@ class AnyPlaySource extends ContentSource {
         ? (raw['genres'] as List).whereType<Map>().map((genre) => genre['name']).whereType<String>().toList()
         : <dynamic>[];
     return {
-      ...item(title: title, url: url, image: poster.isEmpty ? backdrop : poster, type: 'anime', genres: genres, description: raw['overview']?.toString() ?? '', rating: raw['vote_average']?.toString() ?? ''),
+      ...item(title: title, url: url, image: poster.isEmpty ? backdrop : poster, type: 'drama', genres: genres, description: raw['overview']?.toString() ?? '', rating: raw['vote_average']?.toString() ?? ''),
       'source': name,
       'source_id': id,
       'external_id': idValue,
