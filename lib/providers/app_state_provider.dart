@@ -7,6 +7,7 @@ import '../services/appwrite_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
   String _username = '';
+  String _displayName = '';
   String _email = '';
   bool _isLoggedIn = false;
   bool _emailVerified = false;
@@ -26,6 +27,8 @@ class AppStateProvider extends ChangeNotifier {
   bool _initialized = false;
 
   String get username => _username;
+  String get displayName => _displayName;
+  String? get userId => _userId;
   String get email => _email;
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
@@ -66,7 +69,7 @@ class AppStateProvider extends ChangeNotifier {
       return;
     }
     _userId = user.$id as String;
-    _username = (user.name as String?)?.trim() ?? '';
+    _displayName = (user.name as String?)?.trim() ?? '';
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
     _isLoggedIn = _emailVerified;
@@ -106,7 +109,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   String _usernameCandidate(String userId) {
-    final base = _username.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_|_$'), '');
+    final base = _displayName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_|_$'), '');
     final safeBase = base.isEmpty ? 'user' : base;
     final suffix = userId.length > 5 ? userId.substring(userId.length - 5).toLowerCase() : userId.toLowerCase();
     final value = '${safeBase}_$suffix';
@@ -131,6 +134,7 @@ class AppStateProvider extends ChangeNotifier {
 
   void _clearUser() {
     _username = '';
+    _displayName = '';
     _email = '';
     _emailVerified = false;
     _userId = null;
@@ -139,6 +143,8 @@ class AppStateProvider extends ChangeNotifier {
     _isLoggedIn = false;
     _favoriteAnime = [];
     _favoriteComics = [];
+    _animeHistory = [];
+    _comicHistory = [];
   }
 
   Future<void> login({required String email, required String password}) async {
@@ -146,6 +152,8 @@ class AppStateProvider extends ChangeNotifier {
       final user = await _appwrite.login(email: email, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
       // _applyAuthenticatedUser already hydrates the account from Appwrite.
       // Loading SharedPreferences after that used to overwrite fresh cloud
@@ -162,6 +170,8 @@ class AppStateProvider extends ChangeNotifier {
       final user = await _appwrite.loginWithUsername(username: username, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
       notifyListeners();
     } catch (_) {
@@ -225,10 +235,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> updateProfileName(String name) async {
     final user = await _appwrite.updateName(name);
-    _username = user.name.trim();
-    if (_profileDocumentId != null) {
-      try { await _appwrite.updateProfile(documentId: _profileDocumentId!, username: _username); } catch (_) { _setErrorMessage('تعذر مزامنة بيانات الملف الشخصي.'); }
-    }
+    _displayName = user.name.trim();
     notifyListeners();
   }
 
@@ -255,6 +262,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> pingAppwrite() => _appwrite.ping();
 
   String _favoritesKey(String key) => _userId == null ? key : '${key}_$_userId';
+  String _historyKey(String key) => _userId == null ? key : '${key}_$_userId';
 
   Future<void> _loadFavorites() async {
     try {
@@ -327,8 +335,10 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _animeHistory = jsonDecode(prefs.getString('anime_history') ?? '[]');
-      _comicHistory = jsonDecode(prefs.getString('comic_history') ?? '[]');
+      final anime = jsonDecode(prefs.getString(_historyKey('anime_history')) ?? '[]');
+      final comics = jsonDecode(prefs.getString(_historyKey('comic_history')) ?? '[]');
+      _animeHistory = anime is List ? List<dynamic>.from(anime) : <dynamic>[];
+      _comicHistory = comics is List ? List<dynamic>.from(comics) : <dynamic>[];
       notifyListeners();
     } catch (_) { _setErrorMessage('تعذر تحميل السجل. حاول مرة أخرى.'); }
   }
@@ -341,7 +351,7 @@ class AppStateProvider extends ChangeNotifier {
       list.insert(0, {...Map<String, dynamic>.from(item as Map), 'id': DateTime.now().millisecondsSinceEpoch.toString(), 'type': isAnime ? 'anime' : 'comic', 'timestamp': DateTime.now().toString()});
       if (list.length > 50) list.removeRange(50, list.length);
       if (isAnime) { _animeHistory = list; } else { _comicHistory = list; }
-      await prefs.setString(key, jsonEncode(list)); notifyListeners();
+      await prefs.setString(_historyKey(key), jsonEncode(list)); notifyListeners();
     } catch (_) { _setErrorMessage('تعذر إضافة العنصر إلى السجل. حاول مرة أخرى.'); }
   }
   Future<void> removeFromHistory(String id, bool isAnime) async { await _changeHistory(id, isAnime, false); }
@@ -351,7 +361,7 @@ class AppStateProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance(); final key = isAnime ? 'anime_history' : 'comic_history';
       final list = clear ? <dynamic>[] : List<dynamic>.from(isAnime ? _animeHistory : _comicHistory)..removeWhere((item) => item['id'] == id);
       if (isAnime) { _animeHistory = list; } else { _comicHistory = list; }
-      await prefs.setString(key, jsonEncode(list)); notifyListeners();
+      await prefs.setString(_historyKey(key), jsonEncode(list)); notifyListeners();
     } catch (_) { _setErrorMessage(clear ? 'تعذر مسح السجل. حاول مرة أخرى.' : 'تعذر إزالة العنصر من السجل. حاول مرة أخرى.'); }
   }
 

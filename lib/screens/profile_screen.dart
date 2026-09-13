@@ -29,6 +29,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String username = '';
+  String displayName = '';
   String email = '';
   bool isLoggedIn = false;
   bool isDarkMode = true;
@@ -55,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await appStateProvider.initialize();
       setState(() {
         username = appStateProvider.username;
+        displayName = appStateProvider.displayName;
         email = appStateProvider.email;
         isLoggedIn = appStateProvider.isLoggedIn;
         isDarkMode = appStateProvider.isDarkMode;
@@ -67,13 +69,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadPreferences() async {
+    final provider = context.read<AppStateProvider>();
+    await provider.initialize();
+    final userId = provider.userId;
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       _streamCellular = prefs.getBool('stream_cellular') ?? false;
       _showMatureContent = prefs.getBool('show_mature_content') ?? false;
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _avatarPath = prefs.getString('profile_avatar_path');
+      _avatarPath = prefs.getString(userId == null ? 'profile_avatar_path' : 'profile_avatar_path_$userId');
     });
   }
 
@@ -81,8 +86,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
     final path = result?.files.single.path;
     if (path == null) return;
+    final userId = context.read<AppStateProvider>().userId;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_avatar_path', path);
+    await prefs.setString(userId == null ? 'profile_avatar_path' : 'profile_avatar_path_$userId', path);
     if (mounted) setState(() => _avatarPath = path);
     final provider = context.read<AppStateProvider>();
     if (provider.isLoggedIn) {
@@ -259,12 +265,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showEditNameDialog() {
     _showEditValueDialog(
       title: 'تعديل الاسم الظاهر',
-      initial: username,
+      initial: displayName,
       onSave: (value) async {
         if (value.length < 2) return;
         try {
           await context.read<AppStateProvider>().updateProfileName(value);
-          if (mounted) setState(() => username = value);
+          if (mounted) setState(() => displayName = value);
           if (mounted) ToastUtils.show('تم تحديث الاسم', backgroundColor: AppTheme.primaryColor);
         } catch (error) {
           if (mounted) _showInfoDialog('تعذر تحديث الاسم', authErrorMessage(error, registering: false));
@@ -290,8 +296,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'الحساب',
                     children: isLoggedIn
                         ? [
-                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'اسم المستخدم: ${username.isEmpty ? 'غير متوفر' : username}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
-                            SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: username.isEmpty ? 'غير متوفر' : username, onTap: _showEditNameDialog),
+                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
+                            SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: displayName.isEmpty ? 'غير متوفر' : displayName, onTap: _showEditNameDialog),
                             SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
                             SettingTile(icon: Icons.alternate_email, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
                           ]
@@ -403,7 +409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(username.isEmpty ? 'زائر' : username, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                Text(displayName.isEmpty ? (username.isEmpty ? 'زائر' : username) : displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
                 Text(
                   isLoggedIn ? (email.isEmpty ? 'حساب متصل' : email) : 'سجّل الدخول لإدارة حسابك',
