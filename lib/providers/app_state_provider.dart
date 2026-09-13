@@ -107,10 +107,11 @@ class AppStateProvider extends ChangeNotifier {
       // the user explicitly chooses one; never use displayName as identity.
       final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
       _profileDocumentId = profile.$id;
-    final data = profile.data;
+      final data = profile.data;
       final cloudName = (data['username'] ?? '').toString().trim();
       if (cloudName.isNotEmpty) _username = cloudName;
-      _birthDate = (data['birthDate'] ?? '').toString();
+      _displayName = (data['displayname'] ?? _displayName).toString().trim();
+      _birthDate = (data['birthdate'] ?? '').toString();
       _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
       final cloudFavorites = await _appwrite.getFavorites(userId);
@@ -252,11 +253,15 @@ class AppStateProvider extends ChangeNotifier {
           final profile = await _appwrite.ensureProfile(
             userId: _userId!,
             username: normalizedUsername,
+            displayName: name,
+            birthDate: birthDate,
+            country: country,
           );
           _profileDocumentId = profile.$id;
           final savedUsername = (profile.data['username'] ?? '').toString().trim();
           if (savedUsername.isNotEmpty) _username = savedUsername;
-          _birthDate = (profile.data['birthDate'] ?? birthDate).toString();
+          _displayName = (profile.data['displayname'] ?? name).toString();
+          _birthDate = (profile.data['birthdate'] ?? birthDate).toString();
           _country = (profile.data['country'] ?? country).toString();
           if (profileImagePath != null && profileImagePath.trim().isNotEmpty) {
             final imageId = await _appwrite.uploadProfileImage(userId: _userId!, path: profileImagePath);
@@ -334,6 +339,10 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> updateProfileName(String name) async {
     final user = await _appwrite.updateName(name);
+    final documentId = _profileDocumentId;
+    if (documentId != null) {
+      await _appwrite.updateProfile(documentId: documentId, username: _username, displayName: name);
+    }
     _displayName = user.name.trim();
     notifyListeners();
   }

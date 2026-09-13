@@ -180,6 +180,9 @@ class AppwriteService {
   Future<models.Document> ensureProfile({
     required String userId,
     required String username,
+    String? displayName,
+    String? birthDate,
+    String? country,
   }) async {
     final normalized = normalizeUsername(username);
     final existing = await getProfile(userId);
@@ -189,10 +192,13 @@ class AppwriteService {
         if (!await isUsernameAvailable(normalized, currentDocumentId: existing.$id)) {
           throw const UsernameTakenException();
         }
-        return updateProfile(documentId: existing.$id, username: normalized);
+        return updateProfile(documentId: existing.$id, username: normalized, displayName: displayName, birthDate: birthDate, country: country);
       }
       if (normalized.isNotEmpty && existingUsername != normalized) {
         throw const UsernameTakenException();
+      }
+      if (displayName != null || birthDate != null || country != null) {
+        return updateProfile(documentId: existing.$id, username: existingUsername, displayName: displayName, birthDate: birthDate, country: country);
       }
       return existing;
     }
@@ -213,6 +219,9 @@ class AppwriteService {
             'username': normalized,
             'profileImageId': '',
             'updatedAt': DateTime.now().toUtc().toIso8601String(),
+            if (displayName != null) 'displayname': displayName.trim(),
+            if (birthDate != null) 'birthdate': birthDate.trim(),
+            if (country != null) 'country': country.trim(),
           },
         },
       );
@@ -227,7 +236,7 @@ class AppwriteService {
     }
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId}) async {
+  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country}) async {
     final response = await client.call(
       HttpMethod.patch,
       path: '/tablesdb/$databaseId/tables/$profilesTableId/rows/$documentId',
@@ -235,6 +244,9 @@ class AppwriteService {
         'data': {
           'username': normalizeUsername(username),
           if (profileImageId != null) 'profileImageId': profileImageId,
+          if (displayName != null) 'displayname': displayName.trim(),
+          if (birthDate != null) 'birthdate': birthDate.trim(),
+          if (country != null) 'country': country.trim(),
           'updatedAt': DateTime.now().toUtc().toIso8601String(),
         },
       },
