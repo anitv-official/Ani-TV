@@ -32,6 +32,7 @@ const errorDetails = (err) => ({
 
 module.exports = async ({ req, res, log, error }) => {
   let username = '';
+  let phase = 'request';
   try {
     log('request started');
     const payload = req.bodyJson && typeof req.bodyJson === 'object'
@@ -57,6 +58,8 @@ module.exports = async ({ req, res, log, error }) => {
     const tablesDB = new TablesDB(adminClient);
 
     let result;
+    phase = 'profiles_lookup';
+    log('profiles lookup started');
     try {
       result = await tablesDB.listRows({
         databaseId: required('APPWRITE_DATABASE_ID'),
@@ -68,20 +71,24 @@ module.exports = async ({ req, res, log, error }) => {
       error(`profile lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
       return serverError(res, 'PROFILE_ERROR');
     }
+    log(`profiles lookup succeeded; rows=${Array.isArray(result.rows) ? result.rows.length : 0}`);
 
     // Query.equal is case-sensitive in Appwrite. Normalize locally so legacy
     // records such as "Looord" still work.
     const profile = result.rows.find((row) =>
       normalizeUsername(String(row.username ?? '')) === username,
     );
-    log(`profile found: ${profile ? 'true' : 'false'}`);
+    log(`profile lookup result; found=${profile ? 'true' : 'false'}`);
     if (!profile) return invalidCredentials(res);
 
+    phase = 'profile_user_id_extraction';
     const userId = String(profile.userId ?? '').trim();
-    log(`userId found: ${userId ? 'true' : 'false'}`);
+    log(`profile userId extraction result; found=${userId ? 'true' : 'false'}`);
     if (!userId) return serverError(res, 'PROFILE_ERROR');
 
     let user;
+    phase = 'users_get';
+    log('Users.get started');
     try {
       const users = new Users(adminClient);
       user = await users.get(userId);
@@ -90,16 +97,19 @@ module.exports = async ({ req, res, log, error }) => {
       error(`user lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
       return serverError(res, 'USER_ERROR');
     }
-    log(`user found: ${user ? 'true' : 'false'}`);
+    log(`Users.get succeeded; found=${user ? 'true' : 'false'}`);
+
+    phase = 'email_extraction';
     const email = typeof user.email === 'string' ? user.email.trim() : '';
-    log(`email found: ${email ? 'true' : 'false'} (${maskEmail(email)})`);
+    log(`email extraction result; found=${email ? 'true' : 'false'} (${maskEmail(email)})`);
     if (!email) return serverError(res, 'USER_ERROR');
 
-    log('creating session');
+    phase = 'session_creation';
+    log('createEmailPasswordSession started; client=admin-api-key; scope=sessions.write');
     try {
       const account = new Account(adminClient);
       const session = await account.createEmailPasswordSession({ email, password });
-      log('session creation succeeded');
+      log('createEmailPasswordSession succeeded');
       return json(res, 200, {
         ok: true,
         userId,
@@ -108,16 +118,17 @@ module.exports = async ({ req, res, log, error }) => {
       });
     } catch (err) {
       const details = errorDetails(err);
-      error(`session creation failed; code=${details.code}; type=${details.type}; message=${details.message}`);
-      // A 401 from Appwrite at this stage is the only case exposed as bad
-      // credentials. Permission/configuration failures remain server errors.
+      error(`createEmailPasswordSession failed; phase=${phase}; code=${details.code}; type=${details.type}; message=${details.message}`);
+      // A 401 at this stage means Appwrite rejected the supplied credentials.
+      // Other status codes are surfaced as server errors so configuration,
+      // permission, rate-limit, and service failures are not misreported.
       return Number(details.code) === 401
         ? invalidCredentials(res)
         : serverError(res, 'SESSION_ERROR');
     }
   } catch (err) {
     const details = errorDetails(err);
-    error(`request failed; username=${username || '[empty]'}; code=${details.code}; type=${details.type}; message=${details.message}`);
+    error(`request failed; phase=${phase}; username=${username || '[empty]'}; code=${details.code}; type=${details.type}; message=${details.message}`);
     return serverError(res);
   }
 };
