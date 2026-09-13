@@ -5,6 +5,18 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../services/appwrite_service.dart';
 
+class RegistrationResult {
+  final bool accountCreated;
+  final bool profileSaved;
+  final String? warning;
+
+  const RegistrationResult({
+    required this.accountCreated,
+    required this.profileSaved,
+    this.warning,
+  });
+}
+
 class AppStateProvider extends ChangeNotifier {
   String _username = '';
   String _displayName = '';
@@ -190,7 +202,7 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> register({
+  Future<RegistrationResult> register({
     required String email,
     required String password,
     required String name,
@@ -199,40 +211,59 @@ class AppStateProvider extends ChangeNotifier {
     required String country,
     String? profileImagePath,
   }) async {
+    var accountCreated = false;
     try {
       final normalizedUsername = UsernameValidation.normalize(username);
       if (!UsernameValidation.isValid(normalizedUsername) || !await _appwrite.isUsernameAvailable(normalizedUsername)) {
         throw const UsernameTakenException();
       }
       final user = await _appwrite.register(email: email, password: password, name: name);
+      accountCreated = true;
       await _applyAuthenticatedUser(user, syncCloud: false);
+      var profileSaved = true;
+      String? profileWarning;
       if (_userId != null) {
-        final profile = await _appwrite.ensureProfile(
-          userId: _userId!,
-          username: normalizedUsername,
-          displayName: name,
-          email: email,
-          birthDate: birthDate,
-          country: country,
-        );
-        _profileDocumentId = profile.$id;
-        final savedUsername = (profile.data['username'] ?? '').toString().trim();
-        if (savedUsername.isNotEmpty) _username = savedUsername;
-        _birthDate = (profile.data['birthDate'] ?? birthDate).toString();
-        _country = (profile.data['country'] ?? country).toString();
-        if (profileImagePath != null && profileImagePath.trim().isNotEmpty) {
-          try {
+        try {
+          final profile = await _appwrite.ensureProfile(
+            userId: _userId!,
+            username: normalizedUsername,
+            displayName: name,
+            email: email,
+            birthDate: birthDate,
+            country: country,
+          );
+          _profileDocumentId = profile.$id;
+          final savedUsername = (profile.data['username'] ?? '').toString().trim();
+          if (savedUsername.isNotEmpty) _username = savedUsername;
+          _birthDate = (profile.data['birthDate'] ?? birthDate).toString();
+          _country = (profile.data['country'] ?? country).toString();
+          if (profileImagePath != null && profileImagePath.trim().isNotEmpty) {
             final imageId = await _appwrite.uploadProfileImage(userId: _userId!, path: profileImagePath);
             await _appwrite.updateProfile(documentId: profile.$id, username: _username, profileImageId: imageId);
             _profileImageId = imageId;
-          } catch (error) {
-            debugPrint('Optional registration profile image upload failed: $error');
           }
+        } catch (error) {
+          profileSaved = false;
+          profileWarning = 'تم إنشاء الحساب، لكن تعذر حفظ بعض بيانات الملف الشخصي. يمكنك إكمالها لاحقًا.';
+          debugPrint('Registration profile step failed after account creation: $error');
         }
       }
       notifyListeners();
+      return RegistrationResult(accountCreated: true, profileSaved: profileSaved, warning: profileWarning);
+    } on AccountCreatedButSessionUnavailableException catch (error) {
+      _clearUser();
+      debugPrint('Account created but session could not be opened: ${error.cause}');
+      return const RegistrationResult(
+        accountCreated: true,
+        profileSaved: false,
+        warning: 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.',
+      );
     } catch (_) {
-      try { await _appwrite.logout(); } catch (cleanupError) { debugPrint('Registration session cleanup failed: $cleanupError'); }
+      if (accountCreated) {
+        debugPrint('Registration failed after account creation; preserving account: $_');
+      } else {
+        try { await _appwrite.logout(); } catch (cleanupError) { debugPrint('Registration session cleanup failed: $cleanupError'); }
+      }
       _clearUser();
       rethrow;
     }

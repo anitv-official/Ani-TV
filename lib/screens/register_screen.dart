@@ -81,12 +81,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
     final email = _email.text.trim();
     try {
-      await context.read<AppStateProvider>().register(
+      final result = await context.read<AppStateProvider>().register(
         email: email, password: _password.text, name: _name.text.trim(), username: _username.text.trim().toLowerCase(),
         birthDate: _birthDate!.toIso8601String().split('T').first, country: _country!, profileImagePath: _imagePath,
       );
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: email)), (_) => false);
+      ToastUtils.show(result.warning ?? 'تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني للمتابعة.', backgroundColor: Colors.green);
+      if (context.read<AppStateProvider>().emailVerified) {
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      } else if (result.profileSaved || context.read<AppStateProvider>().userId != null) {
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: email)), (_) => false);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      }
     } catch (error) {
       if (mounted) ToastUtils.show(authErrorMessage(error, registering: true), backgroundColor: AppTheme.errorColor);
     } finally {

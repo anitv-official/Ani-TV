@@ -51,10 +51,11 @@ class AppwriteService {
     try {
       await account.createEmailPasswordSession(email: email.trim(), password: password);
       return account.get();
-    } catch (_) {
-      // Do not leave an unusable authenticated account session behind.
-      try { await account.deleteSession(sessionId: 'current'); } catch (_) {}
-      rethrow;
+    } catch (error) {
+      // The account was already created. Keep that truth visible to the UI
+      // instead of turning a post-create session failure into registration
+      // failure or deleting the newly-created account.
+      throw AccountCreatedButSessionUnavailableException(error);
     }
   }
 
@@ -193,10 +194,14 @@ class AppwriteService {
         params: {
           'rowId': documentId,
           'data': {
-          'userId': userId,
-          'username': normalized,
-          'profileImageId': '',
-          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+            'userId': userId,
+            'username': normalized,
+            'displayName': displayName.trim(),
+            'email': email.trim(),
+            'birthDate': birthDate,
+            'country': country,
+            'profileImageId': '',
+            'updatedAt': DateTime.now().toUtc().toIso8601String(),
           },
         },
       );
@@ -266,6 +271,9 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
+  if (error is AccountCreatedButSessionUnavailableException) {
+    return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
+  }
   if (error is UsernameTakenException) return 'اسم المستخدم مأخوذ بالفعل';
   if (error is UsernameLoginException) {
     switch (error.code) {
@@ -280,8 +288,9 @@ String authErrorMessage(Object error, {required bool registering}) {
   }
   if (error is AppwriteException) {
     switch (error.code) {
-      case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'بيانات الدخول غير صحيحة.';
-      case 409: return registering ? 'هذا البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل.' : 'بيانات الدخول غير صحيحة.';
+      case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+      case 404: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'لم يتم العثور على حساب بهذا البريد الإلكتروني.';
+      case 409: return registering ? 'هذا البريد الإلكتروني مستخدم بالفعل. جرّب تسجيل الدخول أو استخدم بريدًا آخر.' : 'بيانات الدخول غير صحيحة.';
       case 400: return registering ? 'تحقق من البيانات المدخلة.' : 'تحقق من البيانات المدخلة.';
       case 408:
       case 429:
@@ -296,6 +305,11 @@ String authErrorMessage(Object error, {required bool registering}) {
 class UsernameLoginException implements Exception {
   final String code;
   const UsernameLoginException(this.code);
+}
+
+class AccountCreatedButSessionUnavailableException implements Exception {
+  final Object cause;
+  const AccountCreatedButSessionUnavailableException(this.cause);
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
