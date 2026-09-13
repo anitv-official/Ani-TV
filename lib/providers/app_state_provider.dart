@@ -282,9 +282,11 @@ class AppStateProvider extends ChangeNotifier {
     } catch (_) {
       if (accountCreated) {
         debugPrint('Registration failed after account creation; preserving account: $_');
-      } else {
-        try { await _appwrite.logout(); } catch (cleanupError) { debugPrint('Registration session cleanup failed: $cleanupError'); }
       }
+      // Never leave the newly-created account session active after the
+      // Profile step fails. The Appwrite User is preserved for recovery, but
+      // the client must return to a signed-out, retryable state.
+      try { await _appwrite.logout(); } catch (cleanupError) { debugPrint('Registration session cleanup failed: $cleanupError'); }
       _clearUser();
       rethrow;
     }
