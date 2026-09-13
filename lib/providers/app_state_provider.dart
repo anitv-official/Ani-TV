@@ -341,10 +341,28 @@ class AppStateProvider extends ChangeNotifier {
     final user = await _appwrite.updateName(name);
     final documentId = _profileDocumentId;
     if (documentId != null) {
-      await _appwrite.updateProfile(documentId: documentId, username: _username, displayName: name);
+      final profile = await _appwrite.updateProfile(documentId: documentId, username: _username, displayName: name);
+      _profileDocumentId = profile.$id;
     }
     _displayName = user.name.trim();
     notifyListeners();
+  }
+
+  Future<String> _ensureCurrentProfileId() async {
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) {
+      throw Exception('يجب تسجيل الدخول أولًا');
+    }
+    if (_profileDocumentId != null && _profileDocumentId!.isNotEmpty) return _profileDocumentId!;
+    final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
+    _profileDocumentId = profile.$id;
+    final cloudName = (profile.data['username'] ?? '').toString().trim();
+    if (cloudName.isNotEmpty) _username = cloudName;
+    _displayName = (profile.data['displayname'] ?? _displayName).toString().trim();
+    _birthDate = (profile.data['birthdate'] ?? _birthDate).toString();
+    _country = (profile.data['country'] ?? _country).toString();
+    _profileImageId = (profile.data['profileImageId'] ?? '').toString();
+    return profile.$id;
   }
 
   Future<void> updateUsername(String value) async {
@@ -352,8 +370,7 @@ class AppStateProvider extends ChangeNotifier {
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(normalized)) {
       throw Exception('Username يجب أن يتكون من 3 إلى 24 حرفًا إنجليزيًا صغيرًا أو رقمًا أو _');
     }
-    final documentId = _profileDocumentId;
-    if (_userId == null || documentId == null) throw Exception('يجب تسجيل الدخول أولًا');
+    final documentId = await _ensureCurrentProfileId();
     if (normalized == _username.toLowerCase()) return;
     if (!await _appwrite.isUsernameAvailable(normalized, currentDocumentId: documentId)) {
       throw Exception('Username مستخدم بالفعل، اختر اسمًا آخر');
@@ -367,19 +384,25 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> updateProfileImage(String path) async {
     final userId = _userId;
-    if (userId == null) return;
+    if (userId == null || userId.isEmpty) throw Exception('يجب تسجيل الدخول أولًا');
+    String? newImageId;
     try {
       final oldImageId = _profileImageId;
-      final newImageId = await _appwrite.uploadProfileImage(userId: userId, path: path);
-      final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
-      _profileDocumentId = profile.$id;
-      await _appwrite.updateProfile(documentId: profile.$id, username: _username, profileImageId: newImageId);
+      final documentId = await _ensureCurrentProfileId();
+      newImageId = await _appwrite.uploadProfileImage(userId: userId, path: path);
+      await _appwrite.updateProfile(documentId: documentId, username: _username, profileImageId: newImageId);
       _profileImageId = newImageId;
       if (oldImageId != null && oldImageId.isNotEmpty && oldImageId != newImageId) {
         try { await _appwrite.deleteProfileImage(oldImageId); } catch (_) {}
       }
       notifyListeners();
-    } catch (_) { _setErrorMessage('تعذر تحديث صورة الملف الشخصي.'); rethrow; }
+    } catch (_) {
+      if (newImageId != null && newImageId!.isNotEmpty && newImageId != _profileImageId) {
+        try { await _appwrite.deleteProfileImage(newImageId!); } catch (_) {}
+      }
+      _setErrorMessage('تعذر تحديث صورة الملف الشخصي. تحقق من صلاحية التخزين وحاول مرة أخرى.');
+      rethrow;
+    }
   }
 
   Future<void> updatePassword({required String password, required String oldPassword}) async => _appwrite.updatePassword(password: password, oldPassword: oldPassword);

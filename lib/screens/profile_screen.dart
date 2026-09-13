@@ -448,6 +448,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12),
                 ),
+                if (isLoggedIn && (birthDate.isNotEmpty || country.isNotEmpty))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'تاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate} · الدولة: ${country.isEmpty ? 'غير متوفر' : country}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11),
+                    ),
+                  ),
                 TextButton(
                   onPressed: _pickAvatar,
                   style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)),
