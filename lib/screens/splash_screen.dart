@@ -143,14 +143,11 @@ class _SplashScreenState extends State<SplashScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Logo
-              ClipRRect(
-                borderRadius: BorderRadius.circular(28),
-                child: Image.asset(
-                  'assets/images/anitv_app_icon.png',
-                  width: 104,
-                  height: 104,
-                  fit: BoxFit.cover,
-                ),
+              Image.asset(
+                'assets/images/anitv_logo_transparent.png',
+                width: 220,
+                height: 104,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 22),
               const Text(

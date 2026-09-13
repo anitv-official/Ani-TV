@@ -28,7 +28,7 @@ class _AuthBrandingState extends State<AuthBranding> with SingleTickerProviderSt
             child: Align(
               alignment: Alignment.centerLeft,
               widthFactor: progress,
-          child: Text('AniTV', style: TextStyle(color: const Color(0xFFE50914), fontSize: 42, fontWeight: FontWeight.w900, letterSpacing: 1.6, shadows: [Shadow(color: const Color(0xFFE50914).withOpacity(glow * .35), blurRadius: 10)])),
+          child: Image.asset('assets/images/anitv_logo_transparent.png', width: 164, height: 68, fit: BoxFit.contain, opacity: AlwaysStoppedAnimation(0.88 + glow * .12)),
             ),
           ),
         ),

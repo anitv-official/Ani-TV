@@ -264,7 +264,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         children: [
           Consumer<AppStateProvider>(
             builder: (context, appState, _) => Row(children: [
-              const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)),
+              Image.asset('assets/images/anitv_logo_transparent.png', width: 104, height: 38, fit: BoxFit.contain),
               const Spacer(),
               IconButton(
                 tooltip: 'التحديثات',
