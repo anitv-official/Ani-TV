@@ -72,12 +72,12 @@ module.exports = async ({ req, res, log, error }) => {
     // Query.equal is case-sensitive in Appwrite. Normalize locally so legacy
     // records such as "Looord" still work.
     const profile = result.rows.find((row) =>
-      normalizeUsername(String(row.data?.username ?? '')) === username,
+      normalizeUsername(String(row.username ?? '')) === username,
     );
     log(`profile found: ${profile ? 'true' : 'false'}`);
     if (!profile) return invalidCredentials(res);
 
-    const userId = String(profile.data?.userId ?? '').trim();
+    const userId = String(profile.userId ?? '').trim();
     log(`userId found: ${userId ? 'true' : 'false'}`);
     if (!userId) return serverError(res, 'PROFILE_ERROR');
 
