@@ -5,6 +5,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/app_version_service.dart';
+import '../services/download_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/custom_error_dialog.dart';
@@ -15,7 +16,6 @@ import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/poster_image.dart';
 import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/section_header.dart';
-import '../widgets/ui/segmented_toggle.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
@@ -26,6 +26,7 @@ import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'sources_screen.dart';
+import 'downloads_screen.dart';
 
 class HomeContent extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -51,6 +52,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   bool _hasError = false;
   int _currentCarouselIndex = 0;
   bool _showAnime = true;
+  String _contentFilter = 'anime';
   bool _isUpdateAvailable = false;
   late final ScrollController _scrollController;
   int _animePage = 1;
@@ -232,25 +234,17 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         slivers: [
           SliverToBoxAdapter(child: _buildHeroSection()),
           SliverToBoxAdapter(child: _buildQuickActions()),
+          SliverToBoxAdapter(child: _buildOfflineSection()),
           SliverToBoxAdapter(
             child: SourceSummary(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen())),
             ),
           ),
           SliverToBoxAdapter(child: _buildContinueSection()),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: SegmentedToggle(
-                labels: const ['أنمي', 'مانجا'],
-                index: _showAnime ? 0 : 1,
-                onChanged: (i) => setState(() => _showAnime = i == 0),
-              ),
-            ),
-          ),
+          SliverToBoxAdapter(child: _buildContentFilters()),
           SliverToBoxAdapter(
             child: SectionHeader(
-              title: _showAnime ? 'أحدث الأنمي' : 'أحدث المانجا',
+              title: _contentFilter == 'manga' ? 'أحدث المانجا' : (_contentFilter == 'drama' ? 'أحدث الدراما' : 'أحدث الأنمي'),
             ),
           ),
           SliverToBoxAdapter(child: _buildContentGrid()),
@@ -298,6 +292,11 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                     items: featuredContent.map((contentItem) => PosterImage(url: (contentItem['image_url'] ?? '').toString(), borderRadius: BorderRadius.zero, width: double.infinity, height: imageHeight)).toList(),
                   ),
                 ),
+                if (featuredContent.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(featuredContent.length > 8 ? 8 : featuredContent.length, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: index == _currentCarouselIndex ? 18 : 6, height: 6, decoration: BoxDecoration(color: index == _currentCarouselIndex ? AppTheme.primaryColor : AppTheme.textMutedColor, borderRadius: BorderRadius.circular(8)))),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -336,24 +335,35 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
   Widget _buildQuickActions() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Row(
-        children: [
-          _quickAction(Icons.favorite_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.category_rounded, 'التصنيفات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.hub_outlined, 'المصادر', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen()))),
-          const SizedBox(width: 10),
-          _quickAction(Icons.search_rounded, 'بحث', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)))),
-        ],
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+      child: LayoutBuilder(
+        builder: (context, constraints) => GridView.count(
+          crossAxisCount: constraints.maxWidth >= 600 ? 4 : 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: constraints.maxWidth >= 600 ? 3.0 : 2.25,
+          children: [
+            _quickAction(Icons.auto_awesome_rounded, 'فاجئني', _surpriseMe),
+            _quickAction(Icons.favorite_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen()))),
+            _quickAction(Icons.download_for_offline_rounded, 'التنزيلات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
+            _quickAction(Icons.category_rounded, 'التصنيفات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()))),
+          ],
+        ),
       ),
     );
   }
 
+  void _surpriseMe() {
+    final items = [...latestAnime, ...latestComics];
+    if (items.isEmpty) return;
+    final item = (items.toList()..shuffle()).first;
+    _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama' || item['category'] == 'drama');
+  }
+
   Widget _quickAction(IconData icon, String label, VoidCallback onTap) {
-    return Expanded(
-      child: Material(
+    return Material(
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
@@ -375,7 +385,36 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
             ),
           ),
         ),
-      ),
+    );
+  }
+
+  Widget _buildOfflineSection() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: DownloadService.list(),
+      builder: (context, snapshot) {
+        final count = snapshot.data?.where((item) => item['kind'] == 'manga').length ?? 0;
+        if (count == 0) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Material(
+            color: AppTheme.surfaceColor,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(children: [
+                  const Icon(Icons.offline_pin_rounded, color: AppTheme.primaryColor),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('$count فصل محفوظ دون اتصال', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                  const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppTheme.textSecondaryColor),
+                ]),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -418,7 +457,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Widget _buildContentGrid() {
-    final items = _showAnime ? latestAnime : latestComics;
+    final items = _filteredContentItems();
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 48),
@@ -439,10 +478,38 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         return ContentCard(
           title: item['title']?.toString(),
           imageUrl: item['image_url']?.toString(),
-          badge: _showAnime ? item['source']?.toString() : item['type']?.toString(),
-          onTap: () => _openItem(item, isAnime: _showAnime),
+          badge: _contentFilter == 'manga' ? item['type']?.toString() : (item['source']?.toString() ?? 'أنمي'),
+          onTap: () => _openItem(item, isAnime: _contentFilter != 'manga'),
         );
       },
     );
+  }
+
+  Widget _buildContentFilters() {
+    const filters = <String, String>{'anime': 'أنمي', 'manga': 'مانجا', 'drama': 'دراما'};
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: filters.entries.map((entry) => ChoiceChip(
+          label: Text(entry.value),
+          selected: _contentFilter == entry.key,
+          onSelected: (_) => setState(() { _contentFilter = entry.key; _showAnime = entry.key != 'manga'; }),
+          selectedColor: AppTheme.primaryColor,
+          backgroundColor: AppTheme.surfaceColor,
+          labelStyle: TextStyle(color: _contentFilter == entry.key ? Colors.white : AppTheme.textSecondaryColor, fontWeight: FontWeight.w700),
+          side: const BorderSide(color: AppTheme.borderColor),
+        )).toList(),
+      ),
+    );
+  }
+
+  List<dynamic> _filteredContentItems() {
+    if (_contentFilter == 'manga') return latestComics;
+    if (_contentFilter == 'drama') {
+      return latestAnime.where((item) => item['type'] == 'drama' || item['category'] == 'drama').toList();
+    }
+    return latestAnime.where((item) => item['type'] != 'drama' && item['category'] != 'drama').toList();
   }
 }
