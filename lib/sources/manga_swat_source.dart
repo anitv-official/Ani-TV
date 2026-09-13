@@ -67,13 +67,18 @@ class MangaSwatSource extends ContentSource {
   }
 
   @override
-  Future<Map<String, dynamic>> chapterImages(String url) async {
+  Future<Map<String, dynamic>?> chapterImages(String url) async {
     final id = _chapterId(url);
     if (id == null) throw Exception('تعذر تحميل المحتوى');
     final data = await HtmlClient.getJson('$_api/chapters/$id/images/');
     final images = <Map<String, dynamic>>[];
-    if (data is List) {
-      final sorted = [...data];
+    final rawImages = data is List
+        ? data
+        : data is Map
+            ? (data['results'] ?? data['images'] ?? data['data'] ?? const [])
+            : const [];
+    if (rawImages is List) {
+      final sorted = [...rawImages];
       sorted.sort((a, b) {
         final ao = a is Map ? (a['order'] as num? ?? 0) : 0;
         final bo = b is Map ? (b['order'] as num? ?? 0) : 0;
@@ -81,7 +86,7 @@ class MangaSwatSource extends ContentSource {
       });
       for (final img in sorted) {
         if (img is! Map) continue;
-        final src = (img['image'] ?? '').toString();
+        final src = (img['image'] ?? img['url'] ?? img['src'] ?? '').toString();
         if (src.isEmpty) continue;
         images.add({'url': src});
       }

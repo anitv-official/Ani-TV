@@ -141,6 +141,19 @@ class AppwriteService {
         },
       );
 
+  Future<bool> isUsernameAvailable(String username, {String? currentDocumentId}) async {
+    final value = username.trim().toLowerCase();
+    final result = await databases.listDocuments(
+      databaseId: databaseId,
+      collectionId: profilesTableId,
+      queries: [Query.equal('username', value), Query.limit(2)],
+    );
+    return result.documents.every((document) => currentDocumentId != null && document.$id == currentDocumentId);
+  }
+
+  Future<models.Document> updateUsername({required String documentId, required String username}) =>
+      updateProfile(documentId: documentId, username: username.trim().toLowerCase());
+
   Future<String> uploadProfileImage({required String userId, required String path}) async {
     final file = await storage.createFile(
       bucketId: profileImagesBucketId,

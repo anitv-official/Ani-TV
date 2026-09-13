@@ -63,7 +63,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     _checkForUpdates();
     if (widget.preloadedAnime != null &&
         widget.preloadedComics != null &&
-        widget.preloadedFeaturedContent != null) {
+        widget.preloadedFeaturedContent != null &&
+        widget.preloadedAnime!.isNotEmpty &&
+        widget.preloadedComics!.isNotEmpty) {
       setState(() {
         latestAnime = widget.preloadedAnime!;
         latestComics = widget.preloadedComics!;

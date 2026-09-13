@@ -118,15 +118,16 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   }
 
   Future<void> _fetchChapterImages(String url) async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final chapter = await ApiService.fetchChapterImages(url);
-      final List<String> pages = List<String>.from(
-        (chapter['images'] as List).map((img) => (img['url'] as String).trim()),
-      );
+      final rawImages = chapter['images'] is List ? chapter['images'] as List : const [];
+      final pages = rawImages.map((img) => img is Map ? (img['url'] ?? '').toString().trim() : '').where((url) => url.isNotEmpty).toList();
+      if (pages.isEmpty) throw Exception('لا توجد صور متاحة لهذا الفصل');
       final String title = chapter['title'] ?? 'الفصل';
       final String chapterId = widget.chapterId ?? chapter['chapter_number']?.toString() ?? url;
 
@@ -140,6 +141,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
             chapter['navigation']['chapter_list']?.toString()?.trim();
       }
 
+      if (!mounted) return;
       setState(() {
         _pages = pages;
         _chapterTitle = title;
@@ -151,6 +153,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       // Preload semua gambar setelah data diambil
       _preloadImages();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = e.toString();
@@ -406,7 +409,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
             children: [
               Icon(Icons.error_outline, size: 60, color: AppTheme.primaryColor),
               SizedBox(height: 16),
-              Text('Error loading chapter images',
+              Text('تعذر تحميل صور الفصل',
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -418,7 +421,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
               SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('Go Back'),
+                  child: Text('رجوع'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,

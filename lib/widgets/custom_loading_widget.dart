@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import '../theme/app_theme.dart';
 
 class CustomLoadingWidget extends StatelessWidget {
@@ -20,21 +19,20 @@ class CustomLoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Lottie.asset(
-            'assets/animations/loading_animation.json',
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
+          SizedBox(
+            width: size.clamp(32.0, 64.0),
+            height: size.clamp(32.0, 64.0),
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: color ?? AppTheme.primaryColor,
+              backgroundColor: (color ?? AppTheme.primaryColor).withOpacity(.12),
+            ),
           ),
           if (message.isNotEmpty) ...[
             SizedBox(height: 16),
             Text(
               message,
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
           ],

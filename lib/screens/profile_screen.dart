@@ -279,6 +279,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showEditUsernameDialog() {
+    _showEditValueDialog(
+      title: 'تغيير Username',
+      initial: username,
+      onSave: (value) async {
+        final normalized = value.replaceFirst('@', '').trim().toLowerCase();
+        if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(normalized)) {
+          _showInfoDialog('Username غير صالح', 'استخدم من 3 إلى 24 حرفًا إنجليزيًا صغيرًا أو رقمًا أو _ فقط.');
+          return;
+        }
+        try {
+          await context.read<AppStateProvider>().updateUsername(normalized);
+          if (mounted) setState(() => username = normalized);
+          if (mounted) ToastUtils.show('تم تحديث Username', backgroundColor: AppTheme.primaryColor);
+        } catch (error) {
+          if (mounted) _showInfoDialog('تعذر تحديث Username', error.toString().replaceFirst('Exception: ', ''));
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,8 +319,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? [
                             SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
                             SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: displayName.isEmpty ? 'غير متوفر' : displayName, onTap: _showEditNameDialog),
+                            SettingTile(icon: Icons.alternate_email, title: 'تغيير Username', subtitle: username.isEmpty ? 'غير متوفر' : '@$username', onTap: _showEditUsernameDialog),
                             SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
-                            SettingTile(icon: Icons.alternate_email, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
+                            SettingTile(icon: Icons.email_outlined, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
                           ]
                         : [
                             SettingTile(icon: Icons.login_rounded, title: 'تسجيل الدخول', subtitle: 'للوصول إلى ملفك الشخصي', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),
@@ -411,6 +433,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(displayName.isEmpty ? (username.isEmpty ? 'زائر' : username) : displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
+                if (isLoggedIn && username.isNotEmpty)
+                  Text('@$username', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.w700)),
                 Text(
                   isLoggedIn ? (email.isEmpty ? 'حساب متصل' : email) : 'سجّل الدخول لإدارة حسابك',
                   maxLines: 1,

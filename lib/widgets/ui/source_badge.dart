@@ -17,16 +17,23 @@ class SourceBadge extends StatelessWidget {
         color: AppTheme.primaryColor.withOpacity(.92),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(
-        text.toUpperCase(),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: compact ? 9 : 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(text.toLowerCase().contains('manga') || text.toLowerCase().contains('manhwa')
+              ? Icons.menu_book_rounded
+              : Icons.play_circle_fill_rounded, color: Colors.white, size: compact ? 11 : 14),
+          const SizedBox(width: 3),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: compact ? 86 : 150),
+            child: Text(
+              text.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.white, fontSize: compact ? 8.5 : 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.25),
+            ),
+          ),
+        ],
       ),
     );
   }

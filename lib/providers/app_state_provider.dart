@@ -239,6 +239,24 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateUsername(String value) async {
+    final normalized = value.trim().toLowerCase();
+    if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(normalized)) {
+      throw Exception('Username يجب أن يتكون من 3 إلى 24 حرفًا إنجليزيًا صغيرًا أو رقمًا أو _');
+    }
+    final documentId = _profileDocumentId;
+    if (_userId == null || documentId == null) throw Exception('يجب تسجيل الدخول أولًا');
+    if (normalized == _username.toLowerCase()) return;
+    if (!await _appwrite.isUsernameAvailable(normalized, currentDocumentId: documentId)) {
+      throw Exception('Username مستخدم بالفعل، اختر اسمًا آخر');
+    }
+    await _appwrite.updateUsername(documentId: documentId, username: normalized);
+    _username = normalized;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username_$_userId', normalized);
+    notifyListeners();
+  }
+
   Future<void> updateProfileImage(String path) async {
     final userId = _userId;
     if (userId == null) return;
