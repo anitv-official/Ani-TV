@@ -3,7 +3,8 @@ import 'dart:typed_data';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
-import 'package:appwrite/src/enums.dart' show HttpMethod, OAuthProvider;
+import 'package:appwrite/src/enums.dart' show HttpMethod;
+import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -70,7 +71,7 @@ class AppwriteService {
     // SDK 17 opens Google, waits for the Android callback, and completes the
     // Appwrite session before this future returns.
     await account.createOAuth2Session(
-      provider: OAuthProvider.google,
+      provider: enums.OAuthProvider.google,
       success: success,
       failure: failure,
     );
