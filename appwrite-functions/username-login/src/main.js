@@ -6,6 +6,11 @@ const invalidCredentials = (res) => json(res, 401, {
   code: 'INVALID_CREDENTIALS',
   message: 'Invalid username or password.',
 });
+const serverError = (res, code = 'SERVER_ERROR') => json(res, 500, {
+  ok: false,
+  code,
+  message: 'Unable to sign in right now.',
+});
 
 const required = (name) => {
   const value = process.env[name];
@@ -14,16 +19,29 @@ const required = (name) => {
 };
 
 const normalizeUsername = (value) => value.trim().toLowerCase();
+const maskEmail = (email) => {
+  if (typeof email !== 'string' || !email.includes('@')) return '[missing]';
+  const [local, domain] = email.split('@');
+  return `${local.slice(0, 1)}***@${domain}`;
+};
+const errorDetails = (err) => ({
+  code: err?.code ?? 'unknown',
+  type: err?.type ?? 'unknown',
+  message: String(err?.message ?? 'unknown').replace(/[\r\n]/g, ' ').slice(0, 240),
+});
 
-module.exports = async ({ req, res, error }) => {
+module.exports = async ({ req, res, log, error }) => {
+  let username = '';
   try {
+    log('request started');
     const payload = req.bodyJson && typeof req.bodyJson === 'object'
       ? req.bodyJson
       : (() => {
           try { return JSON.parse(req.body || '{}'); } catch (_) { return {}; }
         })();
-    const username = typeof payload.username === 'string' ? normalizeUsername(payload.username) : '';
+    username = typeof payload.username === 'string' ? normalizeUsername(payload.username) : '';
     const password = typeof payload.password === 'string' ? payload.password : '';
+    log(`username normalized: ${username || '[empty]'}`);
 
     if (!username || !password) {
       return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'Username and password are required.' });
@@ -38,39 +56,68 @@ module.exports = async ({ req, res, error }) => {
       .setKey(required('APPWRITE_API_KEY'));
     const databases = new Databases(adminClient);
 
-    // Query.equal is case-sensitive in Appwrite. Read the bounded profile set
-    // and normalize locally so legacy records such as "Looord" still work.
-    const result = await databases.listDocuments(
-      required('APPWRITE_DATABASE_ID'),
-      required('APPWRITE_PROFILES_TABLE_ID'),
-      [Query.limit(5000)],
-    );
+    let result;
+    try {
+      result = await databases.listDocuments(
+        required('APPWRITE_DATABASE_ID'),
+        required('APPWRITE_PROFILES_TABLE_ID'),
+        [Query.limit(5000)],
+      );
+    } catch (err) {
+      const details = errorDetails(err);
+      error(`profile lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+      return serverError(res, 'PROFILE_ERROR');
+    }
+
+    // Query.equal is case-sensitive in Appwrite. Normalize locally so legacy
+    // records such as "Looord" still work.
     const profile = result.documents.find((document) =>
       normalizeUsername(String(document.data?.username ?? '')) === username,
     );
+    log(`profile found: ${profile ? 'true' : 'false'}`);
     if (!profile) return invalidCredentials(res);
 
-    const userId = String(profile.data?.userId ?? '');
-    if (!userId) return invalidCredentials(res);
+    const userId = String(profile.data?.userId ?? '').trim();
+    log(`userId found: ${userId ? 'true' : 'false'}`);
+    if (!userId) return serverError(res, 'PROFILE_ERROR');
 
-    // Appwrite verifies the password here; the password is never stored or logged.
-    const users = new Users(adminClient);
-    const user = await users.get(userId);
-    const account = new Account(adminClient);
-    const session = await account.createEmailPasswordSession({ email: user.email, password });
+    let user;
+    try {
+      const users = new Users(adminClient);
+      user = await users.get(userId);
+    } catch (err) {
+      const details = errorDetails(err);
+      error(`user lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+      return serverError(res, 'USER_ERROR');
+    }
+    log(`user found: ${user ? 'true' : 'false'}`);
+    const email = typeof user.email === 'string' ? user.email.trim() : '';
+    log(`email found: ${email ? 'true' : 'false'} (${maskEmail(email)})`);
+    if (!email) return serverError(res, 'USER_ERROR');
 
-    return json(res, 200, {
-      ok: true,
-      userId,
-      secret: session.secret,
-      expire: session.expire,
-    });
+    log('creating session');
+    try {
+      const account = new Account(adminClient);
+      const session = await account.createEmailPasswordSession({ email, password });
+      log('session creation succeeded');
+      return json(res, 200, {
+        ok: true,
+        userId,
+        secret: session.secret,
+        expire: session.expire,
+      });
+    } catch (err) {
+      const details = errorDetails(err);
+      error(`session creation failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+      // A 401 from Appwrite at this stage is the only case exposed as bad
+      // credentials. Permission/configuration failures remain server errors.
+      return Number(details.code) === 401
+        ? invalidCredentials(res)
+        : serverError(res, 'SESSION_ERROR');
+    }
   } catch (err) {
-    // Never log request data, passwords, API keys, emails, or user IDs.
-    const isCredentialFailure = err && (err.code === 401 || err.code === 404);
-    if (!isCredentialFailure) error(`Username login failed: ${err.message || 'unknown error'}`);
-    return isCredentialFailure
-      ? invalidCredentials(res)
-      : json(res, 500, { ok: false, code: 'FUNCTION_ERROR', message: 'Unable to sign in right now.' });
+    const details = errorDetails(err);
+    error(`request failed; username=${username || '[empty]'}; code=${details.code}; type=${details.type}; message=${details.message}`);
+    return serverError(res);
   }
 };
