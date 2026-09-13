@@ -252,10 +252,6 @@ class AppStateProvider extends ChangeNotifier {
           final profile = await _appwrite.ensureProfile(
             userId: _userId!,
             username: normalizedUsername,
-            displayName: name,
-            email: email,
-            birthDate: birthDate,
-            country: country,
           );
           _profileDocumentId = profile.$id;
           final savedUsername = (profile.data['username'] ?? '').toString().trim();
@@ -433,7 +429,7 @@ class AppStateProvider extends ChangeNotifier {
         itemId: (removed['url'] ?? removed['itemId']).toString(),
         source: (removed['source'] ?? '').toString(),
       );
-      if (document != null) await _appwrite.deleteFavorite(document.$id);
+      if (document != null) await _appwrite.deleteFavorite(userId: _userId!, documentId: document.$id);
       list.removeWhere((item) => item['id'] == id);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));

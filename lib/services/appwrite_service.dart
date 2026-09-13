@@ -180,10 +180,6 @@ class AppwriteService {
   Future<models.Document> ensureProfile({
     required String userId,
     required String username,
-    String displayName = '',
-    String email = '',
-    String birthDate = '',
-    String country = '',
   }) async {
     final normalized = normalizeUsername(username);
     final existing = await getProfile(userId);
@@ -215,10 +211,6 @@ class AppwriteService {
           'data': {
             'userId': userId,
             'username': normalized,
-            'displayName': displayName.trim(),
-            'email': email.trim(),
-            'birthDate': birthDate,
-            'country': country,
             'profileImageId': '',
             'updatedAt': DateTime.now().toUtc().toIso8601String(),
           },
@@ -294,7 +286,10 @@ class AppwriteService {
     await _assertCurrentUser(userId);
     return databases.createDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: ID.unique(), data: {'userId': userId, ...data});
   }
-  Future<void> deleteFavorite(String documentId) => databases.deleteDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: documentId);
+  Future<void> deleteFavorite({required String userId, required String documentId}) async {
+    await _assertCurrentUser(userId);
+    await databases.deleteDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: documentId);
+  }
 
   Future<void> _assertCurrentUser(String expectedUserId) async {
     final user = await getCurrentUser();
