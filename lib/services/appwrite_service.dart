@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
-import 'package:appwrite/src/enums.dart' show HttpMethod;
+import 'package:appwrite/src/enums.dart' show HttpMethod, OAuthProvider;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
