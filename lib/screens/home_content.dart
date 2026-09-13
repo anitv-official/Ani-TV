@@ -295,7 +295,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                 if (featuredContent.length > 1)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(featuredContent.length > 8 ? 8 : featuredContent.length, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: index == _currentCarouselIndex ? 18 : 6, height: 6, decoration: BoxDecoration(color: index == _currentCarouselIndex ? AppTheme.primaryColor : AppTheme.textMutedColor, borderRadius: BorderRadius.circular(8)))),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(featuredContent.length > 8 ? 8 : featuredContent.length, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: index == _currentCarouselIndex ? 18 : 6, height: 6, decoration: BoxDecoration(color: index == _currentCarouselIndex ? AppTheme.primaryColor : AppTheme.textMutedColor, borderRadius: BorderRadius.circular(8))))),
                   ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
