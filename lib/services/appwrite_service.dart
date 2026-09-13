@@ -3,7 +3,8 @@ import 'dart:typed_data';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
-import 'package:appwrite/src/enums.dart' show HttpMethod, OAuthProvider;
+import 'package:appwrite/src/enums.dart' show HttpMethod;
+import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -66,7 +67,7 @@ class AppwriteService {
 
   Future<models.User> loginWithGoogle() async {
     final callback = await account.createOAuth2Token(
-      provider: OAuthProvider.google,
+      provider: enums.OAuthProvider.google,
       success: 'appwrite-callback-6aa4295900094d600163://auth/success',
       failure: 'appwrite-callback-6aa4295900094d600163://auth/failure',
     );
