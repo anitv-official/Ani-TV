@@ -54,6 +54,26 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
       - name: Run Flutter tests
         run: flutter test
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/anitv-release.jks"
+          chmod 600 "$GITHUB_WORKSPACE/anitv-release.jks"
+          {
+            printf 'storeFile=%s\n' "$GITHUB_WORKSPACE/anitv-release.jks"
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > android/key.properties
+          chmod 600 android/key.properties
       - name: Build Android APK
         run: flutter build apk --release
       - name: Upload APK
@@ -62,3 +82,6 @@ jobs:
           name: anitv-android-release
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+      - name: Remove release signing material
+        if: ${{ always() }}
+        run: rm -f "$GITHUB_WORKSPACE/anitv-release.jks" android/key.properties

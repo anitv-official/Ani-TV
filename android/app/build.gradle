@@ -5,6 +5,12 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.anitv.app"
     compileSdk = 34
@@ -33,9 +39,13 @@ android {
 
     buildTypes {
         release {
-            // CI release artifact uses the configured Android signing strategy.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            signingConfig = signingConfigs.create("release")
+            signingConfig.storeFile = keystorePropertiesFile.exists()
+                ? file(keystoreProperties["storeFile"])
+                : null
+            signingConfig.storePassword = keystoreProperties["storePassword"]
+            signingConfig.keyAlias = keystoreProperties["keyAlias"]
+            signingConfig.keyPassword = keystoreProperties["keyPassword"]
         }
     }
 }
