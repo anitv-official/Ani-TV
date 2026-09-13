@@ -165,7 +165,6 @@ class AppwriteService {
     final response = await client.call(
       HttpMethod.get,
       path: '/tablesdb/$databaseId/tables/$profilesTableId/rows',
-      params: const {'queries': ['limit(5000)']},
     );
     final body = response.data;
     if (body is! Map || body['rows'] is! List) {
