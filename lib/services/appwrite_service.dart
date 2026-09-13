@@ -6,7 +6,6 @@ import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/src/enums.dart' show HttpMethod;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -65,20 +64,16 @@ class AppwriteService {
     return account.get();
   }
 
-  Future<void> loginWithGoogle() async {
+  Future<models.User> loginWithGoogle() async {
     const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
     const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
-    final uri = Uri.parse('$_endpoint/account/sessions/oauth2/google').replace(
-      queryParameters: {'project': _projectId, 'success': success, 'failure': failure},
+    // SDK 17 opens Google, waits for the Android callback, and completes the
+    // Appwrite session before this future returns.
+    await account.createOAuth2Session(
+      provider: OAuthProvider.google,
+      success: success,
+      failure: failure,
     );
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw const GoogleAuthException('OPEN_FAILED');
-    }
-  }
-
-  Future<models.User> completeGoogleLogin({required String userId, required String secret}) async {
-    if (userId.isEmpty || secret.isEmpty) throw const GoogleAuthException('INVALID_CALLBACK');
-    await account.createSession(userId: userId, secret: secret);
     return account.get();
   }
 
