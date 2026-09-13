@@ -28,7 +28,7 @@ void main() {
 
     test('maps duplicate email to a clear registration message', () {
       final message = authErrorMessage(
-        AppwriteException('duplicate', code: 409),
+        AppwriteException('duplicate', 409),
         registering: true,
       );
       expect(message, contains('البريد الإلكتروني مستخدم بالفعل'));
