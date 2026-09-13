@@ -202,7 +202,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final normalizedUsername = UsernameValidation.normalize(username);
       if (!UsernameValidation.isValid(normalizedUsername) || !await _appwrite.isUsernameAvailable(normalizedUsername)) {
-        throw AppwriteException('Username is already in use.', code: 409);
+        throw const UsernameTakenException();
       }
       final user = await _appwrite.register(email: email, password: password, name: name);
       await _applyAuthenticatedUser(user, syncCloud: false);

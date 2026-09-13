@@ -72,10 +72,10 @@ class AppwriteService {
     );
     dynamic response;
     try { response = jsonDecode(execution.responseBody); } catch (_) { response = null; }
-    if (response is! Map || response['ok'] != true) throw AppwriteException('Invalid username or password.', code: 401);
+    if (response is! Map || response['ok'] != true) throw Exception('Invalid username or password.');
     final userId = response['userId']?.toString() ?? '';
     final secret = response['secret']?.toString() ?? '';
-    if (userId.isEmpty || secret.isEmpty) throw AppwriteException('Invalid username or password.', code: 401);
+    if (userId.isEmpty || secret.isEmpty) throw Exception('Invalid username or password.');
     await account.createSession(userId: userId, secret: secret);
     return account.get();
   }
@@ -202,6 +202,7 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
+  if (error is UsernameTakenException) return 'اسم المستخدم مأخوذ بالفعل';
   if (error is AppwriteException) {
     switch (error.code) {
       case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'بيانات الدخول غير صحيحة.';
@@ -218,6 +219,10 @@ String authErrorMessage(Object error, {required bool registering}) {
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
+
+class UsernameTakenException implements Exception {
+  const UsernameTakenException();
+}
 
 class UsernameValidation {
   static final RegExp pattern = RegExp(r'^[a-z0-9_]{3,24}$');

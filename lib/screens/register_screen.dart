@@ -132,6 +132,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       const SizedBox(height: 24),
       SizedBox(height: 54, child: ElevatedButton(onPressed: _loading ? null : _register, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('إنشاء الحساب', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)))),
       TextButton(onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('لديك حساب؟ تسجيل الدخول', style: TextStyle(color: Colors.white))),
-    ]))),
+    ])))),
   );
 }
