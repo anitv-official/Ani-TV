@@ -11,134 +11,22 @@ import '../widgets/auth_branding.dart';
 import 'email_verification_screen.dart';
 import 'login_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
-  @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
-}
-
+class RegisterScreen extends StatefulWidget { const RegisterScreen({super.key}); @override State<RegisterScreen> createState() => _RegisterScreenState(); }
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _email = TextEditingController();
-  final _username = TextEditingController();
-  final _password = TextEditingController();
-  final _confirm = TextEditingController();
-  Timer? _usernameTimer;
-  bool _loading = false, _checkingUsername = false, _obscure = true, _obscureConfirm = true;
-  bool? _usernameAvailable;
-  String? _usernameMessage, _country, _imagePath;
-  DateTime? _birthDate;
-  static const _countries = <String>['السعودية', 'مصر', 'الإمارات', 'الكويت', 'قطر', 'الأردن', 'العراق', 'المغرب', 'الجزائر', 'تونس', 'ليبيا', 'فلسطين', 'اليمن', 'عُمان', 'البحرين', 'سوريا', 'لبنان', 'أخرى'];
-
-  @override
-  void dispose() {
-    _usernameTimer?.cancel();
-    for (final c in [_name, _email, _username, _password, _confirm]) c.dispose();
-    super.dispose();
-  }
-
-  void _onUsernameChanged(String value) {
-    _usernameTimer?.cancel();
-    final normalized = UsernameValidation.normalize(value);
-    setState(() { _usernameAvailable = null; _usernameMessage = null; });
-    if (normalized.isEmpty) return;
-    if (normalized.length < 3) { setState(() => _usernameMessage = 'يجب أن يتكون Username من 3 أحرف على الأقل'); return; }
-    if (!UsernameValidation.isValid(normalized)) { setState(() => _usernameMessage = 'استخدم الأحرف الإنجليزية الصغيرة والأرقام و _ فقط'); return; }
-    setState(() { _checkingUsername = true; _usernameMessage = 'جارٍ التحقق...'; });
-    _usernameTimer = Timer(const Duration(milliseconds: 450), () async {
-      try {
-        final available = await AppwriteService.instance.isUsernameAvailable(normalized);
-        if (!mounted || _username.text.trim().toLowerCase() != normalized) return;
-        setState(() { _usernameAvailable = available; _checkingUsername = false; _usernameMessage = available ? 'اسم المستخدم متوفر' : 'اسم المستخدم مأخوذ بالفعل'; });
-      } catch (error) {
-        debugPrint('Username availability check failed: $error');
-        if (mounted) setState(() { _checkingUsername = false; _usernameMessage = 'تعذر التحقق من اسم المستخدم'; });
-      }
-    });
-  }
-
-  Future<void> _chooseBirthDate() async {
-    final picked = await showDatePicker(context: context, firstDate: DateTime(1900), lastDate: DateTime.now(), initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)), helpText: 'اختر تاريخ الميلاد');
-    if (picked != null) setState(() => _birthDate = picked);
-  }
-
-  Future<void> _chooseImage() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: false);
-      final path = result?.files.single.path;
-      if (path != null && path.isNotEmpty) setState(() => _imagePath = path);
-    } catch (error) {
-      debugPrint('Profile image selection failed: $error');
-      if (mounted) ToastUtils.show('تعذر اختيار الصورة. يمكنك المتابعة بدون صورة.', backgroundColor: AppTheme.errorColor);
-    }
-  }
-
-  Future<void> _register() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_usernameAvailable != true) { ToastUtils.show(_usernameMessage ?? 'تحقق من توفر اسم المستخدم أولًا.', backgroundColor: AppTheme.errorColor); return; }
-    if (_birthDate == null || _country == null) { ToastUtils.show('اختر تاريخ الميلاد والدولة.', backgroundColor: AppTheme.errorColor); return; }
-    setState(() => _loading = true);
-    final email = _email.text.trim();
-    try {
-      final result = await context.read<AppStateProvider>().register(
-        email: email, password: _password.text, name: _name.text.trim(), username: _username.text.trim().toLowerCase(),
-        birthDate: _birthDate!.toIso8601String().split('T').first, country: _country!, profileImagePath: _imagePath,
-      );
-      if (!mounted) return;
-      ToastUtils.show(result.warning ?? 'تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني للمتابعة.', backgroundColor: Colors.green);
-      if (context.read<AppStateProvider>().emailVerified) {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
-      } else if (result.profileSaved || context.read<AppStateProvider>().userId != null) {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: email)), (_) => false);
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
-      }
-    } catch (error) {
-      if (mounted) ToastUtils.show(authErrorMessage(error, registering: true), backgroundColor: AppTheme.errorColor);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  InputDecoration _decoration(String hint, {Widget? suffix}) => InputDecoration(
-    hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondaryColor), filled: true, fillColor: AppTheme.surfaceColor,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16), suffixIcon: suffix,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2)),
-    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppTheme.errorColor)),
-    errorStyle: const TextStyle(color: AppTheme.errorColor),
-  );
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppTheme.backgroundColor,
-    appBar: AppBar(title: const Text('إنشاء حساب'), leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop())),
-    body: SafeArea(child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(24, 18, 24, 32), child: Form(key: _formKey, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const AuthBranding(),
-      const Text('إنشاء حساب جديد', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 24),
-      TextFormField(controller: _username, onChanged: _onUsernameChanged, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white), decoration: _decoration('Username', suffix: _checkingUsername ? const Padding(padding: EdgeInsets.all(14), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))) : null), validator: (v) => !UsernameValidation.isValid(v ?? '') ? 'Username غير صالح' : null),
-      if (_usernameMessage != null) Padding(padding: const EdgeInsets.only(top: 6, right: 4), child: Text(_usernameMessage!, style: TextStyle(color: _usernameAvailable == true ? Colors.greenAccent : AppTheme.errorColor, fontSize: 12))),
-      const SizedBox(height: 14),
-      TextFormField(controller: _name, style: const TextStyle(color: Colors.white), decoration: _decoration('الاسم الظاهر'), validator: (v) => v == null || v.trim().length < 2 ? 'أدخل اسمًا من حرفين على الأقل' : null),
-      const SizedBox(height: 14),
-      TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white), decoration: _decoration('البريد الإلكتروني'), validator: (v) => v == null || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()) ? 'أدخل بريدًا إلكترونيًا صحيحًا' : null),
-      const SizedBox(height: 14),
-      TextFormField(controller: _password, obscureText: _obscure, style: const TextStyle(color: Colors.white), decoration: _decoration('كلمة المرور', suffix: IconButton(icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, color: AppTheme.textSecondaryColor), onPressed: () => setState(() => _obscure = !_obscure))), validator: (v) => v == null || v.length < 8 ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل' : null),
-      const SizedBox(height: 14),
-      TextFormField(controller: _confirm, obscureText: _obscureConfirm, style: const TextStyle(color: Colors.white), decoration: _decoration('تأكيد كلمة المرور', suffix: IconButton(icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, color: AppTheme.textSecondaryColor), onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm))), validator: (v) => v != _password.text ? 'كلمتا المرور غير متطابقتين' : null),
-      const SizedBox(height: 14),
-      OutlinedButton.icon(onPressed: _chooseBirthDate, icon: const Icon(Icons.cake_outlined), label: Text(_birthDate == null ? 'اختيار تاريخ الميلاد' : 'تاريخ الميلاد: ${_birthDate!.year}-${_birthDate!.month.toString().padLeft(2, '0')}-${_birthDate!.day.toString().padLeft(2, '0')}')),
-      const SizedBox(height: 10),
-      DropdownButtonFormField<String>(value: _country, dropdownColor: AppTheme.surfaceColor, decoration: _decoration('الدولة'), items: _countries.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(), onChanged: (v) => setState(() => _country = v), validator: (v) => v == null ? 'اختر الدولة' : null),
-      const SizedBox(height: 10),
-      OutlinedButton.icon(onPressed: _chooseImage, icon: const Icon(Icons.photo_library_outlined), label: Text(_imagePath == null ? 'اختيار صورة البروفايل (اختياري)' : 'تغيير صورة البروفايل')),
-      if (_imagePath != null) Padding(padding: const EdgeInsets.only(top: 10), child: ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.file(File(_imagePath!), height: 150, fit: BoxFit.cover))),
-      const SizedBox(height: 24),
-      SizedBox(height: 54, child: ElevatedButton(onPressed: _loading ? null : _register, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('إنشاء الحساب', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)))),
-      TextButton(onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('لديك حساب؟ تسجيل الدخول', style: TextStyle(color: Colors.white))),
-    ])))),
-  );
+  final _name=TextEditingController(), _email=TextEditingController(), _username=TextEditingController(), _password=TextEditingController(), _confirm=TextEditingController();
+  Timer? _timer; int _step=0; bool _loading=false, _checking=false, _obscure=true, _obscureConfirm=true; bool? _available; String? _message, _country, _imagePath; DateTime? _birthDate;
+  static const countries=['السعودية','مصر','الإمارات','الكويت','قطر','الأردن','العراق','المغرب','الجزائر','تونس','ليبيا','فلسطين','اليمن','عُمان','البحرين','سوريا','لبنان','أخرى'];
+  @override void dispose(){_timer?.cancel(); for(final c in [_name,_email,_username,_password,_confirm])c.dispose(); super.dispose();}
+  void _usernameChanged(String value){_timer?.cancel(); final v=UsernameValidation.normalize(value); setState((){_available=null;_message=null;}); if(v.isEmpty)return; if(!UsernameValidation.isValid(v)){setState(()=>_message='استخدم الأحرف الإنجليزية الصغيرة والأرقام و _ فقط');return;} setState((){_checking=true;_message='جارٍ التحقق...';}); _timer=Timer(const Duration(milliseconds:450),()async{try{final ok=await AppwriteService.instance.isUsernameAvailable(v);if(!mounted||UsernameValidation.normalize(_username.text)!=v)return;setState(()=>_available=ok);setState(()=>_message=ok?'اسم المستخدم متاح':'اسم المستخدم مستخدم بالفعل');}catch(_){if(mounted)setState((){_checking=false;_message='تعذر التحقق من اسم المستخدم';});}});}
+  Future<void> _date()async{final d=await showDatePicker(context:context,firstDate:DateTime(1900),lastDate:DateTime.now(),initialDate:DateTime.now().subtract(const Duration(days:6570)),helpText:'اختر تاريخ الميلاد');if(d!=null)setState(()=>_birthDate=d);}
+  Future<void> _image()async{try{final r=await FilePicker.platform.pickFiles(type:FileType.image,allowMultiple:false);if(r?.files.single.path!=null)setState(()=>_imagePath=r!.files.single.path);}catch(_){if(mounted)ToastUtils.show('تعذر اختيار الصورة، يمكنك المتابعة بدونها.',backgroundColor:AppTheme.errorColor);}}
+  bool _validStep(){switch(_step){case 0:return _email.text.trim().isNotEmpty&&RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(_email.text.trim());case 1:return UsernameValidation.isValid(_username.text)&&_available==true;case 2:return _name.text.trim().length>=2;case 3:return _password.text.length>=8;case 4:return _confirm.text==_password.text&&!_confirm.text.isEmpty;case 5:return _birthDate!=null;case 6:return _country!=null;default:return true;}}
+  void _next(){if(!_validStep()){ToastUtils.show(_step==1?(_message??'تحقق من اسم المستخدم'): 'أكمل هذه الخطوة بشكل صحيح',backgroundColor:AppTheme.errorColor);return;}if(_step<6){setState(()=>_step++);}else _register();}
+  Future<void> _register()async{setState(()=>_loading=true);final email=_email.text.trim();try{final result=await context.read<AppStateProvider>().register(email:email,password:_password.text,name:_name.text.trim(),username:_username.text.trim().toLowerCase(),birthDate:_birthDate!.toIso8601String().split('T').first,country:_country!,profileImagePath:_imagePath);if(!mounted)return;ToastUtils.show(result.warning??'تم إنشاء الحساب بنجاح. تحقق من بريدك الإلكتروني للمتابعة.',backgroundColor:Colors.green);if(context.read<AppStateProvider>().emailVerified){Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}else{Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>EmailVerificationScreen(email:email)),(_)=>false);}}catch(e){if(mounted)ToastUtils.show(authErrorMessage(e,registering:true),backgroundColor:AppTheme.errorColor);}finally{if(mounted)setState(()=>_loading=false);}}
+  InputDecoration dec(String hint,{Widget?suffix})=>InputDecoration(hintText:hint,hintStyle:const TextStyle(color:AppTheme.textSecondaryColor),filled:true,fillColor:AppTheme.surfaceColor,contentPadding:const EdgeInsets.symmetric(horizontal:16,vertical:16),suffixIcon:suffix,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:const BorderSide(color:AppTheme.primaryColor,width:1.5)));
+  @override Widget build(BuildContext context)=>Scaffold(backgroundColor:AppTheme.backgroundColor,appBar:AppBar(title:const Text('مستخدم جديد')),body:SafeArea(child:ListView(padding:const EdgeInsets.fromLTRB(24,18,24,30),children:[const AuthBranding(),const SizedBox(height:18),const Text('إنشاء حساب جديد',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontSize:27,fontWeight:FontWeight.w900)),const SizedBox(height:8),const Text('أكمل بياناتك خطوة بخطوة',textAlign:TextAlign.center,style:TextStyle(color:AppTheme.textSecondaryColor)),const SizedBox(height:22),_Progress(current:_step+1,total:7),const SizedBox(height:24),AnimatedSwitcher(duration:const Duration(milliseconds:260),child:_body()),const SizedBox(height:24),Row(children:[if(_step>0)Expanded(child:OutlinedButton(onPressed:_loading?null:()=>setState(()=>_step--),child:const Text('رجوع'))),if(_step>0)const SizedBox(width:10),Expanded(child:ElevatedButton(onPressed:_loading?null:_next,style:ElevatedButton.styleFrom(backgroundColor:AppTheme.primaryColor,padding:const EdgeInsets.symmetric(vertical:15),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))),child:_loading?const SizedBox(width:21,height:21,child:CircularProgressIndicator(strokeWidth:2,color:Colors.white)):Text(_step==6?'إنشاء الحساب':'متابعة',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold))))])])));
+  Widget _body(){switch(_step){case 0:return _field('البريد الإلكتروني',_email,keyboard:TextInputType.emailAddress);case 1:return Column(key:const ValueKey(1),crossAxisAlignment:CrossAxisAlignment.stretch,children:[const Text('Username',style:TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),const SizedBox(height:10),TextField(controller:_username,onChanged:_usernameChanged,textDirection:TextDirection.ltr,style:const TextStyle(color:Colors.white),decoration:dec('username',suffix:_checking?const Padding(padding:EdgeInsets.all(14),child:SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2))):null)),if(_message!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(_message!,style:TextStyle(color:_available==true?Colors.greenAccent:AppTheme.errorColor)))]);case 2:return _field('الاسم الظاهر',_name);case 3:return _field('كلمة المرور',_password,obscure:_obscure,suffix:IconButton(icon:Icon(_obscure?Icons.visibility_off:Icons.visibility,color:AppTheme.textSecondaryColor),onPressed:()=>setState(()=>_obscure=!_obscure)));case 4:return _field('تأكيد كلمة المرور',_confirm,obscure:_obscureConfirm,suffix:IconButton(icon:Icon(_obscureConfirm?Icons.visibility_off:Icons.visibility,color:AppTheme.textSecondaryColor),onPressed:()=>setState(()=>_obscureConfirm=!_obscureConfirm)));case 5:return _choice(key:'date',icon:Icons.cake_outlined,label:_birthDate==null?'اختيار تاريخ الميلاد':'تاريخ الميلاد: ${_birthDate!.year}-${_birthDate!.month.toString().padLeft(2,'0')}-${_birthDate!.day.toString().padLeft(2,'0')}',onTap:_date);case 6:return Column(key:const ValueKey(6),crossAxisAlignment:CrossAxisAlignment.stretch,children:[DropdownButtonFormField<String>(value:_country,dropdownColor:AppTheme.surfaceColor,decoration:dec('الدولة'),items:countries.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),onChanged:(v)=>setState(()=>_country=v)),const SizedBox(height:14),_choice(key:'image',icon:Icons.photo_library_outlined,label:_imagePath==null?'اختيار صورة البروفايل (اختياري)':'تغيير صورة البروفايل',onTap:_image),if(_imagePath!=null)Padding(padding:const EdgeInsets.only(top:12),child:ClipRRect(borderRadius:BorderRadius.circular(14),child:Image.file(File(_imagePath!),height:150,fit:BoxFit.cover)))]);default:return const SizedBox.shrink();}}
+  Widget _field(String label,TextEditingController c,{TextInputType?keyboard,bool obscure=false,Widget?suffix})=>Column(key:ValueKey(label),crossAxisAlignment:CrossAxisAlignment.stretch,children:[Text(label,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),const SizedBox(height:10),TextField(controller:c,autofocus:true,keyboardType:keyboard,obscureText:obscure,textDirection:keyboard==TextInputType.emailAddress?TextDirection.ltr:null,style:const TextStyle(color:Colors.white),decoration:dec(label,suffix:suffix))]);
+  Widget _choice({required Key key,required IconData icon,required String label,required VoidCallback onTap})=>OutlinedButton.icon(key:key,onPressed:onTap,icon:Icon(icon),label:Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text(label)),style:OutlinedButton.styleFrom(shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(15))));
 }
+class _Progress extends StatelessWidget{final int current,total;const _Progress({required this.current,required this.total});@override Widget build(BuildContext context)=>Row(children:[Expanded(child:LinearProgressIndicator(value:current/total,minHeight:6,borderRadius:BorderRadius.circular(10),backgroundColor:AppTheme.surfaceColor,color:AppTheme.primaryColor)),const SizedBox(width:12),Text('$current / $total',style:const TextStyle(color:AppTheme.textSecondaryColor,fontWeight:FontWeight.w700))]);}

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lottie/lottie.dart';
 import 'home_screen.dart';
 import 'landing_screen.dart';
+import 'auth_choice_screen.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../providers/app_state_provider.dart';
@@ -65,11 +67,12 @@ class _SplashScreenState extends State<SplashScreen>
     await Future.delayed(Duration(milliseconds: 500));
 
     if (!isLoggedIn) {
-      // If not logged in, navigate to login screen
+      final prefs = await SharedPreferences.getInstance();
+      final accepted = prefs.getBool('onboarding_policy_accepted') ?? false;
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LandingScreen()),
+          MaterialPageRoute(builder: (context) => accepted ? const AuthChoiceScreen() : const LandingScreen()),
         );
       }
       return;
