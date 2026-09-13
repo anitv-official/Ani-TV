@@ -38,7 +38,7 @@ class AppStateProvider extends ChangeNotifier {
   List<dynamic> _comicHistory = [];
   bool _isLoading = false;
   String _errorMessage = '';
-  bool _initialized = false;
+  Future<void>? _initializationFuture;
 
   String get username => _username;
   String get displayName => _displayName;
@@ -56,9 +56,15 @@ class AppStateProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
 
-  Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
+  Future<void> initialize() {
+    final running = _initializationFuture;
+    if (running != null) return running;
+    final future = _initializeInternal();
+    _initializationFuture = future;
+    return future;
+  }
+
+  Future<void> _initializeInternal() async {
     await _loadUserData();
     // Authenticated users are hydrated by _syncAccountFromCloud. Reading the
     // local cache afterwards used to overwrite that cloud snapshot.
@@ -69,8 +75,9 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isDarkMode = prefs.getBool('dark_mode') ?? true;
       final user = await _appwrite.getCurrentUser();
+      final themeScope = user == null ? 'guest' : 'user_${user.$id}';
+      _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
       await _applyAuthenticatedUser(user, syncCloud: user != null);
       notifyListeners();
     } catch (_) {
@@ -180,6 +187,7 @@ class AppStateProvider extends ChangeNotifier {
       // _applyAuthenticatedUser already hydrates the account from Appwrite.
       // Loading SharedPreferences after that used to overwrite fresh cloud
       // data with an old/empty local snapshot.
+      if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
       _clearUser();
@@ -195,6 +203,7 @@ class AppStateProvider extends ChangeNotifier {
       _animeHistory = [];
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
       _clearUser();
@@ -210,6 +219,7 @@ class AppStateProvider extends ChangeNotifier {
       _animeHistory = [];
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
       _clearUser();
@@ -307,7 +317,11 @@ class AppStateProvider extends ChangeNotifier {
       if (username != null) { _username = username; await prefs.setString('username', username); }
       if (email != null) { _email = email; await prefs.setString('email', email); }
       if (isLoggedIn != null) { _isLoggedIn = isLoggedIn; await prefs.setBool('isLoggedIn', isLoggedIn); }
-      if (isDarkMode != null) { _isDarkMode = isDarkMode; await prefs.setBool('dark_mode', isDarkMode); }
+      if (isDarkMode != null) {
+        _isDarkMode = isDarkMode;
+        final scope = _userId == null ? 'guest' : 'user_$_userId';
+        await prefs.setBool('dark_mode_$scope', isDarkMode);
+      }
       notifyListeners();
     } catch (_) { _setErrorMessage('تعذر حفظ بيانات الحساب. حاول مرة أخرى.'); }
   }
@@ -393,7 +407,8 @@ class AppStateProvider extends ChangeNotifier {
         _setErrorMessage('سجّل الدخول لحفظ المفضلة على حسابك.');
         return;
       }
-      final existing = await _appwrite.findFavorite(userId: _userId!, itemId: itemId);
+      final source = (item['source'] ?? '').toString();
+      final existing = await _appwrite.findFavorite(userId: _userId!, itemId: itemId, source: source);
       if (existing != null) return;
       final document = await _appwrite.createFavorite(userId: _userId!, data: {
         'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
@@ -413,7 +428,11 @@ class AppStateProvider extends ChangeNotifier {
       final list = List<dynamic>.from(isAnime ? _favoriteAnime : _favoriteComics);
       final removed = list.firstWhere((item) => item['id'] == id, orElse: () => null);
       if (!_isLoggedIn || _userId == null || removed == null) return;
-      final document = await _appwrite.findFavorite(userId: _userId!, itemId: (removed['url'] ?? removed['itemId']).toString());
+      final document = await _appwrite.findFavorite(
+        userId: _userId!,
+        itemId: (removed['url'] ?? removed['itemId']).toString(),
+        source: (removed['source'] ?? '').toString(),
+      );
       if (document != null) await _appwrite.deleteFavorite(document.$id);
       list.removeWhere((item) => item['id'] == id);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }

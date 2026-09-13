@@ -77,11 +77,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await provider.initialize();
     final userId = provider.userId;
     final prefs = await SharedPreferences.getInstance();
+    final scope = userId == null ? 'guest' : 'user_$userId';
     if (!mounted) return;
     setState(() {
-      _streamCellular = prefs.getBool('stream_cellular') ?? false;
-      _showMatureContent = prefs.getBool('show_mature_content') ?? false;
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _streamCellular = prefs.getBool('stream_cellular_$scope') ?? false;
+      _showMatureContent = prefs.getBool('show_mature_content_$scope') ?? false;
+      _notificationsEnabled = prefs.getBool('notifications_enabled_$scope') ?? true;
       _avatarPath = prefs.getString(userId == null ? 'profile_avatar_path' : 'profile_avatar_path_$userId');
     });
   }
@@ -107,7 +108,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _savePreference(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(key, value);
+    final userId = context.read<AppStateProvider>().userId;
+    final scope = userId == null ? 'guest' : 'user_$userId';
+    await prefs.setBool('${key}_$scope', value);
   }
 
   void _showErrorDialog(String title, String message) {
