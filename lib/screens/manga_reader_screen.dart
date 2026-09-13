@@ -25,6 +25,9 @@ class MangaReaderScreen extends StatefulWidget {
   final String? prevChapterUrl;
   final String? chapterListUrl;
   final String? comicImageUrl;
+  final List<String>? nextOfflinePages;
+  final String? nextOfflineTitle;
+  final String? nextOfflineChapterId;
 
   MangaReaderScreen({
     this.url,
@@ -35,6 +38,9 @@ class MangaReaderScreen extends StatefulWidget {
     this.prevChapterUrl,
     this.chapterListUrl,
     this.comicImageUrl,
+    this.nextOfflinePages,
+    this.nextOfflineTitle,
+    this.nextOfflineChapterId,
   });
 
   @override
@@ -57,6 +63,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   String? _error;
   bool _isPreloading = false;
   int _preloadedCount = 0;
+  bool _autoTransitionScheduled = false;
 
   // Navigasi chapter
   String? _nextChapterUrl;
@@ -86,6 +93,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
     
     _scrollController = ScrollController(); // Init scroll controller
+    _scrollController.addListener(_handleEndOfChapter);
     
     _transformationController = TransformationController();
     _animationController = AnimationController(
@@ -159,6 +167,21 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
         _error = e.toString();
       });
     }
+  }
+
+  void _handleEndOfChapter() {
+    if (!_scrollController.hasClients || _autoTransitionScheduled || _loading || _pages.isEmpty) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 48) return;
+    if (!_hasNextChapter && (widget.nextOfflinePages == null || widget.nextOfflinePages!.isEmpty)) return;
+    _autoTransitionScheduled = true;
+    Future<void>.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted || !_scrollController.hasClients || _scrollController.position.pixels < _scrollController.position.maxScrollExtent - 48) {
+        _autoTransitionScheduled = false;
+        return;
+      }
+      _navigateToNextChapter();
+    });
   }
 
   Future<void> _saveToHistory(Map<String, dynamic> chapter, String url) async {
@@ -382,7 +405,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
         backgroundColor: _isDarkMode ? Colors.black : Colors.white,
         body: Center(
           child: CustomLoadingWidget(
-            message: 'Loading chapter...',
+            message: 'جارٍ تحميل الفصل...',
             color: AppTheme.primaryColor,
           ),
         ),
@@ -394,7 +417,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
         backgroundColor: _isDarkMode ? Colors.black : Colors.white,
         body: Center(
           child: CustomLoadingWidget(
-            message: 'Preloading chapter... (${_preloadedCount}/${_pages.length})',
+            message: 'جارٍ تجهيز صفحات الفصل... (${_preloadedCount}/${_pages.length})',
             color: AppTheme.primaryColor,
           ),
         ),
@@ -550,6 +573,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
 
   // Navigasi ke chapter berikutnya
   void _navigateToNextChapter() {
+    _autoTransitionScheduled = true;
     if (_nextChapterUrl != null && _nextChapterUrl!.isNotEmpty) {
       Navigator.pushReplacement(
         context,
@@ -560,11 +584,21 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
           ),
         ),
       );
-    } else {
-      ToastUtils.show(
-        'Tidak ada chapter selanjutnya',
-        backgroundColor: AppTheme.primaryColor,
+    } else if (widget.nextOfflinePages != null && widget.nextOfflinePages!.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MangaReaderScreen(
+            pages: widget.nextOfflinePages,
+            title: widget.nextOfflineTitle ?? widget.title,
+            chapterId: widget.nextOfflineChapterId ?? widget.chapterId,
+            comicImageUrl: widget.comicImageUrl,
+          ),
+        ),
       );
+    } else {
+      _autoTransitionScheduled = false;
+      ToastUtils.show('لا يوجد فصل تالٍ', backgroundColor: AppTheme.primaryColor);
     }
   }
 
@@ -582,7 +616,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       );
     } else {
       ToastUtils.show(
-        'Ini adalah chapter pertama',
+        'هذا أول فصل',
         backgroundColor: AppTheme.primaryColor,
       );
     }
@@ -635,7 +669,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(
-                    "Select Chapter",
+                    'اختر الفصل',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -656,7 +690,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                       } else if (snapshot.hasError) {
                         return Center(
                           child: Text(
-                            'Failed to load chapters',
+                            'تعذر تحميل الفصول',
                             style: TextStyle(color: Colors.white54),
                           ),
                         );
@@ -665,7 +699,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                          if (chapters == null || chapters.isEmpty) {
                             return Center(
                               child: Text(
-                                'No chapters found',
+                                'لا توجد فصول',
                                 style: TextStyle(color: Colors.white54),
                               ),
                             );
@@ -751,7 +785,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                     setState(() => _isDarkMode = !_isDarkMode);
                     _savePreferences();
                   },
-                  tooltip: _isDarkMode ? 'Light Mode' : 'Dark Mode',
+                  tooltip: _isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن',
                 ),
               ],
             ),
@@ -769,7 +803,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                   IconButton(
                     icon: Icon(Icons.skip_previous, color: Colors.white),
                     onPressed: _navigateToPrevChapter,
-                    tooltip: 'Chapter Sebelumnya',
+                    tooltip: 'الفصل السابق',
                   )
                 else
                   // Widget kosong untuk menjaga layout tetap seimbang
@@ -777,14 +811,14 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                 IconButton(
                   icon: Icon(Icons.list, color: Colors.white),
                   onPressed: _navigateToChapterList,
-                  tooltip: 'Daftar Chapter',
+                  tooltip: 'قائمة الفصول',
                 ),
                 // Tombol next hanya ditampilkan jika ada chapter selanjutnya
                 if (_hasNextChapter)
                   IconButton(
                     icon: Icon(Icons.skip_next, color: Colors.white),
                     onPressed: _navigateToNextChapter,
-                    tooltip: 'Chapter Selanjutnya',
+                    tooltip: 'الفصل التالي',
                   )
                 else
                   // Widget kosong untuk menjaga layout tetap seimbang

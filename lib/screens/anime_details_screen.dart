@@ -251,25 +251,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<bool> _downloadEpisodeFromButton(BuildContext context, Map<String, dynamic> episode) async {
-    try {
-      final streams = await ApiService.fetchEpisodeStreams(episode['url']);
-      final groups = streams?['download_links'] as Map<String, dynamic>?;
-      final firstGroup = groups?.values.firstWhere(
-            (value) => value is List && value.isNotEmpty,
-            orElse: () => const [],
-          ) as List?;
-      if (firstGroup == null || firstGroup.isEmpty) {
-        if (context.mounted) ToastUtils.show('لا يوجد رابط تنزيل لهذه الحلقة', backgroundColor: Colors.red);
-        return false;
-      }
-      return await _downloadAnimeEpisodeInternal(
-        Map<String, dynamic>.from(firstGroup.first as Map),
-        episode,
-      );
-    } catch (e) {
-      if (context.mounted) ToastUtils.show('تعذر تنزيل الحلقة: $e', backgroundColor: Colors.red);
-      return false;
-    }
+    if (context.mounted) ToastUtils.show('تنزيل الأفلام والأنمي والدراما قريبًا', backgroundColor: AppTheme.primaryColor);
+    return false;
   }
 
   Widget _buildActionButtons(BuildContext context, Map<String, dynamic> anime) {
@@ -291,15 +274,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: SecondaryButton(
-                label: 'تنزيل',
+                label: 'التنزيل قريبًا',
                 icon: Icons.download_rounded,
-                onPressed: () {
-                   if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
-                      _showDownloadBottomSheet(context, anime['episodes'][0]);
-                   } else {
-                       ToastUtils.show('لا توجد حلقات متاحة للتنزيل', backgroundColor: Colors.orange);
-                   }
-                },
+                onPressed: () => ToastUtils.show('تنزيل الأفلام والأنمي والدراما قريبًا', backgroundColor: AppTheme.primaryColor),
               ),
             ),
           ],

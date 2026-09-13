@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class DownloadService {
   static const _key = 'anitv_downloads';
   static const _channel = MethodChannel('com.anitv.app/downloads');
+  static Future<void> _writeQueue = Future<void>.value();
 
   static Future<List<Map<String, dynamic>>> list() async {
     final prefs = await SharedPreferences.getInstance();
@@ -19,11 +20,16 @@ class DownloadService {
   }
 
   static Future<void> _add(Map<String, dynamic> entry) async {
-    final prefs = await SharedPreferences.getInstance();
-    final entries = await list();
-    entries.removeWhere((item) => item['id'] == entry['id']);
-    entries.insert(0, entry);
-    await prefs.setString(_key, jsonEncode(entries));
+    _writeQueue = _writeQueue.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_key) ?? '[]';
+      final decoded = jsonDecode(raw);
+      final entries = decoded is List ? decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+      entries.removeWhere((item) => item['id'] == entry['id']);
+      entries.insert(0, entry);
+      await prefs.setString(_key, jsonEncode(entries));
+    });
+    await _writeQueue;
   }
 
   static Future<String> saveMangaChapter({

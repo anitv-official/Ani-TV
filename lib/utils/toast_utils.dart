@@ -12,7 +12,7 @@ class ToastUtils {
   }) {
     final messenger = scaffoldMessengerKey.currentState;
     if (messenger == null) return;
-    final color = backgroundColor ?? Colors.blueGrey;
+    final color = backgroundColor ?? const Color(0xFF263238);
     messenger
       ..clearSnackBars()
       ..showSnackBar(
@@ -38,12 +38,13 @@ class ToastUtils {
               ),
             ],
           ),
-          backgroundColor: color.withOpacity(.96),
+          backgroundColor: color.withOpacity(.94),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 280),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          elevation: 12,
+          duration: const Duration(milliseconds: 2400),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 86),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withOpacity(.10))),
+          elevation: 4,
         ),
       );
   }

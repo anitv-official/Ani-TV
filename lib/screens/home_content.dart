@@ -261,122 +261,61 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Widget _buildHeroSection() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final heroHeight = (screenHeight * 0.42).clamp(280.0, 420.0);
     final item = featuredContent.isEmpty ? null : featuredContent[_currentCarouselIndex];
-
-    return SizedBox(
-      height: heroHeight,
-      child: Stack(
-        fit: StackFit.expand,
+    final imageHeight = (MediaQuery.of(context).size.width * .55).clamp(210.0, 300.0);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (featuredContent.isNotEmpty)
-            CarouselSlider(
-              options: CarouselOptions(
-                height: heroHeight,
-                viewportFraction: 1.0,
-                autoPlay: true,
-                autoPlayInterval: const Duration(seconds: 5),
-                onPageChanged: (index, reason) => setState(() => _currentCarouselIndex = index),
+          Consumer<AppStateProvider>(
+            builder: (context, appState, _) => Row(children: [
+              const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900)),
+              const Spacer(),
+              IconButton(
+                tooltip: 'التحديثات',
+                onPressed: _isUpdateAvailable ? _showUpdateSheet : null,
+                icon: Icon(_isUpdateAvailable ? Icons.notifications_active_rounded : Icons.notifications_none_rounded, color: Colors.white),
               ),
-              items: featuredContent.map((contentItem) {
-                return PosterImage(
-                  url: (contentItem['image_url'] ?? '').toString(),
-                  borderRadius: BorderRadius.zero,
-                  width: double.infinity,
-                  height: heroHeight,
-                );
-              }).toList(),
-            )
-          else
-            Container(color: AppTheme.surfaceColor),
-          IgnorePointer(
-            child: Container(decoration: BoxDecoration(gradient: AppTheme.heroOverlay)),
+              if (appState.isLoggedIn)
+                InkWell(borderRadius: BorderRadius.circular(22), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())), child: _buildHeaderAvatar(appState))
+              else
+                TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('دخول')),
+            ]),
           ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Consumer<AppStateProvider>(
-                    builder: (context, appState, _) => Row(
-                    children: [
-                      const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
-                      const Spacer(),
-                      IconButton(
-                        tooltip: 'التحديثات',
-                        onPressed: _isUpdateAvailable ? _showUpdateSheet : null,
-                        icon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              _isUpdateAvailable ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
-                              color: Colors.white,
-                            ),
-                            if (_isUpdateAvailable)
-                              Positioned(
-                                right: -1,
-                                top: -1,
-                                child: Container(
-                                  width: 9,
-                                  height: 9,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 1.4),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (appState.isLoggedIn)
-                        InkWell(
-                          borderRadius: BorderRadius.circular(22),
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())),
-                          child: _buildHeaderAvatar(appState),
-                        )
-                      else
-                        TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('دخول')),
-                    ],
-                    ),
+          const SizedBox(height: 6),
+          SearchLaunchField(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)))),
+          const SizedBox(height: 14),
+          if (item != null)
+            Container(
+              decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppTheme.borderColor)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                SizedBox(
+                  height: imageHeight,
+                  child: CarouselSlider(
+                    options: CarouselOptions(height: imageHeight, viewportFraction: 1, autoPlay: true, autoPlayInterval: const Duration(seconds: 5), onPageChanged: (index, reason) => setState(() => _currentCarouselIndex = index)),
+                    items: featuredContent.map((contentItem) => PosterImage(url: (contentItem['image_url'] ?? '').toString(), borderRadius: BorderRadius.zero, width: double.infinity, height: imageHeight)).toList(),
                   ),
-                  const SizedBox(height: 8),
-                  SearchLaunchField(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-                  ),
-                  const Spacer(),
-                  if (item != null) ...[
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     SourceBadge(label: item['type'] == 'comic' ? 'مانجا' : (item['category'] == 'drama' ? 'دراما' : 'أنمي')),
                     const SizedBox(height: 8),
-                    Text(
-                      item['title'] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, height: 1.2),
-                    ),
+                    Text(item['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, height: 1.2)),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        PrimaryButton(
-                          label: item['type'] == 'comic' ? 'اقرأ الآن' : 'شاهد الآن',
-                          icon: item['type'] == 'comic' ? Icons.menu_book_rounded : Icons.play_arrow_rounded,
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'),
-                        ),
-                        const SizedBox(width: 10),
-                        SecondaryButton(
-                          label: 'التفاصيل',
-                          onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+                    Row(children: [
+                      Expanded(child: PrimaryButton(label: item['type'] == 'comic' ? 'اقرأ الآن' : 'شاهد الآن', icon: item['type'] == 'comic' ? Icons.menu_book_rounded : Icons.play_arrow_rounded, onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'))),
+                      const SizedBox(width: 10),
+                      Expanded(child: SecondaryButton(label: 'التفاصيل', onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'))),
+                    ]),
+                  ]),
+                ),
+              ]),
+            )
+          else
+            Container(height: imageHeight, decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(22)), child: const Center(child: Icon(Icons.movie_outlined, color: AppTheme.textMutedColor, size: 42))),
         ],
       ),
     );

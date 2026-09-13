@@ -94,28 +94,34 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           subtitle: Text('${items.length} ${isManga ? 'فصل' : 'حلقة'} محفوظة', style: const TextStyle(color: AppTheme.textSecondaryColor)),
           trailing: IconButton(icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: Colors.white), onPressed: () => setState(() => open ? _expanded.remove(key) : _expanded.add(key))),
         ),
-        if (open) ...items.map((item) {
+        if (open) ...items.asMap().entries.map((downloadEntry) {
+          final item = downloadEntry.value;
           final exists = File(item['path']?.toString() ?? '').existsSync() || (isManga && Directory(item['path']?.toString() ?? '').existsSync());
           return ListTile(
             dense: true,
             leading: Icon(isManga ? Icons.menu_book : Icons.play_circle_outline, color: AppTheme.primaryColor),
             title: Text((isManga ? item['chapter'] : item['episode'])?.toString() ?? '', style: const TextStyle(color: Colors.white)),
             trailing: Icon(exists ? Icons.check_circle : Icons.error_outline, color: exists ? AppTheme.successColor : AppTheme.warningColor),
-            onTap: () => _open(item, isManga),
+            onTap: () => _open(item, isManga, nextItem: isManga && downloadEntry.key + 1 < items.length ? items[downloadEntry.key + 1] : null),
           );
         }),
       ]),
     );
   }
 
-  Future<void> _open(Map<String, dynamic> item, bool isManga) async {
+  Future<void> _open(Map<String, dynamic> item, bool isManga, {Map<String, dynamic>? nextItem}) async {
     final path = item['path']?.toString() ?? '';
     if (!File(path).existsSync() && isManga == false) return;
     if (isManga) {
       final files = Directory(path).existsSync() ? Directory(path).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.jpg')).toList() : <File>[];
       files.sort((a, b) => a.path.compareTo(b.path));
       if (!mounted || files.isEmpty) return;
-      Navigator.push(context, MaterialPageRoute(builder: (_) => MangaReaderScreen(pages: files.map((f) => f.path).toList(), title: item['title']?.toString(), chapterId: item['chapter']?.toString(), comicImageUrl: item['cover_url']?.toString())));
+      List<String>? nextPages;
+      if (nextItem != null && Directory(nextItem['path']?.toString() ?? '').existsSync()) {
+        final nextFiles = Directory(nextItem['path'].toString()).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.jpg')).toList()..sort((a, b) => a.path.compareTo(b.path));
+        nextPages = nextFiles.map((f) => f.path).toList();
+      }
+      Navigator.push(context, MaterialPageRoute(builder: (_) => MangaReaderScreen(pages: files.map((f) => f.path).toList(), title: item['title']?.toString(), chapterId: item['chapter']?.toString(), comicImageUrl: item['cover_url']?.toString(), nextOfflinePages: nextPages, nextOfflineTitle: nextItem?['chapter']?.toString(), nextOfflineChapterId: nextItem?['chapter']?.toString())));
     } else if (mounted) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: path, title: item['episode']?.toString() ?? 'حلقة', episodeId: path)));
     }
