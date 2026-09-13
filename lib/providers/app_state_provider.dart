@@ -202,6 +202,21 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    try {
+      final user = await _appwrite.loginWithGoogle();
+      _favoriteAnime = [];
+      _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
+      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
+    }
+  }
+
   Future<RegistrationResult> register({
     required String email,
     required String password,

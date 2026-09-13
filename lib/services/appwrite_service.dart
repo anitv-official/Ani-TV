@@ -64,6 +64,24 @@ class AppwriteService {
     return account.get();
   }
 
+  Future<models.User> loginWithGoogle() async {
+    final callback = await account.createOAuth2Token(
+      provider: OAuthProvider.google,
+      success: 'appwrite-callback-6aa4295900094d600163://auth/success',
+      failure: 'appwrite-callback-6aa4295900094d600163://auth/failure',
+    );
+    final uri = callback is Uri ? callback : Uri.tryParse(callback.toString());
+    final userId = uri?.queryParameters['userId'] ?? '';
+    final secret = uri?.queryParameters['secret'] ?? '';
+    if (userId.isEmpty || secret.isEmpty) {
+      throw GoogleAuthException(
+        uri?.queryParameters['error'] == 'access_denied' ? 'CANCELLED' : 'INVALID_CALLBACK',
+      );
+    }
+    await account.createSession(userId: userId, secret: secret);
+    return account.get();
+  }
+
   Future<models.User> loginWithUsername({required String username, required String password}) async {
     final normalized = username.trim().toLowerCase();
     late http.Response response;
@@ -271,6 +289,11 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
+  if (error is GoogleAuthException) {
+    return error.code == 'CANCELLED'
+        ? 'تم إلغاء تسجيل الدخول باستخدام Google.'
+        : 'تعذر تسجيل الدخول باستخدام Google. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
+  }
   if (error is AccountCreatedButSessionUnavailableException) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
   }
@@ -310,6 +333,11 @@ class UsernameLoginException implements Exception {
 class AccountCreatedButSessionUnavailableException implements Exception {
   final Object cause;
   const AccountCreatedButSessionUnavailableException(this.cause);
+}
+
+class GoogleAuthException implements Exception {
+  final String code;
+  const GoogleAuthException(this.code);
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
