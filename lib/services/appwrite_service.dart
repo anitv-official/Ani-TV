@@ -299,7 +299,7 @@ class AppwriteService {
   Future<void> _assertCurrentUser(String expectedUserId) async {
     final user = await getCurrentUser();
     if (user == null || user.$id != expectedUserId) {
-      throw const AppwriteException('The requested data does not belong to the current user.', 401);
+      throw AppwriteException('The requested data does not belong to the current user.', 401);
     }
   }
 }
