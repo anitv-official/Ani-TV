@@ -124,15 +124,37 @@ class AppwriteService {
   Future<models.Token> completePasswordRecovery({required String userId, required String secret, required String password}) async => account.updateRecovery(userId: userId, secret: secret, password: password);
 
   Future<models.Document?> getProfile(String userId) async {
-    final result = await databases.listDocuments(
-      databaseId: databaseId,
-      collectionId: profilesTableId,
-      queries: [Query.equal('userId', userId), Query.limit(1)],
-    );
-    return result.documents.isEmpty ? null : result.documents.first;
+    final rows = await _listProfileRows();
+    final matches = rows.where((row) => row['userId']?.toString() == userId);
+    return matches.isEmpty ? null : _profileRowToDocument(matches.first);
   }
 
   String normalizeUsername(String value) => value.trim().toLowerCase();
+
+  models.Document _profileRowToDocument(Map<String, dynamic> row) {
+    return models.Document.fromMap({
+      ...row,
+      r'$collectionId': profilesTableId,
+      r'$databaseId': databaseId,
+      r'$permissions': row[r'$permissions'] ?? <String>[],
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _listProfileRows() async {
+    final response = await client.call(
+      HttpMethod.get,
+      path: '/tablesdb/$databaseId/tables/$profilesTableId/rows',
+      params: const {'queries': ['limit(5000)']},
+    );
+    final body = response.data;
+    if (body is! Map || body['rows'] is! List) {
+      throw const FormatException('Invalid profile rows response');
+    }
+    return (body['rows'] as List)
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+  }
 
   Future<models.Document> ensureProfile({
     required String userId,
@@ -163,42 +185,56 @@ class AppwriteService {
     if (normalized.isNotEmpty && !await isUsernameAvailable(normalized)) {
       throw const UsernameTakenException();
     }
-    return databases.createDocument(
-      databaseId: databaseId,
-      collectionId: profilesTableId,
-      documentId: documentId,
-      data: {
-        'userId': userId,
-        'username': normalized,
-        'profileImageId': '',
-        'updatedAt': DateTime.now().toUtc().toIso8601String(),
-      },
-    );
+    try {
+      final response = await client.call(
+        HttpMethod.post,
+        path: '/tablesdb/$databaseId/tables/$profilesTableId/rows',
+        params: {
+          'rowId': documentId,
+          'data': {
+          'userId': userId,
+          'username': normalized,
+          'profileImageId': '',
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+          },
+        },
+      );
+      final body = response.data;
+      if (body is! Map) throw const FormatException('Invalid profile row response');
+      return _profileRowToDocument(Map<String, dynamic>.from(body));
+    } on AppwriteException catch (error) {
+      if (error.code == 409 || error.type.contains('duplicate')) {
+        throw const UsernameTakenException();
+      }
+      rethrow;
+    }
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId}) => databases.updateDocument(
-    databaseId: databaseId,
-    collectionId: profilesTableId,
-    documentId: documentId,
-    data: {
-      'username': normalizeUsername(username),
-      if (profileImageId != null) 'profileImageId': profileImageId,
-      'updatedAt': DateTime.now().toUtc().toIso8601String(),
-    },
-  );
+  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId}) async {
+    final response = await client.call(
+      HttpMethod.patch,
+      path: '/tablesdb/$databaseId/tables/$profilesTableId/rows/$documentId',
+      params: {
+        'data': {
+          'username': normalizeUsername(username),
+          if (profileImageId != null) 'profileImageId': profileImageId,
+          'updatedAt': DateTime.now().toUtc().toIso8601String(),
+        },
+      },
+    );
+    final body = response.data;
+    if (body is! Map) throw const FormatException('Invalid profile row response');
+    return _profileRowToDocument(Map<String, dynamic>.from(body));
+  }
 
   Future<bool> isUsernameAvailable(String username, {String? currentDocumentId}) async {
     final value = normalizeUsername(username);
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(value)) return false;
     // Read all bounded profile records and compare normalized values locally.
     // This also detects legacy records that were saved with uppercase letters.
-    final result = await databases.listDocuments(
-      databaseId: databaseId,
-      collectionId: profilesTableId,
-      queries: [Query.limit(5000)],
-    );
-    return !result.documents.any((document) =>
-      normalizeUsername((document.data['username'] ?? '').toString()) == value && document.$id != currentDocumentId);
+    final rows = await _listProfileRows();
+    return !rows.any((row) =>
+      normalizeUsername((row['username'] ?? '').toString()) == value && row['$id'] != currentDocumentId);
   }
 
   Future<models.Document> updateUsername({required String documentId, required String username}) => updateProfile(documentId: documentId, username: username);
