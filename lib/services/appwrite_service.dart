@@ -26,10 +26,7 @@ class AppwriteService {
   static const String favoritesTableId = '6aa58e3a003b23556872';
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
   static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
-  static const String usernameLoginFunctionId = String.fromEnvironment(
-    'APPWRITE_USERNAME_LOGIN_FUNCTION_ID',
-    defaultValue: 'username-login',
-  );
+  static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
 
   final Client client = Client();
   late final Account account;
@@ -138,12 +135,7 @@ class AppwriteService {
       data: {
         'userId': userId,
         'username': normalized,
-        'displayName': displayName.trim(),
-        'email': email.trim(),
-        'birthDate': birthDate,
-        'country': country.trim(),
         'profileImageId': '',
-        'createdAt': DateTime.now().toUtc().toIso8601String(),
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       },
     );

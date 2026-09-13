@@ -136,7 +136,7 @@ class AppStateProvider extends ChangeNotifier {
       'coverUrl': data['coverUrl'] ?? '',
       'source': data['source'] ?? '',
       'type': data['type'] ?? 'anime',
-      'addedAt': data['addedAt'] ?? '',
+      'addAt': data['addAt'] ?? '',
     };
   }
 
@@ -343,30 +343,21 @@ class AppStateProvider extends ChangeNotifier {
         _setErrorMessage('العنصر موجود بالفعل في المفضلة');
         return;
       }
-      final newItem = {...Map<String, dynamic>.from(item as Map), 'id': DateTime.now().millisecondsSinceEpoch.toString(), 'type': isAnime ? 'anime' : 'comic'};
+      if (!_isLoggedIn || _userId == null) {
+        _setErrorMessage('سجّل الدخول لحفظ المفضلة على حسابك.');
+        return;
+      }
+      final existing = await _appwrite.findFavorite(userId: _userId!, itemId: itemId);
+      if (existing != null) return;
+      final document = await _appwrite.createFavorite(userId: _userId!, data: {
+        'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
+        'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      final newItem = {...Map<String, dynamic>.from(item as Map), 'id': document.$id, 'type': isAnime ? 'anime' : 'comic'};
       list.insert(0, newItem);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
       notifyListeners();
-      // Do not write favorites for a session that has not completed the
-      // application's authenticated/verified state.
-      final userId = _isLoggedIn ? _userId : null;
-      if (userId != null) {
-        try {
-          final existing = await _appwrite.findFavorite(userId: userId, itemId: itemId);
-          if (existing == null) {
-            final document = await _appwrite.createFavorite(userId: userId, data: {
-              'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
-              'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addedAt': DateTime.now().toUtc().toIso8601String(),
-            });
-            newItem['id'] = document.$id;
-            await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
-          }
-        } catch (_) {
-          debugPrint('Favorite cloud insert failed for $userId/$itemId: $_');
-          _setErrorMessage('حُفظت المفضلة محليًا وستتم مزامنتها عند توفر الاتصال.');
-        }
-      }
     } catch (_) { _setErrorMessage('تعذر الإضافة إلى المفضلة. حاول مرة أخرى.'); }
   }
 
@@ -375,19 +366,13 @@ class AppStateProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final list = List<dynamic>.from(isAnime ? _favoriteAnime : _favoriteComics);
       final removed = list.firstWhere((item) => item['id'] == id, orElse: () => null);
+      if (!_isLoggedIn || _userId == null || removed == null) return;
+      final document = await _appwrite.findFavorite(userId: _userId!, itemId: (removed['url'] ?? removed['itemId']).toString());
+      if (document != null) await _appwrite.deleteFavorite(document.$id);
       list.removeWhere((item) => item['id'] == id);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
       notifyListeners();
-      if (_isLoggedIn && _userId != null && removed != null) {
-        try {
-          final document = await _appwrite.findFavorite(userId: _userId!, itemId: (removed['url'] ?? removed['itemId']).toString());
-          if (document != null) await _appwrite.deleteFavorite(document.$id);
-        } catch (_) {
-          debugPrint('Favorite cloud delete failed for ${_userId}/${removed['itemId'] ?? removed['url']}: $_');
-          _setErrorMessage('تمت الإزالة محليًا وتعذر تحديث السحابة مؤقتًا.');
-        }
-      }
     } catch (_) { _setErrorMessage('تعذر إزالة العنصر من المفضلة. حاول مرة أخرى.'); }
   }
 
