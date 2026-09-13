@@ -10,6 +10,7 @@ import 'manga_mello_source.dart';
 import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
+import 'drama_source.dart';
 import 'source_base.dart';
 
 class SourceRegistry {
@@ -29,6 +30,7 @@ class SourceRegistry {
       MangaSlayerSource(),
       MangaMelloSource(),
       HijalaSource(),
+      DramaSource(),
   ];
 
   static List<ContentSource> get animeSources =>
@@ -36,6 +38,9 @@ class SourceRegistry {
 
   static List<ContentSource> get mangaSources =>
       all.where((s) => s.kind == 'manga').toList();
+
+  static List<ContentSource> get dramaSources =>
+      all.where((s) => s.kind == 'drama').toList();
 
   static ContentSource? sourceFor(String url) {
     for (final source in all) {
@@ -45,7 +50,7 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> searchAnime(String query) async {
-    return _merge(animeSources.map((s) => s.search(query)), query: query);
+    return _merge([...animeSources, ...dramaSources].map((s) => s.search(query)), query: query);
   }
 
   static Future<List<Map<String, dynamic>>> searchManga(String query) async {
@@ -57,7 +62,7 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) async {
-    return _cached('anime:$page', () => _merge(animeSources.map((s) => s.latest(page: page))));
+    return _cached('anime:$page', () => _merge([...animeSources, ...dramaSources].map((s) => s.latest(page: page))));
   }
 
   static Future<List<Map<String, dynamic>>> latestManga({int page = 1}) async {

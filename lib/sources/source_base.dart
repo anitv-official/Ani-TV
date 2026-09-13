@@ -30,13 +30,14 @@ abstract class ContentSource {
     String description = '',
     String rating = '',
   }) {
-    final resolvedType = type.isNotEmpty ? type : (kind == 'anime' ? 'anime' : 'comic');
+    final resolvedType = type.isNotEmpty ? type : (kind == 'anime' ? 'anime' : kind == 'manga' ? 'comic' : kind);
+    final category = kind == 'anime' ? 'anime' : kind == 'manga' ? 'comic' : kind;
     return {
       'title': title,
       'url': url,
       'image_url': image,
       'type': resolvedType,
-      'category': kind == 'anime' ? 'anime' : 'comic',
+      'category': category,
       'source': name,
       'source_id': id,
       'genres': genres,
@@ -73,25 +74,17 @@ class SourceUtils {
   }
 
   static String cleanTitle(String title) {
-    return title
-        .replaceAll(RegExp(r'<[^>]+>'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .replaceAll('&amp;', '&')
-        .trim();
+    return title.replaceAll(RegExp(r'<[^>]+>'), ' ').replaceAll(RegExp(r'\s+'), ' ').replaceAll('&amp;', '&').trim();
   }
 
   static String episodeTitle(String raw, [int? number]) {
-    final cleaned = cleanTitle(raw)
-        .replaceAll(RegExp(r'مترجم.*$'), '')
-        .replaceAll(RegExp(r'اون.?لاين.*$', caseSensitive: false), '')
-        .trim();
+    final cleaned = cleanTitle(raw).replaceAll(RegExp(r'مترجم.*$'), '').replaceAll(RegExp(r'اون.?لاين.*$', caseSensitive: false), '').trim();
     if (cleaned.isNotEmpty) return cleaned;
     return number == null ? 'حلقة' : 'الحلقة $number';
   }
 
   static int? episodeNumber(String text) {
-    final match = RegExp(r'(?:الحلقة|حلقة|episode|ep)\s*[:\-]?\s*(\d+)', caseSensitive: false)
-        .firstMatch(text);
+    final match = RegExp(r'(?:الحلقة|حلقة|episode|ep)\s*[:\-]?\s*(\d+)', caseSensitive: false).firstMatch(text);
     if (match != null) return int.tryParse(match.group(1)!);
     final last = RegExp(r'(\d+)').allMatches(text).toList();
     if (last.isEmpty) return null;
@@ -99,8 +92,7 @@ class SourceUtils {
   }
 
   static int? chapterNumber(String text) {
-    final match = RegExp(r'(?:الفصل|chapter|ch)\s*[:\-]?\s*(\d+(?:\.\d+)?)', caseSensitive: false)
-        .firstMatch(text);
+    final match = RegExp(r'(?:الفصل|chapter|ch)\s*[:\-]?\s*(\d+(?:\.\d+)?)', caseSensitive: false).firstMatch(text);
     if (match != null) return int.tryParse(match.group(1)!.split('.').first);
     final last = RegExp(r'(\d+)').allMatches(text).toList();
     if (last.isEmpty) return null;
@@ -108,13 +100,6 @@ class SourceUtils {
   }
 
   static String seriesKey(String title) {
-    return cleanTitle(title)
-        .toLowerCase()
-        .replaceAll(RegExp(r'(الحلقة|حلقة|episode|ep)\s*\d+.*$', caseSensitive: false), '')
-        .replaceAll(RegExp(r'مترجم.*$'), '')
-        .replaceAll(RegExp(r'اون.?لاين', caseSensitive: false), '')
-        .replaceAll(RegExp(r'انمي|anime'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    return cleanTitle(title).toLowerCase().replaceAll(RegExp(r'(الحلقة|حلقة|episode|ep)\s*\d+.*$', caseSensitive: false), '').replaceAll(RegExp(r'مترجم.*$'), '').replaceAll(RegExp(r'اون.?لاين', caseSensitive: false), '').replaceAll(RegExp(r'انمي|anime'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 }
