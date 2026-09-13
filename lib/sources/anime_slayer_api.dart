@@ -8,14 +8,16 @@ import 'package:http/http.dart' as http;
 class AnimeSlayerApi {
   static const base = 'https://anslayer.com/anime/public/';
   static const _clientId = 'android-app2';
-  static const _clientSecret = '7befba6263cc14c90d2f1d6da2c5cf9b251bfbbd';
+  // Secrets must be supplied by a trusted proxy/build environment. Values
+  // are intentionally absent from source control and the default APK.
+  static const _clientSecret = String.fromEnvironment('ANISLAYER_CLIENT_SECRET');
   static const _certSha1 = '44D8B79265DDBB9C887320F64521A76D72F6D7D4';
-  static const _backupPassword = 'android-app9>E>VBa=X%;[5BX~=Q~K';
+  static const _backupPassword = String.fromEnvironment('ANISLAYER_BACKUP_PASSWORD');
   static final _client = http.Client();
 
   static Map<String, String> get _headers => {
         'Client-Id': _clientId,
-        'Client-Secret': _clientSecret,
+        if (_clientSecret.isNotEmpty) 'Client-Secret': _clientSecret,
         'Accept': 'application/json',
         'User-Agent': 'okhttp/3.12.12',
       };
@@ -177,6 +179,7 @@ class AnimeSlayerApi {
   }
 
   static String _decryptRnc(String value) {
+    if (_backupPassword.isEmpty) throw Exception('Anime Slayer secure configuration is unavailable');
     final data = base64.decode(value.trim());
     if (data.length < 66) throw Exception('Invalid CDN response');
     final salt = data.sublist(2, 10);

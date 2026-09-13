@@ -14,6 +14,12 @@ void main() {
       expect(UsernameValidation.isValid('اسم'), isFalse);
       expect(UsernameValidation.isValid('ani-tv'), isFalse);
     });
+
+    test('normalization is case insensitive and availability rules are shared', () {
+      expect(UsernameValidation.normalize('  Lord  '), 'lord');
+      expect(UsernameValidation.normalize('LORD123'), 'lord123');
+      expect(UsernameValidation.isValid(UsernameValidation.normalize('Lord_123')), isTrue);
+    });
   });
 
   group('authErrorMessage', () {

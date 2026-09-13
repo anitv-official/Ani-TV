@@ -25,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = false;
-  bool _useUsername = false;
 
   @override
   void initState() {
@@ -53,10 +52,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final provider = context.read<AppStateProvider>();
-      if (_useUsername) {
-        await provider.loginWithUsername(username: _emailController.text.trim(), password: _passwordController.text);
+      final identifier = _emailController.text.trim();
+      final isEmail = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(identifier);
+      if (!isEmail) {
+        await provider.loginWithUsername(username: identifier, password: _passwordController.text);
       } else {
-        await provider.login(email: _emailController.text.trim(), password: _passwordController.text);
+        await provider.login(email: identifier, password: _passwordController.text);
       }
       final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
@@ -162,22 +163,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 const Text('سجّل الدخول لمتابعة المشاهدة والقراءة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(child: ChoiceChip(label: const Text('البريد الإلكتروني'), selected: !_useUsername, onSelected: (_) => setState(() => _useUsername = false))),
-                    const SizedBox(width: 10),
-                    Expanded(child: ChoiceChip(label: const Text('Username'), selected: _useUsername, onSelected: (_) => setState(() => _useUsername = true))),
-                  ],
-                ),
-                const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
-                  keyboardType: _useUsername ? TextInputType.text : TextInputType.emailAddress,
+                  keyboardType: TextInputType.emailAddress,
                   textDirection: TextDirection.ltr,
                   textInputAction: TextInputAction.next,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _decoration(_useUsername ? 'Username' : 'البريد الإلكتروني'),
-                  validator: (value) => value == null || value.trim().isEmpty ? (_useUsername ? 'أدخل Username' : 'أدخل البريد الإلكتروني') : null,
+                  decoration: _decoration('البريد الإلكتروني أو اسم المستخدم'),
+                  validator: (value) => value == null || value.trim().isEmpty ? 'أدخل البريد الإلكتروني أو اسم المستخدم' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

@@ -278,15 +278,30 @@ class AppwriteService {
   Future<void> deleteProfileImage(String fileId) async { if (fileId.isNotEmpty) await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId); }
 
   Future<List<models.Document>> getFavorites(String userId) async {
+    await _assertCurrentUser(userId);
     final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)]);
     return result.documents;
   }
-  Future<models.Document?> findFavorite({required String userId, required String itemId}) async {
-    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.equal('itemId', itemId), Query.limit(1)]);
+  Future<models.Document?> findFavorite({required String userId, required String itemId, String? source}) async {
+    await _assertCurrentUser(userId);
+    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [
+      Query.equal('userId', userId), Query.equal('itemId', itemId),
+      if (source != null && source.isNotEmpty) Query.equal('source', source), Query.limit(1),
+    ]);
     return result.documents.isEmpty ? null : result.documents.first;
   }
-  Future<models.Document> createFavorite({required String userId, required Map<String, dynamic> data}) => databases.createDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: ID.unique(), data: {'userId': userId, ...data});
+  Future<models.Document> createFavorite({required String userId, required Map<String, dynamic> data}) async {
+    await _assertCurrentUser(userId);
+    return databases.createDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: ID.unique(), data: {'userId': userId, ...data});
+  }
   Future<void> deleteFavorite(String documentId) => databases.deleteDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: documentId);
+
+  Future<void> _assertCurrentUser(String expectedUserId) async {
+    final user = await getCurrentUser();
+    if (user == null || user.$id != expectedUserId) {
+      throw AppwriteException('The requested data does not belong to the current user.', 401);
+    }
+  }
 }
 
 String authErrorMessage(Object error, {required bool registering}) {

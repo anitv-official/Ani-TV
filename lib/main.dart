@@ -91,6 +91,9 @@ class _MyAppState extends State<MyApp> {
 
   void _handleUri(Uri? uri) {
     if (uri == null) return;
+    // Appwrite OAuth callbacks are consumed by the OAuth flow itself. They
+    // must never be interpreted as password-recovery links.
+    if (uri.scheme == 'appwrite-callback-6aa4295900094d600163') return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
     final isVerificationCallback = (uri.scheme == 'anitv' && uri.host == 'verify-email') ||
@@ -125,7 +128,9 @@ class _MyAppState extends State<MyApp> {
       });
       return;
     }
-    if (userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
+    final isRecoveryCallback = (uri.scheme == 'anitv' && uri.host == 'reset-password') ||
+        (uri.scheme == 'https' && uri.host == 'anitv-manga-lord.vercel.app' && uri.path == '/reset-password');
+    if (isRecoveryCallback && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
       final key = '$userId:$secret';
       if (_lastRecoveryLink == key) return;
       _lastRecoveryLink = key;
