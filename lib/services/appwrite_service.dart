@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -27,6 +28,7 @@ class AppwriteService {
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
   static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
   static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
+  static const String usernameLoginEndpoint = 'https://anitv-username-login.nyc.appwrite.run';
 
   final Client client = Client();
   late final Account account;
@@ -62,19 +64,42 @@ class AppwriteService {
 
   Future<models.User> loginWithUsername({required String username, required String password}) async {
     final normalized = username.trim().toLowerCase();
-    final execution = await functions.createExecution(
-      functionId: usernameLoginFunctionId,
-      body: jsonEncode({'username': normalized, 'password': password}),
-      xasync: false,
-    );
-    dynamic response;
-    try { response = jsonDecode(execution.responseBody); } catch (_) { response = null; }
-    if (response is! Map || response['ok'] != true) throw Exception('Invalid username or password.');
-    final userId = response['userId']?.toString() ?? '';
-    final secret = response['secret']?.toString() ?? '';
-    if (userId.isEmpty || secret.isEmpty) throw Exception('Invalid username or password.');
-    await account.createSession(userId: userId, secret: secret);
-    return account.get();
+    late http.Response response;
+    try {
+      response = await http.post(
+        Uri.parse(usernameLoginEndpoint),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': normalized, 'password': password}),
+      );
+    } on Exception {
+      throw const UsernameLoginException('SERVER_ERROR');
+    }
+
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
+      throw UsernameLoginException(response.statusCode >= 400 ? 'SERVER_ERROR' : 'SERVER_ERROR');
+    }
+    if (body is! Map) throw const UsernameLoginException('SERVER_ERROR');
+    final code = body['code']?.toString();
+    if (response.statusCode < 200 || response.statusCode >= 300 || body['ok'] != true) {
+      throw UsernameLoginException(code ?? (response.statusCode == 401 ? 'INVALID_CREDENTIALS' : 'SERVER_ERROR'));
+    }
+
+    final userId = body['userId']?.toString() ?? '';
+    final secret = body['secret']?.toString() ?? '';
+    if (userId.isEmpty || secret.isEmpty) throw const UsernameLoginException('SERVER_ERROR');
+
+    // The Function already created the user's Appwrite session. Install its
+    // session secret on the client; do not call createSession a second time.
+    client.setSession(secret);
+    try {
+      return await account.get();
+    } catch (_) {
+      client.setSession('');
+      rethrow;
+    }
   }
 
   Future<void> sendEmailVerification() async {
@@ -205,6 +230,17 @@ class AppwriteService {
 
 String authErrorMessage(Object error, {required bool registering}) {
   if (error is UsernameTakenException) return 'اسم المستخدم مأخوذ بالفعل';
+  if (error is UsernameLoginException) {
+    switch (error.code) {
+      case 'INVALID_CREDENTIALS': return 'بيانات الدخول غير صحيحة.';
+      case 'INVALID_INPUT': return 'تحقق من البيانات المدخلة.';
+      case 'PROFILE_ERROR':
+      case 'USER_ERROR':
+      case 'SESSION_ERROR':
+      case 'SERVER_ERROR': return 'حدث خطأ في الخادم. حاول مرة أخرى.';
+      default: return 'حدث خطأ في الخادم. حاول مرة أخرى.';
+    }
+  }
   if (error is AppwriteException) {
     switch (error.code) {
       case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'بيانات الدخول غير صحيحة.';
@@ -218,6 +254,11 @@ String authErrorMessage(Object error, {required bool registering}) {
     }
   }
   return registering ? 'حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.' : 'حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.';
+}
+
+class UsernameLoginException implements Exception {
+  final String code;
+  const UsernameLoginException(this.code);
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
