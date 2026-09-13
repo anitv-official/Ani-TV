@@ -1,4 +1,4 @@
-const { Client, Account, Databases, Query, Users } = require('node-appwrite');
+const { Client, Account, TablesDB, Query, Users } = require('node-appwrite');
 
 const json = (res, statusCode, body) => res.json(body, statusCode);
 const invalidCredentials = (res) => json(res, 401, {
@@ -54,15 +54,15 @@ module.exports = async ({ req, res, log, error }) => {
       .setEndpoint(required('APPWRITE_ENDPOINT'))
       .setProject(required('APPWRITE_PROJECT_ID'))
       .setKey(required('APPWRITE_API_KEY'));
-    const databases = new Databases(adminClient);
+    const tablesDB = new TablesDB(adminClient);
 
     let result;
     try {
-      result = await databases.listDocuments(
-        required('APPWRITE_DATABASE_ID'),
-        required('APPWRITE_PROFILES_TABLE_ID'),
-        [Query.limit(5000)],
-      );
+      result = await tablesDB.listRows({
+        databaseId: required('APPWRITE_DATABASE_ID'),
+        tableId: required('APPWRITE_PROFILES_TABLE_ID'),
+        queries: [Query.limit(5000)],
+      });
     } catch (err) {
       const details = errorDetails(err);
       error(`profile lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
@@ -71,8 +71,8 @@ module.exports = async ({ req, res, log, error }) => {
 
     // Query.equal is case-sensitive in Appwrite. Normalize locally so legacy
     // records such as "Looord" still work.
-    const profile = result.documents.find((document) =>
-      normalizeUsername(String(document.data?.username ?? '')) === username,
+    const profile = result.rows.find((row) =>
+      normalizeUsername(String(row.data?.username ?? '')) === username,
     );
     log(`profile found: ${profile ? 'true' : 'false'}`);
     if (!profile) return invalidCredentials(res);
