@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import '../services/appwrite_service.dart';
+import '../services/local_cache_service.dart';
 
 class RegistrationResult {
   final bool accountCreated;
@@ -27,6 +29,7 @@ class AppStateProvider extends ChangeNotifier {
   bool _emailVerified = false;
   bool _isDarkMode = true;
   final AppwriteService _appwrite = AppwriteService.instance;
+  final LocalCacheService _cache = LocalCacheService.instance;
   String? _userId;
   String? _profileDocumentId;
   String? _profileImageId;
@@ -39,6 +42,8 @@ class AppStateProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _errorMessage = '';
   Future<void>? _initializationFuture;
+  Future<void>? _cloudSyncFuture;
+  DateTime? _lastCloudSyncAt;
 
   String get username => _username;
   String get displayName => _displayName;
@@ -78,8 +83,10 @@ class AppStateProvider extends ChangeNotifier {
       final user = await _appwrite.getCurrentUser();
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
       _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
-      await _applyAuthenticatedUser(user, syncCloud: user != null);
+      await _applyAuthenticatedUser(user, syncCloud: false);
+      if (_isLoggedIn && _userId != null) await _loadLocalAccountCache(_userId!);
       notifyListeners();
+      if (_isLoggedIn) unawaited(_syncAccountFromCloud());
     } catch (_) {
       _clearUser();
       _setErrorMessage('تعذر التحقق من جلسة الحساب. حاول مرة أخرى.');
@@ -99,7 +106,36 @@ class AppStateProvider extends ChangeNotifier {
     if (syncCloud && _emailVerified) await _syncAccountFromCloud();
   }
 
+  Future<void> _loadLocalAccountCache(String userId) async {
+    final profile = await _cache.readProfile(userId);
+    if (profile != null) {
+      final documentId = (profile['profileDocumentId'] ?? '').toString();
+      _profileDocumentId = documentId.isEmpty ? null : documentId;
+      _username = (profile['username'] ?? _username).toString();
+      _displayName = (profile['displayName'] ?? _displayName).toString();
+      _birthDate = (profile['birthDate'] ?? '').toString();
+      _country = (profile['country'] ?? '').toString();
+      _profileImageId = (profile['profileImageId'] ?? '').toString();
+    }
+    _favoriteAnime = await _cache.readFavorites(userId, 'anime');
+    _favoriteComics = await _cache.readFavorites(userId, 'comics');
+  }
+
   Future<void> _syncAccountFromCloud() async {
+    final lastSync = _lastCloudSyncAt;
+    if (lastSync != null && DateTime.now().toUtc().difference(lastSync) < const Duration(minutes: 5)) return;
+    final running = _cloudSyncFuture;
+    if (running != null) return running;
+    final future = _syncAccountFromCloudInternal();
+    _cloudSyncFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_cloudSyncFuture, future)) _cloudSyncFuture = null;
+    }
+  }
+
+  Future<void> _syncAccountFromCloudInternal() async {
     final userId = _userId;
     if (userId == null) return;
     try {
@@ -114,6 +150,15 @@ class AppStateProvider extends ChangeNotifier {
       _birthDate = (data['birthdate'] ?? '').toString();
       _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
+      await _cache.writeProfile(userId, {
+        'profileDocumentId': _profileDocumentId,
+        'username': _username,
+        'displayName': _displayName,
+        'birthDate': _birthDate,
+        'country': _country,
+        'profileImageId': _profileImageId,
+      });
+      await _syncFavoriteQueue(userId);
       final cloudFavorites = await _appwrite.getFavorites(userId);
       final prefs = await SharedPreferences.getInstance();
       final anime = <dynamic>[];
@@ -130,10 +175,36 @@ class AppStateProvider extends ChangeNotifier {
       _favoriteComics = comics;
       await prefs.setString(_favoritesKey('favorite_anime'), jsonEncode(anime));
       await prefs.setString(_favoritesKey('favorite_comics'), jsonEncode(comics));
+      await _cache.writeFavorites(userId, 'anime', anime);
+      await _cache.writeFavorites(userId, 'comics', comics);
+      _lastCloudSyncAt = DateTime.now().toUtc();
+      notifyListeners();
     } catch (_) {
       debugPrint('Favorites cloud sync failed for current user: $_');
       _setErrorMessage('تعذر مزامنة بياناتك. ستبقى التغييرات محفوظة محليًا.');
     }
+  }
+
+  Future<void> _syncFavoriteQueue(String userId) async {
+    final queue = await _cache.pendingFavorites(userId);
+    if (queue.isEmpty) return;
+    final remaining = <Map<String, dynamic>>[];
+    for (final operation in queue) {
+      try {
+        final op = operation['op']?.toString();
+        if (op == 'create' && operation['data'] is Map) {
+          final data = Map<String, dynamic>.from(operation['data'] as Map);
+          final existing = await _appwrite.findFavorite(userId: userId, itemId: data['itemId']?.toString() ?? '', source: data['source']?.toString());
+          if (existing == null) await _appwrite.createFavorite(userId: userId, data: data);
+        } else if (op == 'delete') {
+          final document = await _appwrite.findFavorite(userId: userId, itemId: operation['itemId']?.toString() ?? '', source: operation['source']?.toString());
+          if (document != null) await _appwrite.deleteFavorite(userId: userId, documentId: document.$id);
+        }
+      } catch (_) {
+        remaining.add(operation);
+      }
+    }
+    await _cache.writePendingFavorites(userId, remaining);
   }
 
   String _usernameCandidate(String userId) {
@@ -175,6 +246,7 @@ class AppStateProvider extends ChangeNotifier {
     _favoriteComics = [];
     _animeHistory = [];
     _comicHistory = [];
+    _lastCloudSyncAt = null;
   }
 
   Future<void> login({required String email, required String password}) async {
@@ -346,7 +418,21 @@ class AppStateProvider extends ChangeNotifier {
       _profileDocumentId = profile.$id;
     }
     _displayName = user.name.trim();
+    if (_userId != null) await _writeCurrentProfileCache();
     notifyListeners();
+  }
+
+  Future<void> _writeCurrentProfileCache() async {
+    final userId = _userId;
+    if (userId == null || userId.isEmpty) return;
+    await _cache.writeProfile(userId, {
+      'profileDocumentId': _profileDocumentId,
+      'username': _username,
+      'displayName': _displayName,
+      'birthDate': _birthDate,
+      'country': _country,
+      'profileImageId': _profileImageId,
+    });
   }
 
   Future<String> _ensureCurrentProfileId() async {
@@ -378,6 +464,7 @@ class AppStateProvider extends ChangeNotifier {
     }
     await _appwrite.updateUsername(documentId: documentId, username: normalized);
     _username = normalized;
+    await _writeCurrentProfileCache();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('username_$_userId', normalized);
     notifyListeners();
@@ -393,6 +480,7 @@ class AppStateProvider extends ChangeNotifier {
       newImageId = await _appwrite.uploadProfileImage(userId: userId, path: path);
       await _appwrite.updateProfile(documentId: documentId, username: _username, profileImageId: newImageId);
       _profileImageId = newImageId;
+      await _writeCurrentProfileCache();
       if (oldImageId != null && oldImageId.isNotEmpty && oldImageId != newImageId) {
         try { await _appwrite.deleteProfileImage(oldImageId); } catch (_) {}
       }
@@ -439,17 +527,40 @@ class AppStateProvider extends ChangeNotifier {
         return;
       }
       final source = (item['source'] ?? '').toString();
-      final existing = await _appwrite.findFavorite(userId: _userId!, itemId: itemId, source: source);
-      if (existing != null) return;
-      final document = await _appwrite.createFavorite(userId: _userId!, data: {
-        'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
-        'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
-      });
-      final newItem = {...Map<String, dynamic>.from(item as Map), 'id': document.$id, 'type': isAnime ? 'anime' : 'comic'};
+      final userId = _userId!;
+      final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
+      final newItem = {...Map<String, dynamic>.from(item as Map), 'id': localId, 'type': isAnime ? 'anime' : 'comic'};
       list.insert(0, newItem);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
+      await _cache.writeFavorites(userId, isAnime ? 'anime' : 'comics', list);
       notifyListeners();
+      try {
+        final existing = await _appwrite.findFavorite(userId: userId, itemId: itemId, source: source);
+        if (existing != null) {
+          final withoutDuplicate = list.where((value) => value['id'] != localId).toList();
+          if (isAnime) { _favoriteAnime = withoutDuplicate; } else { _favoriteComics = withoutDuplicate; }
+          await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(withoutDuplicate));
+          await _cache.writeFavorites(userId, isAnime ? 'anime' : 'comics', withoutDuplicate);
+          notifyListeners();
+          return;
+        }
+        final document = await _appwrite.createFavorite(userId: userId, data: {
+        'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
+        'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
+        });
+        final updated = list.map((value) => value is Map && value['id'] == localId ? {...Map<String, dynamic>.from(value), 'id': document.$id} : value).toList();
+        if (isAnime) { _favoriteAnime = updated; } else { _favoriteComics = updated; }
+        await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(updated));
+        await _cache.writeFavorites(userId, isAnime ? 'anime' : 'comics', updated);
+        notifyListeners();
+      } catch (_) {
+        await _cache.enqueueFavorite(userId, {'op': 'create', 'isAnime': isAnime, 'data': {
+          'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
+          'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
+        }});
+        _setErrorMessage('تم حفظ المفضلة محليًا، وستتم مزامنتها عند عودة الاتصال.');
+      }
     } catch (_) { _setErrorMessage('تعذر الإضافة إلى المفضلة. حاول مرة أخرى.'); }
   }
 
@@ -459,16 +570,22 @@ class AppStateProvider extends ChangeNotifier {
       final list = List<dynamic>.from(isAnime ? _favoriteAnime : _favoriteComics);
       final removed = list.firstWhere((item) => item['id'] == id, orElse: () => null);
       if (!_isLoggedIn || _userId == null || removed == null) return;
-      final document = await _appwrite.findFavorite(
-        userId: _userId!,
-        itemId: (removed['url'] ?? removed['itemId']).toString(),
-        source: (removed['source'] ?? '').toString(),
-      );
-      if (document != null) await _appwrite.deleteFavorite(userId: _userId!, documentId: document.$id);
       list.removeWhere((item) => item['id'] == id);
       if (isAnime) { _favoriteAnime = list; } else { _favoriteComics = list; }
       await prefs.setString(_favoritesKey(isAnime ? 'favorite_anime' : 'favorite_comics'), jsonEncode(list));
+      await _cache.writeFavorites(_userId!, isAnime ? 'anime' : 'comics', list);
       notifyListeners();
+      try {
+        final document = await _appwrite.findFavorite(
+          userId: _userId!,
+          itemId: (removed['url'] ?? removed['itemId']).toString(),
+          source: (removed['source'] ?? '').toString(),
+        );
+        if (document != null) await _appwrite.deleteFavorite(userId: _userId!, documentId: document.$id);
+      } catch (_) {
+        await _cache.enqueueFavorite(_userId!, {'op': 'delete', 'itemId': (removed['url'] ?? removed['itemId']).toString(), 'source': (removed['source'] ?? '').toString()});
+        _setErrorMessage('تمت الإزالة محليًا، وستتم مزامنة الحذف عند عودة الاتصال.');
+      }
     } catch (_) { _setErrorMessage('تعذر إزالة العنصر من المفضلة. حاول مرة أخرى.'); }
   }
 
