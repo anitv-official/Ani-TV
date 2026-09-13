@@ -41,10 +41,11 @@ module.exports = async ({ req, res, log, error }) => {
           try { return JSON.parse(req.body || '{}'); } catch (_) { return {}; }
         })();
     username = typeof payload.username === 'string' ? normalizeUsername(payload.username) : '';
+    const action = typeof payload.action === 'string' ? payload.action : 'login';
     const password = typeof payload.password === 'string' ? payload.password : '';
     log(`username normalized: ${username || '[empty]'}`);
 
-    if (!username || !password) {
+    if (!username || (action !== 'check_username' && !password)) {
       return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'Username and password are required.' });
     }
     if (!/^[a-z0-9_]{3,24}$/.test(username)) {
@@ -56,6 +57,28 @@ module.exports = async ({ req, res, log, error }) => {
       .setProject(required('APPWRITE_PROJECT_ID'))
       .setKey(required('APPWRITE_API_KEY'));
     const tablesDB = new TablesDB(adminClient);
+
+    if (action === 'check_username') {
+      phase = 'username_availability_lookup';
+      try {
+        const result = await tablesDB.listRows({
+          databaseId: required('APPWRITE_DATABASE_ID'),
+          tableId: required('APPWRITE_PROFILES_TABLE_ID'),
+          queries: [Query.limit(5000)],
+        });
+        const currentDocumentId = typeof payload.currentDocumentId === 'string'
+          ? payload.currentDocumentId.trim()
+          : '';
+        const taken = result.rows.some((row) =>
+          normalizeUsername(String(row.username ?? '')) === username && String(row.$id ?? '') !== currentDocumentId,
+        );
+        return json(res, 200, { ok: true, available: !taken });
+      } catch (err) {
+        const details = errorDetails(err);
+        error(`username availability lookup failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+        return serverError(res, 'PROFILE_ERROR');
+      }
+    }
 
     let result;
     phase = 'profiles_lookup';

@@ -41,6 +41,20 @@ Request body:
 {"username":"lord_48291","password":"..."}
 ```
 
+لفحص توفر Username قبل التسجيل، يستخدم التطبيق نفس Function بطلب عام لا يتضمن كلمة مرور:
+
+```json
+{"action":"check_username","username":"lord_48291"}
+```
+
+وتعيد Function:
+
+```json
+{"ok":true,"available":true}
+```
+
+يمكن إرسال `currentDocumentId` عند تغيير Username لاستثناء صف المستخدم نفسه من نتيجة «مأخوذ». هذا الفحص يتم بصلاحية الخادم داخل Function لأن Profiles Table خاصة ولا ينبغي فتح قراءتها للضيوف.
+
 نجاح:
 
 ```json

@@ -123,6 +123,30 @@ class AppwriteService {
     }
   }
 
+  Future<bool> checkUsernameAvailability(String username, {String? currentDocumentId}) async {
+    final normalized = username.trim().toLowerCase();
+    if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(normalized)) return false;
+    final response = await http.post(
+      Uri.parse(usernameLoginEndpoint),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'check_username',
+        'username': normalized,
+        if (currentDocumentId != null && currentDocumentId.isNotEmpty) 'currentDocumentId': currentDocumentId,
+      }),
+    );
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
+      throw const UsernameAvailabilityException();
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300 || body is! Map || body['ok'] != true || body['available'] is! bool) {
+      throw const UsernameAvailabilityException();
+    }
+    return body['available'] as bool;
+  }
+
   Future<void> sendEmailVerification() async {
     try {
       await account.createVerification(url: emailVerificationUrl);
@@ -258,11 +282,7 @@ class AppwriteService {
   Future<bool> isUsernameAvailable(String username, {String? currentDocumentId}) async {
     final value = normalizeUsername(username);
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(value)) return false;
-    // Read all bounded profile records and compare normalized values locally.
-    // This also detects legacy records that were saved with uppercase letters.
-    final rows = await _listProfileRows();
-    return !rows.any((row) =>
-      normalizeUsername((row['username'] ?? '').toString()) == value && row[r'$id'] != currentDocumentId);
+    return checkUsernameAvailability(value, currentDocumentId: currentDocumentId);
   }
 
   Future<models.Document> updateUsername({required String documentId, required String username}) => updateProfile(documentId: documentId, username: username);
@@ -350,6 +370,10 @@ String authErrorMessage(Object error, {required bool registering}) {
 class UsernameLoginException implements Exception {
   final String code;
   const UsernameLoginException(this.code);
+}
+
+class UsernameAvailabilityException implements Exception {
+  const UsernameAvailabilityException();
 }
 
 class AccountCreatedButSessionUnavailableException implements Exception {
