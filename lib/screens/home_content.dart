@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +22,8 @@ import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'categories_screen.dart';
 import 'favorites_screen.dart';
+import 'login_screen.dart';
+import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'sources_screen.dart';
 
@@ -295,7 +299,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Consumer<AppStateProvider>(
+                    builder: (context, appState, _) => Row(
                     children: [
                       const Text('AniTV', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.4)),
                       const Spacer(),
@@ -326,7 +331,16 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                           ],
                         ),
                       ),
+                      if (appState.isLoggedIn)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())),
+                          child: _buildHeaderAvatar(appState),
+                        )
+                      else
+                        TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('دخول')),
                     ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   SearchLaunchField(
@@ -364,6 +378,19 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderAvatar(AppStateProvider appState) {
+    final imageFuture = appState.profileImageBytes;
+    if (imageFuture == null) {
+      return CircleAvatar(radius: 19, backgroundColor: AppTheme.primaryColor.withOpacity(.2), child: const Icon(Icons.person_outline, color: Colors.white, size: 21));
+    }
+    return FutureBuilder<Uint8List>(
+      future: imageFuture,
+      builder: (context, snapshot) => snapshot.hasData
+          ? CircleAvatar(radius: 19, backgroundImage: MemoryImage(snapshot.data!))
+          : CircleAvatar(radius: 19, backgroundColor: AppTheme.primaryColor.withOpacity(.2), child: const Icon(Icons.person_outline, color: Colors.white, size: 21)),
     );
   }
 
