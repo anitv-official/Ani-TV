@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
+import 'package:appwrite/src/enums.dart' show HttpMethod;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -203,7 +204,7 @@ class AppwriteService {
       if (body is! Map) throw const FormatException('Invalid profile row response');
       return _profileRowToDocument(Map<String, dynamic>.from(body));
     } on AppwriteException catch (error) {
-      if (error.code == 409 || error.type.contains('duplicate')) {
+      if (error.code == 409 || (error.type ?? '').contains('duplicate')) {
         throw const UsernameTakenException();
       }
       rethrow;
@@ -234,7 +235,7 @@ class AppwriteService {
     // This also detects legacy records that were saved with uppercase letters.
     final rows = await _listProfileRows();
     return !rows.any((row) =>
-      normalizeUsername((row['username'] ?? '').toString()) == value && row['$id'] != currentDocumentId);
+      normalizeUsername((row['username'] ?? '').toString()) == value && row[r'$id'] != currentDocumentId);
   }
 
   Future<models.Document> updateUsername({required String documentId, required String username}) => updateProfile(documentId: documentId, username: username);
