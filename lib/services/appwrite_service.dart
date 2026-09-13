@@ -1,8 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
-import 'dart:typed_data';
-import 'dart:convert';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -46,29 +47,35 @@ class AppwriteService {
   }
 
   Future<models.User> register({required String email, required String password, required String name}) async {
-    await account.create(userId: ID.unique(), email: email, password: password, name: name);
-    await account.createEmailPasswordSession(email: email, password: password);
-    return account.get();
+    await account.create(userId: ID.unique(), email: email.trim(), password: password, name: name.trim());
+    try {
+      await account.createEmailPasswordSession(email: email.trim(), password: password);
+      return account.get();
+    } catch (_) {
+      // Do not leave an unusable authenticated account session behind.
+      try { await account.deleteSession(sessionId: 'current'); } catch (_) {}
+      rethrow;
+    }
   }
 
   Future<models.User> login({required String email, required String password}) async {
-    await account.createEmailPasswordSession(email: email, password: password);
+    await account.createEmailPasswordSession(email: email.trim(), password: password);
     return account.get();
   }
 
   Future<models.User> loginWithUsername({required String username, required String password}) async {
+    final normalized = username.trim().toLowerCase();
     final execution = await functions.createExecution(
       functionId: usernameLoginFunctionId,
-      body: jsonEncode({'username': username.trim(), 'password': password}),
+      body: jsonEncode({'username': normalized, 'password': password}),
       xasync: false,
     );
-    final response = jsonDecode(execution.responseBody);
-    if (response is! Map || response['ok'] != true) {
-      throw Exception('Invalid username or password.');
-    }
+    dynamic response;
+    try { response = jsonDecode(execution.responseBody); } catch (_) { response = null; }
+    if (response is! Map || response['ok'] != true) throw AppwriteException('Invalid username or password.', code: 401);
     final userId = response['userId']?.toString() ?? '';
     final secret = response['secret']?.toString() ?? '';
-    if (userId.isEmpty || secret.isEmpty) throw Exception('Invalid username or password.');
+    if (userId.isEmpty || secret.isEmpty) throw AppwriteException('Invalid username or password.', code: 401);
     await account.createSession(userId: userId, secret: secret);
     return account.get();
   }
@@ -77,8 +84,6 @@ class AppwriteService {
     try {
       await account.createVerification(url: emailVerificationUrl);
     } on AppwriteException catch (error) {
-      // Keep the user-facing message generic, but preserve the real Appwrite
-      // response in debug logs so URL/platform/rate-limit errors are visible.
       debugPrint('Appwrite createVerification failed: code=${error.code}, type=${error.type}, message=${error.message}');
       rethrow;
     }
@@ -90,19 +95,11 @@ class AppwriteService {
   }
 
   Future<void> logout() async => account.deleteSession(sessionId: 'current');
-
   Future<void> ping() async => client.ping();
-
   Future<models.User> updateName(String name) async => account.updateName(name: name.trim());
-
-  Future<models.User> updatePassword({required String password, required String oldPassword}) async =>
-      account.updatePassword(password: password, oldPassword: oldPassword);
-
-  Future<void> sendPasswordRecovery(String email, String redirectUrl) async =>
-      account.createRecovery(email: email.trim(), url: redirectUrl);
-
-  Future<models.Token> completePasswordRecovery({required String userId, required String secret, required String password}) async =>
-      account.updateRecovery(userId: userId, secret: secret, password: password);
+  Future<models.User> updatePassword({required String password, required String oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
+  Future<void> sendPasswordRecovery(String email, String redirectUrl) async => account.createRecovery(email: email.trim(), url: redirectUrl);
+  Future<models.Token> completePasswordRecovery({required String userId, required String secret, required String password}) async => account.updateRecovery(userId: userId, secret: secret, password: password);
 
   Future<models.Document?> getProfile(String userId) async {
     final result = await databases.listDocuments(
@@ -113,46 +110,71 @@ class AppwriteService {
     return result.documents.isEmpty ? null : result.documents.first;
   }
 
-  Future<models.Document> ensureProfile({required String userId, required String username}) async {
+  String normalizeUsername(String value) => value.trim().toLowerCase();
+
+  Future<models.Document> ensureProfile({
+    required String userId,
+    required String username,
+    String displayName = '',
+    String email = '',
+    String birthDate = '',
+    String country = '',
+  }) async {
+    final normalized = normalizeUsername(username);
     final existing = await getProfile(userId);
     if (existing != null) {
-      if ((existing.data['username'] ?? '').toString().trim().isEmpty && username.trim().isNotEmpty) {
-        return updateProfile(documentId: existing.$id, username: username);
+      if ((existing.data['username'] ?? '').toString().trim().isEmpty && normalized.isNotEmpty) {
+        return updateProfile(documentId: existing.$id, username: normalized);
       }
       return existing;
     }
+    // A normalized document ID makes creation a server-side atomic claim for
+    // new profiles: Lord, lord and LORD cannot claim separate IDs.
+    final documentId = normalized.isNotEmpty ? normalized : ID.unique();
     return databases.createDocument(
       databaseId: databaseId,
       collectionId: profilesTableId,
-      documentId: ID.unique(),
-      data: {'userId': userId, 'username': username, 'profileImageId': '', 'updatedAt': DateTime.now().toUtc().toIso8601String()},
+      documentId: documentId,
+      data: {
+        'userId': userId,
+        'username': normalized,
+        'displayName': displayName.trim(),
+        'email': email.trim(),
+        'birthDate': birthDate,
+        'country': country.trim(),
+        'profileImageId': '',
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      },
     );
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId}) async =>
-      databases.updateDocument(
-        databaseId: databaseId,
-        collectionId: profilesTableId,
-        documentId: documentId,
-        data: {
-          'username': username,
-          if (profileImageId != null) 'profileImageId': profileImageId,
-          'updatedAt': DateTime.now().toUtc().toIso8601String(),
-        },
-      );
+  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId}) => databases.updateDocument(
+    databaseId: databaseId,
+    collectionId: profilesTableId,
+    documentId: documentId,
+    data: {
+      'username': normalizeUsername(username),
+      if (profileImageId != null) 'profileImageId': profileImageId,
+      'updatedAt': DateTime.now().toUtc().toIso8601String(),
+    },
+  );
 
   Future<bool> isUsernameAvailable(String username, {String? currentDocumentId}) async {
-    final value = username.trim().toLowerCase();
+    final value = normalizeUsername(username);
+    if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(value)) return false;
+    // Read all bounded profile records and compare normalized values locally.
+    // This also detects legacy records that were saved with uppercase letters.
     final result = await databases.listDocuments(
       databaseId: databaseId,
       collectionId: profilesTableId,
-      queries: [Query.equal('username', value), Query.limit(2)],
+      queries: [Query.limit(5000)],
     );
-    return result.documents.every((document) => currentDocumentId != null && document.$id == currentDocumentId);
+    return !result.documents.any((document) =>
+      normalizeUsername((document.data['username'] ?? '').toString()) == value && document.$id != currentDocumentId);
   }
 
-  Future<models.Document> updateUsername({required String documentId, required String username}) =>
-      updateProfile(documentId: documentId, username: username.trim().toLowerCase());
+  Future<models.Document> updateUsername({required String documentId, required String username}) => updateProfile(documentId: documentId, username: username);
 
   Future<String> uploadProfileImage({required String userId, required String path}) async {
     final file = await storage.createFile(
@@ -165,59 +187,40 @@ class AppwriteService {
   }
 
   Future<Uint8List> profileImageBytes(String fileId) => storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
-
-  Future<void> deleteProfileImage(String fileId) async {
-    if (fileId.isEmpty) return;
-    await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId);
-  }
+  Future<void> deleteProfileImage(String fileId) async { if (fileId.isNotEmpty) await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId); }
 
   Future<List<models.Document>> getFavorites(String userId) async {
-    final result = await databases.listDocuments(
-      databaseId: databaseId,
-      collectionId: favoritesTableId,
-      queries: [Query.equal('userId', userId), Query.limit(5000)],
-    );
+    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)]);
     return result.documents;
   }
-
   Future<models.Document?> findFavorite({required String userId, required String itemId}) async {
-    final result = await databases.listDocuments(
-      databaseId: databaseId,
-      collectionId: favoritesTableId,
-      queries: [Query.equal('userId', userId), Query.equal('itemId', itemId), Query.limit(1)],
-    );
+    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.equal('itemId', itemId), Query.limit(1)]);
     return result.documents.isEmpty ? null : result.documents.first;
   }
-
-  Future<models.Document> createFavorite({required String userId, required Map<String, dynamic> data}) async =>
-      databases.createDocument(
-        databaseId: databaseId,
-        collectionId: favoritesTableId,
-        documentId: ID.unique(),
-        data: {'userId': userId, ...data},
-      );
-
-  Future<void> deleteFavorite(String documentId) async => databases.deleteDocument(
-        databaseId: databaseId,
-        collectionId: favoritesTableId,
-        documentId: documentId,
-      );
+  Future<models.Document> createFavorite({required String userId, required Map<String, dynamic> data}) => databases.createDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: ID.unique(), data: {'userId': userId, ...data});
+  Future<void> deleteFavorite(String documentId) => databases.deleteDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: documentId);
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
   if (error is AppwriteException) {
     switch (error.code) {
       case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'بيانات الدخول غير صحيحة.';
-      case 409: return 'هذا البريد الإلكتروني مستخدم بالفعل.';
-      case 400: return registering ? 'تحقق من البريد الإلكتروني وكلمة المرور.' : 'تحقق من البيانات المدخلة.';
+      case 409: return registering ? 'هذا البريد الإلكتروني أو اسم المستخدم مستخدم بالفعل.' : 'بيانات الدخول غير صحيحة.';
+      case 400: return registering ? 'تحقق من البيانات المدخلة.' : 'تحقق من البيانات المدخلة.';
       case 408:
       case 429:
       case 500:
       case 502:
-      case 503: return 'تعذر الاتصال بالخدمة. تحقق من الإنترنت وحاول مرة أخرى.';
+      case 503: return 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
     }
   }
   return registering ? 'حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.' : 'حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.';
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
+
+class UsernameValidation {
+  static final RegExp pattern = RegExp(r'^[a-z0-9_]{3,24}$');
+  static String normalize(String value) => value.trim().toLowerCase();
+  static bool isValid(String value) => pattern.hasMatch(normalize(value));
+}

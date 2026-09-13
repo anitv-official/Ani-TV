@@ -93,6 +93,7 @@ class SourceContentScreen extends StatefulWidget {
 class _SourceContentScreenState extends State<SourceContentScreen> {
   late Future<List<Map<String, dynamic>>> _content;
   late final ScrollController _scrollController;
+  late final TextEditingController _searchController;
   int _page = 1;
   bool _loadingMore = false;
 
@@ -100,13 +101,23 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_loadMoreWhenNeeded);
+    _searchController = TextEditingController();
     _content = widget.source.latest();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _search() {
+    final query = _searchController.text.trim();
+    setState(() {
+      _page = 1;
+      _content = query.isEmpty ? widget.source.latest() : widget.source.search(query);
+    });
   }
 
   void _loadMoreWhenNeeded() {
@@ -140,7 +151,25 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
       appBar: AppBar(
         title: Text(widget.source.name),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: TextField(
+            controller: _searchController,
+            textDirection: TextDirection.rtl,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _search(),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'ابحث داخل ${widget.source.name}',
+              prefixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _search),
+              filled: true,
+              fillColor: AppTheme.surfaceColor,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            ),
+          ),
+        ),
+        Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(
         future: _content,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -180,7 +209,8 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
             ),
           );
         },
-      ),
+      )),
+      ]),
     );
   }
 }
@@ -206,7 +236,7 @@ class SourceSummary extends StatelessWidget {
             itemCount: sources.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) => InkWell(
-              onTap: onPressed,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SourceContentScreen(source: sources[index]))),
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: 156,

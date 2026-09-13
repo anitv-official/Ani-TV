@@ -9,6 +9,8 @@ class AppStateProvider extends ChangeNotifier {
   String _username = '';
   String _displayName = '';
   String _email = '';
+  String _birthDate = '';
+  String _country = '';
   bool _isLoggedIn = false;
   bool _emailVerified = false;
   bool _isDarkMode = true;
@@ -30,6 +32,8 @@ class AppStateProvider extends ChangeNotifier {
   String get displayName => _displayName;
   String? get userId => _userId;
   String get email => _email;
+  String get birthDate => _birthDate;
+  String get country => _country;
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isDarkMode => _isDarkMode;
@@ -80,11 +84,15 @@ class AppStateProvider extends ChangeNotifier {
     final userId = _userId;
     if (userId == null) return;
     try {
-      final profile = await _appwrite.ensureProfile(userId: userId, username: _usernameCandidate(userId));
+      // OAuth users may not have chosen a username yet. Keep it empty until
+      // the user explicitly chooses one; never use displayName as identity.
+      final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
       _profileDocumentId = profile.$id;
-      final data = profile.data;
+    final data = profile.data;
       final cloudName = (data['username'] ?? '').toString().trim();
       if (cloudName.isNotEmpty) _username = cloudName;
+      _birthDate = (data['birthDate'] ?? '').toString();
+      _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
       final cloudFavorites = await _appwrite.getFavorites(userId);
       final prefs = await SharedPreferences.getInstance();
@@ -136,6 +144,8 @@ class AppStateProvider extends ChangeNotifier {
     _username = '';
     _displayName = '';
     _email = '';
+    _birthDate = '';
+    _country = '';
     _emailVerified = false;
     _userId = null;
     _profileDocumentId = null;
@@ -180,18 +190,49 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> register({required String email, required String password, required String name}) async {
+  Future<void> register({
+    required String email,
+    required String password,
+    required String name,
+    required String username,
+    required String birthDate,
+    required String country,
+    String? profileImagePath,
+  }) async {
     try {
+      final normalizedUsername = UsernameValidation.normalize(username);
+      if (!UsernameValidation.isValid(normalizedUsername) || !await _appwrite.isUsernameAvailable(normalizedUsername)) {
+        throw AppwriteException('Username is already in use.', code: 409);
+      }
       final user = await _appwrite.register(email: email, password: password, name: name);
       await _applyAuthenticatedUser(user, syncCloud: false);
       if (_userId != null) {
-        final profile = await _appwrite.ensureProfile(userId: _userId!, username: _usernameCandidate(_userId!));
+        final profile = await _appwrite.ensureProfile(
+          userId: _userId!,
+          username: normalizedUsername,
+          displayName: name,
+          email: email,
+          birthDate: birthDate,
+          country: country,
+        );
         _profileDocumentId = profile.$id;
         final savedUsername = (profile.data['username'] ?? '').toString().trim();
         if (savedUsername.isNotEmpty) _username = savedUsername;
+        _birthDate = (profile.data['birthDate'] ?? birthDate).toString();
+        _country = (profile.data['country'] ?? country).toString();
+        if (profileImagePath != null && profileImagePath.trim().isNotEmpty) {
+          try {
+            final imageId = await _appwrite.uploadProfileImage(userId: _userId!, path: profileImagePath);
+            await _appwrite.updateProfile(documentId: profile.$id, username: _username, profileImageId: imageId);
+            _profileImageId = imageId;
+          } catch (error) {
+            debugPrint('Optional registration profile image upload failed: $error');
+          }
+        }
       }
       notifyListeners();
     } catch (_) {
+      try { await _appwrite.logout(); } catch (cleanupError) { debugPrint('Registration session cleanup failed: $cleanupError'); }
       _clearUser();
       rethrow;
     }

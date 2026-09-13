@@ -31,6 +31,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String username = '';
   String displayName = '';
   String email = '';
+  String birthDate = '';
+  String country = '';
   bool isLoggedIn = false;
   bool isDarkMode = true;
   bool isLoading = true;
@@ -58,6 +60,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         username = appStateProvider.username;
         displayName = appStateProvider.displayName;
         email = appStateProvider.email;
+        birthDate = appStateProvider.birthDate;
+        country = appStateProvider.country;
         isLoggedIn = appStateProvider.isLoggedIn;
         isDarkMode = appStateProvider.isDarkMode;
         isLoading = false;
@@ -317,7 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'الحساب',
                     children: isLoggedIn
                         ? [
-                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}')),
+                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}\nتاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate}\nالدولة: ${country.isEmpty ? 'غير متوفر' : country}\n\nتاريخ الميلاد والدولة ثابتان بعد إنشاء الحساب ولا يمكن تعديلهما.')),
                             SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: displayName.isEmpty ? 'غير متوفر' : displayName, onTap: _showEditNameDialog),
                             SettingTile(icon: Icons.alternate_email, title: 'تغيير Username', subtitle: username.isEmpty ? 'غير متوفر' : '@$username', onTap: _showEditUsernameDialog),
                             SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
