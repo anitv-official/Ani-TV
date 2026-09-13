@@ -128,6 +128,15 @@ class Anime3rbSource extends ContentSource {
     ).allMatches(html)) {
       add(match.group(1)!);
     }
+    // Current quality buttons contain the actual player/download URL in an
+    // anchor nested inside the label. Keep only known media/player links.
+    for (final match in RegExp(
+      r'''<a[^>]+href=["']([^"']+)["'][^>]*>''',
+      caseSensitive: false,
+    ).allMatches(html)) {
+      final candidate = HtmlParse.absUrl(url, match.group(1)!);
+      if (_looksLikePlayerUrl(candidate)) add(candidate, 'مشغل/جودة');
+    }
     for (final media in SourceUtils.extractMediaUrls(html, url)) {
       add(media, 'مباشر');
     }
@@ -205,6 +214,15 @@ class Anime3rbSource extends ContentSource {
     final lower = value.toLowerCase();
     return RegExp(r'\.(?:mp4|m3u8|mov|webm)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
+  }
+
+  bool _looksLikePlayerUrl(String value) {
+    final lower = value.toLowerCase();
+    if (_isDirectMedia(lower)) return true;
+    return lower.contains('vid3rb') || lower.contains('3rbcdn') ||
+        lower.contains('vidmoly') || lower.contains('streamtape') ||
+        lower.contains('filemoon') || lower.contains('uqload') ||
+        lower.contains('/embed/');
   }
 
   List<Map<String, dynamic>> _parseCards(String html) {
@@ -300,6 +318,16 @@ class Anime3rbSource extends ContentSource {
     final episodes = <Map<String, dynamic>>[];
     final seen = <String>{};
 
+    final count = _episodeCount(html);
+    final titleMatch = RegExp(r'/titles/([^/?#]+)', caseSensitive: false).firstMatch(pageUrl);
+    if (count != null && titleMatch != null) {
+      final slug = titleMatch.group(1)!;
+      for (var number = 1; number <= count; number++) {
+        episodes.add({'title': 'الحلقة $number', 'name': 'الحلقة $number', 'url': '$_base/episode/$slug/$number', 'number': number});
+      }
+      return episodes;
+    }
+
     void addEpisode(String rawUrl, String text) {
       final url = HtmlParse.absUrl(pageUrl, rawUrl).split('#').first;
       final path = Uri.tryParse(url)?.path ?? '';
@@ -321,10 +349,12 @@ class Anime3rbSource extends ContentSource {
       }
       if (!looksLikeEpisode && !isEpisodePath) return;
       final number = SourceUtils.episodeNumber('$text $decoded');
+      if (number == null) return;
       episodes.add({
-        'title': SourceUtils.episodeTitle(text.isEmpty ? decoded : text, number),
+        'title': 'الحلقة $number',
+        'name': 'الحلقة $number',
         'url': url,
-        'number': number ?? episodes.length + 1,
+        'number': number,
       });
     }
 
@@ -339,5 +369,18 @@ class Anime3rbSource extends ContentSource {
     }
     episodes.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     return episodes;
+  }
+
+  int? _episodeCount(String html) {
+    final candidates = <int>[];
+    for (final pattern in [
+      RegExp(r'(?:عدد الحلقات|عدد حلقات|episodes?|episode_count)[^0-9]{0,80}(\d+)', caseSensitive: false),
+      RegExp(r'''class=["'][^"']*text-lg[^"']*leading-relaxed[^"']*["'][^>]*>\s*(\d+)\s*<''', caseSensitive: false),
+      RegExp(r'"(?:episodes|episode_count|episodes_count)"\s*:\s*(\d+)', caseSensitive: false),
+    ]) {
+      candidates.addAll(pattern.allMatches(html).map((m) => int.tryParse(m.group(1)!)).whereType<int>());
+    }
+    final count = candidates.where((value) => value > 0 && value <= 2000).fold<int>(0, (max, value) => value > max ? value : max);
+    return count > 0 ? count : null;
   }
 }

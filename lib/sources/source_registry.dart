@@ -83,8 +83,9 @@ class SourceRegistry {
     final links = (result['direct_stream_urls'] as List?)?.whereType<Map>().toList() ?? [];
     final playable = links.any((link) {
       final value = link['url']?.toString() ?? '';
-      final isAnyPlayEmbed = source.id == 'anyplay' && value.contains('anyplay.stream/embed/');
-      return value.isNotEmpty && value != url && (isAnyPlayEmbed || !value.contains(Uri.parse(url).host));
+      final isEmbeddedPlayer = (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
+          (source.id == 'anime3rb' && value.contains('anime3rb.com/embed/'));
+      return value.isNotEmpty && value != url && (isEmbeddedPlayer || !value.contains(Uri.parse(url).host));
     });
     return playable ? result : null;
   }
