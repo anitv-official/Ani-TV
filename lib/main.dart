@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -25,11 +26,6 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await FcmService.instance.initialize();
-  if (!kIsWeb && await Permission.notification.isDenied) {
-    await Permission.notification.request();
-  }
   WebViewPlatform.instance =
       WebViewPlatform.instance ?? AndroidWebViewPlatform();
 
@@ -66,6 +62,22 @@ void main() async {
       child: const MyApp(),
     ),
   );
+
+  // Firebase/FCM is optional infrastructure and must never prevent the app
+  // shell from rendering when a device is offline or its push setup is stale.
+  unawaited(_initializePushServices());
+}
+
+Future<void> _initializePushServices() async {
+  try {
+    await Firebase.initializeApp();
+    await FcmService.instance.initialize();
+    if (!kIsWeb && await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+  } catch (error) {
+    debugPrint('Firebase/FCM startup skipped: $error');
+  }
 }
 
 class MyApp extends StatefulWidget {
