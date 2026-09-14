@@ -6,6 +6,7 @@ import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/src/enums.dart' show HttpMethod;
 import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
@@ -31,6 +32,8 @@ class AppwriteService {
   static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
   static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
   static const String usernameLoginEndpoint = 'https://anitv-username-login.nyc.appwrite.run';
+  static const String _sessionSecretKey = 'anitv_appwrite_session_secret';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   final Client client = Client();
   late final Account account;
@@ -42,15 +45,34 @@ class AppwriteService {
     try {
       return await account.get();
     } on AppwriteException catch (error) {
-      if (error.code == 401) return null;
+      if (error.code == 401) {
+        final saved = await _secureStorage.read(key: _sessionSecretKey);
+        if (saved != null && saved.isNotEmpty) {
+          try {
+            client.setSession(saved);
+            return await account.get();
+          } on AppwriteException catch (restoreError) {
+            if (restoreError.code == 401) await _secureStorage.delete(key: _sessionSecretKey);
+          }
+        }
+        return null;
+      }
       rethrow;
+    }
+  }
+
+  Future<void> _rememberSession(String secret) async {
+    if (secret.trim().isNotEmpty) {
+      client.setSession(secret);
+      await _secureStorage.write(key: _sessionSecretKey, value: secret);
     }
   }
 
   Future<models.User> register({required String email, required String password, required String name}) async {
     await account.create(userId: ID.unique(), email: email.trim(), password: password, name: name.trim());
     try {
-      await account.createEmailPasswordSession(email: email.trim(), password: password);
+      final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
+      await _rememberSession(session.secret);
       return account.get();
     } catch (error) {
       // The account was already created. Keep that truth visible to the UI
@@ -61,7 +83,8 @@ class AppwriteService {
   }
 
   Future<models.User> login({required String email, required String password}) async {
-    await account.createEmailPasswordSession(email: email.trim(), password: password);
+    final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
+    await _rememberSession(session.secret);
     return account.get();
   }
 
@@ -75,6 +98,12 @@ class AppwriteService {
       success: success,
       failure: failure,
     );
+    try {
+      final session = await account.getSession(sessionId: 'current');
+      await _rememberSession(session.secret);
+    } catch (_) {
+      // account.get() below remains the source of truth for OAuth sessions.
+    }
     return account.get();
   }
 
@@ -110,6 +139,7 @@ class AppwriteService {
     // The Function already created the user's Appwrite session. Install its
     // session secret on the client; do not call createSession a second time.
     client.setSession(secret);
+    await _rememberSession(secret);
     try {
       return await account.get();
     } catch (_) {
@@ -156,7 +186,14 @@ class AppwriteService {
     return account.get();
   }
 
-  Future<void> logout() async => account.deleteSession(sessionId: 'current');
+  Future<void> logout() async {
+    try {
+      await account.deleteSession(sessionId: 'current');
+    } finally {
+      await _secureStorage.delete(key: _sessionSecretKey);
+      client.setSession('');
+    }
+  }
   Future<void> ping() async => client.ping();
   Future<models.User> updateName(String name) async => account.updateName(name: name.trim());
   Future<models.User> updatePassword({required String password, required String oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
