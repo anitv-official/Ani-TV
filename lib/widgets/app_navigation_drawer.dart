@@ -106,7 +106,7 @@ class _Avatar extends StatelessWidget {
 class AppDrawerButton extends StatelessWidget {
   const AppDrawerButton({super.key});
   @override
-  Widget build(BuildContext context) => Builder(builder: (context) => IconButton(tooltip: 'القائمة', icon: const Icon(Icons.menu_rounded), onPressed: () => Scaffold.of(context).openDrawer()));
+  Widget build(BuildContext context) => Builder(builder: (context) => IconButton(tooltip: 'القائمة', icon: const Icon(Icons.menu_rounded), onPressed: () => Scaffold.of(context).openEndDrawer()));
 }
 
 class AppDrawerScaffold extends StatelessWidget {
@@ -114,5 +114,5 @@ class AppDrawerScaffold extends StatelessWidget {
   final Widget? bottomNavigationBar;
   const AppDrawerScaffold({super.key, required this.body, this.bottomNavigationBar});
   @override
-  Widget build(BuildContext context) => Scaffold(drawer: const AppNavigationDrawer(), backgroundColor: AppTheme.backgroundColor, body: body, bottomNavigationBar: bottomNavigationBar);
+  Widget build(BuildContext context) => Scaffold(endDrawer: const AppNavigationDrawer(), backgroundColor: AppTheme.backgroundColor, body: body, bottomNavigationBar: bottomNavigationBar);
 }

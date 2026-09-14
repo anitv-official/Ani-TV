@@ -249,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       body: _isSearching
           ? Column(
               children: [
-                _buildFilterChips(),
+                _buildSearchSuggestions(),
                 Expanded(
                   child: _isLoading
                       ? _buildLoadingView()
@@ -535,59 +535,29 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildFilterChips() {
+  Widget _buildSearchSuggestions() {
     return Container(
-      height: 50,
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      margin: EdgeInsets.only(bottom: 8),
+      height: 58,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 4),
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          _buildFilterChip('All', _selectedFilter == 'All'),
-          SizedBox(width: 8),
-          _buildFilterChip('أنمي', _selectedFilter == 'أنمي'),
-          SizedBox(width: 8),
-          _buildFilterChip('Manga', _selectedFilter == 'Manga'),
-           if (_selectedChip.isNotEmpty) ...[
-            SizedBox(width: 8),
-            Chip(
-              label: Text(_selectedChip),
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.8),
-              labelStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              deleteIcon: Icon(Icons.close, size: 16, color: Colors.white),
-              onDeleted: () {
-                setState(() {
-                  _selectedChip = '';
-                  _searchResults = [];
-                  _hasSearched = false;
-                });
-              },
-            ),
-          ],
+          ..._genres.take(6).map((genre) => Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: ActionChip(
+                  label: Text(genre['name']?.toString() ?? ''),
+                  backgroundColor: AppTheme.elevatedColor,
+                  labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  side: const BorderSide(color: AppTheme.borderColor),
+                  onPressed: () {
+                    setState(() => _selectedChip = genre['name']?.toString() ?? '');
+                    _performGenreSearch(genre);
+                  },
+                ),
+              )),
         ],
       ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, bool isSelected) {
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      selectedColor: AppTheme.primaryColor,
-      backgroundColor: Colors.white.withOpacity(0.1),
-      checkmarkColor: Colors.white,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppTheme.textSecondaryColor,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (selected) {
-        setState(() {
-          _selectedFilter = label;
-          if (_searchController.text.isNotEmpty) {
-            _performSearch(_searchController.text);
-          }
-        });
-      },
     );
   }
 
@@ -611,7 +581,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         const SizedBox(height: 12),
         const Text('اكتب للبحث عن أنمي أو مانجا', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
         const SizedBox(height: 24),
-        _buildPopularSearches(),
       ],
     );
   }

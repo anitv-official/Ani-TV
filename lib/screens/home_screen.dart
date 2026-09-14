@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       value: AppTheme.systemOverlay,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        drawer: const AppNavigationDrawer(),
+        endDrawer: const AppNavigationDrawer(),
         body: HomeContent(
           preloadedAnime: widget.preloadedAnime,
           preloadedComics: widget.preloadedComics,

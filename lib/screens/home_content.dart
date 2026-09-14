@@ -202,7 +202,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
   Widget _buildLatestHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 42, 16, 16),
       child: Column(
         children: [
           Row(
