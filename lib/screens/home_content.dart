@@ -1,32 +1,15 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../services/app_version_service.dart';
-import '../services/download_service.dart';
 import '../theme/app_theme.dart';
-import '../providers/app_state_provider.dart';
 import '../widgets/custom_error_dialog.dart';
-import '../widgets/update_bottom_sheet.dart';
 import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
-import '../widgets/ui/poster_image.dart';
-import '../widgets/ui/primary_button.dart';
-import '../widgets/ui/section_header.dart';
-import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
-import 'categories_screen.dart';
-import 'favorites_screen.dart';
-import 'login_screen.dart';
-import 'profile_screen.dart';
 import 'search_screen.dart';
-import 'sources_screen.dart';
-import 'downloads_screen.dart';
 import '../widgets/app_navigation_drawer.dart';
 
 class HomeContent extends StatefulWidget {
@@ -52,9 +35,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   bool isLoading = true;
   bool _hasError = false;
   int _currentCarouselIndex = 0;
-  bool _showAnime = true;
-  String _contentFilter = 'anime';
-  bool _isUpdateAvailable = false;
   late final ScrollController _scrollController;
   int _animePage = 1;
   int _comicPage = 1;
@@ -67,7 +47,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    _checkForUpdates();
     if (widget.preloadedAnime != null &&
         widget.preloadedComics != null &&
         widget.preloadedFeaturedContent != null &&
@@ -180,26 +159,6 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     }
   }
 
-  Future<void> _checkForUpdates() async {
-    try {
-      final available = await AppVersionService.isUpdateAvailable();
-      if (mounted) setState(() => _isUpdateAvailable = available);
-    } catch (_) {}
-  }
-
-  void _showUpdateSheet() async {
-    final versionData = await AppVersionService.getAppVersion();
-    final changelog = await AppVersionService.getChangelog();
-    final latestVersion = versionData?['version'];
-    if (mounted) {
-      UpdateBottomSheet.show(
-        context: context,
-        latestVersion: latestVersion,
-        changelog: changelog,
-      );
-    }
-  }
-
   void _showErrorDialog(String title, String message) {
     CustomErrorDialog.show(
       context,
@@ -233,21 +192,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         controller: _scrollController,
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         slivers: [
-          SliverToBoxAdapter(child: _buildHeroSection()),
-          SliverToBoxAdapter(child: _buildQuickActions()),
-          SliverToBoxAdapter(child: _buildOfflineSection()),
-          SliverToBoxAdapter(
-            child: SourceSummary(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen())),
-            ),
-          ),
-          SliverToBoxAdapter(child: _buildContinueSection()),
-          SliverToBoxAdapter(child: _buildContentFilters()),
-          SliverToBoxAdapter(
-            child: SectionHeader(
-              title: _contentFilter == 'manga' ? 'أحدث المانجا' : (_contentFilter == 'drama' ? 'أحدث الدراما' : 'أحدث الأنمي'),
-            ),
-          ),
+          SliverToBoxAdapter(child: _buildLatestHeader()),
           SliverToBoxAdapter(child: _buildContentGrid()),
           SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.of(context).padding.bottom)),
         ],
@@ -255,211 +200,39 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     );
   }
 
-  Widget _buildHeroSection() {
-    final item = featuredContent.isEmpty ? null : featuredContent[_currentCarouselIndex];
-    final imageHeight = (MediaQuery.of(context).size.width * .55).clamp(210.0, 300.0);
+  Widget _buildLatestHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 14),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Consumer<AppStateProvider>(
-            builder: (context, appState, _) => Row(children: [
-              const AppDrawerButton(),
-              Image.asset('assets/images/anitv_logo_transparent.png', width: 104, height: 38, fit: BoxFit.contain),
-              const Spacer(),
-              IconButton(
-                tooltip: 'التحديثات',
-                onPressed: _isUpdateAvailable ? _showUpdateSheet : null,
-                icon: Icon(_isUpdateAvailable ? Icons.notifications_active_rounded : Icons.notifications_none_rounded, color: Colors.white),
+          Row(
+            children: [
+              Image.asset(
+                'assets/images/anitv_logo_transparent.png',
+                width: 104,
+                height: 38,
+                fit: BoxFit.contain,
               ),
-              if (appState.isLoggedIn)
-                InkWell(borderRadius: BorderRadius.circular(22), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen())), child: _buildHeaderAvatar(appState))
-              else
-                TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())), child: const Text('دخول')),
-            ]),
+              const Spacer(),
+              const AppDrawerButton(),
+            ],
           ),
-          const SizedBox(height: 6),
-          SearchLaunchField(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)))),
-          const SizedBox(height: 14),
-          if (item != null)
-            Container(
-              decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(22), border: Border.all(color: AppTheme.borderColor)),
-              clipBehavior: Clip.antiAlias,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                SizedBox(
-                  height: imageHeight,
-                  child: CarouselSlider(
-                    options: CarouselOptions(height: imageHeight, viewportFraction: 1, autoPlay: true, autoPlayInterval: const Duration(seconds: 5), onPageChanged: (index, reason) => setState(() => _currentCarouselIndex = index)),
-                    items: featuredContent.map((contentItem) => PosterImage(url: (contentItem['image_url'] ?? '').toString(), borderRadius: BorderRadius.zero, width: double.infinity, height: imageHeight)).toList(),
-                  ),
-                ),
-                if (featuredContent.length > 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(featuredContent.length > 8 ? 8 : featuredContent.length, (index) => AnimatedContainer(duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 3), width: index == _currentCarouselIndex ? 18 : 6, height: 6, decoration: BoxDecoration(color: index == _currentCarouselIndex ? AppTheme.primaryColor : AppTheme.textMutedColor, borderRadius: BorderRadius.circular(8))))),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    SourceBadge(label: item['type'] == 'comic' ? 'مانجا' : (item['category'] == 'drama' ? 'دراما' : 'أنمي')),
-                    const SizedBox(height: 8),
-                    Text(item['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, height: 1.2)),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(child: PrimaryButton(label: item['type'] == 'comic' ? 'اقرأ الآن' : 'شاهد الآن', icon: item['type'] == 'comic' ? Icons.menu_book_rounded : Icons.play_arrow_rounded, onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'))),
-                      const SizedBox(width: 10),
-                      Expanded(child: SecondaryButton(label: 'التفاصيل', onPressed: () => _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama'))),
-                    ]),
-                  ]),
-                ),
-              ]),
-            )
-          else
-            Container(height: imageHeight, decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(22)), child: const Center(child: Icon(Icons.movie_outlined, color: AppTheme.textMutedColor, size: 42))),
+          const SizedBox(height: 12),
+          SearchLaunchField(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderAvatar(AppStateProvider appState) {
-    final imageFuture = appState.profileImageBytes;
-    if (imageFuture == null) {
-      return CircleAvatar(radius: 19, backgroundColor: AppTheme.primaryColor.withOpacity(.2), child: const Icon(Icons.person_outline, color: Colors.white, size: 21));
-    }
-    return FutureBuilder<Uint8List>(
-      future: imageFuture,
-      builder: (context, snapshot) => snapshot.hasData
-          ? CircleAvatar(radius: 19, backgroundImage: MemoryImage(snapshot.data!))
-          : CircleAvatar(radius: 19, backgroundColor: AppTheme.primaryColor.withOpacity(.2), child: const Icon(Icons.person_outline, color: Colors.white, size: 21)),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-      child: LayoutBuilder(
-        builder: (context, constraints) => GridView.count(
-          crossAxisCount: constraints.maxWidth >= 600 ? 4 : 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: constraints.maxWidth >= 600 ? 3.0 : 2.25,
-          children: [
-            _quickAction(Icons.auto_awesome_rounded, 'فاجئني', _surpriseMe),
-            _quickAction(Icons.favorite_rounded, 'المفضلة', () => Navigator.push(context, MaterialPageRoute(builder: (_) => FavoritesScreen()))),
-            _quickAction(Icons.download_for_offline_rounded, 'التنزيلات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
-            _quickAction(Icons.category_rounded, 'التصنيفات', () => Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()))),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _surpriseMe() {
-    final items = [...latestAnime, ...latestComics];
-    if (items.isEmpty) return;
-    final item = (items.toList()..shuffle()).first;
-    _openItem(item, isAnime: item['type'] == 'anime' || item['type'] == 'drama' || item['category'] == 'drama');
-  }
-
-  Widget _quickAction(IconData icon, String label, VoidCallback onTap) {
-    return Material(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            height: 72,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.borderColor),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: AppTheme.primaryColor, size: 20),
-                const SizedBox(height: 6),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-        ),
-    );
-  }
-
-  Widget _buildOfflineSection() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DownloadService.list(),
-      builder: (context, snapshot) {
-        final count = snapshot.data?.where((item) => item['kind'] == 'manga').length ?? 0;
-        if (count == 0) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Material(
-            color: AppTheme.surfaceColor,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(children: [
-                  const Icon(Icons.offline_pin_rounded, color: AppTheme.primaryColor),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text('$count فصل محفوظ دون اتصال', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
-                  const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppTheme.textSecondaryColor),
-                ]),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildContinueSection() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, _) {
-        final animeItems = appState.animeHistory.take(8).toList();
-        final comicItems = appState.comicHistory.take(8).toList();
-        if (animeItems.isEmpty && comicItems.isEmpty) return const SizedBox.shrink();
-        final items = [
-          ...animeItems.map((item) => Map<String, dynamic>.from(item as Map)..['type'] = 'anime'),
-          ...comicItems.map((item) => Map<String, dynamic>.from(item as Map)..['type'] = 'comic'),
-        ];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: 'متابعة المشاهدة والقراءة',
-              actionLabel: 'السجل',
-              onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())),
-            ),
-            HorizontalContentList(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index];
-                final isAnime = item['type'] == 'anime' || item['type'] == 'drama' || item['category'] == 'drama';
-                return ContentCard(
-                  title: item['title']?.toString(),
-                  imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-                  badge: item['type'] == 'drama' ? 'دراما' : (isAnime ? 'أنمي' : 'مانجا'),
-                  compactTitle: true,
-                  onTap: () => _openItem(item, isAnime: isAnime),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildContentGrid() {
-    final items = _filteredContentItems();
+    final items = latestAnime
+        .where((item) => item['type'] != 'drama' && item['category'] != 'drama')
+        .toList();
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 48),
@@ -474,44 +247,17 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     }
     return ContentGrid(
       shrinkWrap: true,
+      columns: 3,
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
         return ContentCard(
           title: item['title']?.toString(),
-          imageUrl: item['image_url']?.toString(),
-          badge: _contentFilter == 'manga' ? item['type']?.toString() : (item['source']?.toString() ?? 'أنمي'),
-          onTap: () => _openItem(item, isAnime: _contentFilter != 'manga'),
+          imageUrl: (item['image_url'] ?? item['image'])?.toString(),
+          onTap: () => _openItem(item, isAnime: true),
         );
       },
     );
   }
 
-  Widget _buildContentFilters() {
-    const filters = <String, String>{'anime': 'أنمي', 'manga': 'مانجا', 'drama': 'دراما'};
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: filters.entries.map((entry) => ChoiceChip(
-          label: Text(entry.value),
-          selected: _contentFilter == entry.key,
-          onSelected: (_) => setState(() { _contentFilter = entry.key; _showAnime = entry.key != 'manga'; }),
-          selectedColor: AppTheme.primaryColor,
-          backgroundColor: AppTheme.surfaceColor,
-          labelStyle: TextStyle(color: _contentFilter == entry.key ? Colors.white : AppTheme.textSecondaryColor, fontWeight: FontWeight.w700),
-          side: const BorderSide(color: AppTheme.borderColor),
-        )).toList(),
-      ),
-    );
-  }
-
-  List<dynamic> _filteredContentItems() {
-    if (_contentFilter == 'manga') return latestComics;
-    if (_contentFilter == 'drama') {
-      return latestAnime.where((item) => item['type'] == 'drama' || item['category'] == 'drama').toList();
-    }
-    return latestAnime.where((item) => item['type'] != 'drama' && item['category'] != 'drama').toList();
-  }
 }

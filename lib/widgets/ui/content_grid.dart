@@ -5,6 +5,7 @@ class ContentGrid extends StatelessWidget {
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
   final EdgeInsetsGeometry padding;
+  final int? columns;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
@@ -14,6 +15,7 @@ class ContentGrid extends StatelessWidget {
     required this.itemBuilder,
     this.controller,
     this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    this.columns,
     this.shrinkWrap = false,
     this.physics,
   });
@@ -30,7 +32,7 @@ class ContentGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = columnsFor(constraints.maxWidth);
+        final count = columns ?? columnsFor(constraints.maxWidth);
         return GridView.builder(
           controller: controller,
           shrinkWrap: shrinkWrap,
