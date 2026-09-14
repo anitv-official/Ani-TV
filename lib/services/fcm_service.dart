@@ -51,6 +51,7 @@ class FcmService {
 
     await _messaging.requestPermission(alert: true, badge: true, sound: true, provisional: false);
     _token = await _messaging.getToken();
+    await _syncTarget();
     _tokenSubscription = _messaging.onTokenRefresh.listen((token) async {
       _token = token;
       await _syncTarget();
