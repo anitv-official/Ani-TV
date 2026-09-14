@@ -27,6 +27,16 @@ Function مستقلة لإرسال Push Notifications عبر **Appwrite Messagin
 
 ## Request body
 
+### Health check (safe, no notification sent)
+
+For an Appwrite Console smoke test, use **POST** with this JSON body:
+
+```json
+{ "type": "health" }
+```
+
+It returns HTTP `200` and only confirms that the deployment entrypoint loaded. It does not bypass the authentication checks for real notification requests.
+
 ### مستخدم محدد
 
 ```json

@@ -22,9 +22,13 @@ const adminIds = () => new Set(
     .split(',').map((value) => value.trim()).filter(Boolean),
 );
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
+const requestMethod = (req) => String(req.method ?? 'POST').toUpperCase();
 
 module.exports = async ({ req, res, log, error }) => {
   log('Notification request received');
+  if (requestMethod(req) !== 'POST') {
+    return json(res, 405, { ok: false, code: 'METHOD_NOT_ALLOWED', expected: 'POST' });
+  }
   const payload = parseBody(req);
   const actorId = authenticatedUserId(req);
   const type = payload.type;
@@ -32,15 +36,21 @@ module.exports = async ({ req, res, log, error }) => {
   const title = typeof payload.title === 'string' ? payload.title.trim() : '';
   const message = typeof payload.message === 'string' ? payload.message.trim() : '';
 
+  // Safe Appwrite Console smoke test. It never sends a notification and does
+  // not bypass authentication for the real user/broadcast paths below.
+  if (payload.type === 'health') {
+    return json(res, 200, { ok: true, service: 'anitv-notifications', entrypoint: 'src/main.js' });
+  }
+
   if (!actorId) {
     log('Unauthorized request');
     return json(res, 401, { ok: false, code: 'AUTHENTICATION_REQUIRED' });
   }
   if (!validText(title, 120) || !validText(message, 4096)) {
-    return json(res, 400, { ok: false, code: 'INVALID_NOTIFICATION_CONTENT' });
+    return json(res, 400, { ok: false, code: 'INVALID_NOTIFICATION_CONTENT', required: ['title', 'message'] });
   }
   if (type !== 'user' && type !== 'broadcast') {
-    return json(res, 400, { ok: false, code: 'INVALID_TYPE' });
+    return json(res, 400, { ok: false, code: 'INVALID_TYPE', allowed: ['user', 'broadcast', 'health'] });
   }
 
   const admins = adminIds();
