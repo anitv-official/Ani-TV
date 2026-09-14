@@ -151,7 +151,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         onAction: () {
           Navigator.push(
             context,
-            const MaterialPageRoute(builder: (_) => ExploreScreen()),
+            MaterialPageRoute(builder: (_) => const ExploreScreen()),
           );
         },
       );

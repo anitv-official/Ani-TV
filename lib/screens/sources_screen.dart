@@ -19,11 +19,11 @@ class SourcesScreen extends StatelessWidget {
     final sources = SourceRegistry.all;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
+      endDrawer: embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           children: [
-            if (!widget.embedded) const AppFixedHeader(title: 'مصادر المحتوى'),
+            if (!embedded) const AppFixedHeader(title: 'مصادر المحتوى'),
             Expanded(child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: sources.length,

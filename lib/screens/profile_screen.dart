@@ -410,7 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (!isLoading && !isLoggedIn) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppTheme.backgroundColor,
       endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
         body: SafeArea(
