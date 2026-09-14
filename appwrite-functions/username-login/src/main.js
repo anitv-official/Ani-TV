@@ -30,9 +30,10 @@ const errorDetails = (err) => ({
   message: String(err?.message ?? 'unknown').replace(/[\r\n]/g, ' ').slice(0, 240),
 });
 
-const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
+const deleteAccount = async ({ adminClient, payload, req, res, log, error }) => {
   const userId = typeof payload.userId === 'string' ? payload.userId.trim() : '';
   const password = typeof payload.password === 'string' ? payload.password : '';
+  log(`delete_account entered; userIdPresent=${userId ? 'true' : 'false'}; passwordPresent=${password ? 'true' : 'false'}`);
   if (!userId || !password) {
     return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'User identity and password are required.' });
   }
@@ -40,6 +41,7 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
   // on createExecution. Password verification below is the required proof of
   // identity; when Appwrite does provide the header, still enforce the match.
   const authenticatedUserId = String(req.headers?.['x-appwrite-user-id'] ?? '').trim();
+  log(`delete identity header present=${authenticatedUserId ? 'true' : 'false'}; matches=${authenticatedUserId ? String(authenticatedUserId === userId) : 'not_checked'}`);
   if (authenticatedUserId && authenticatedUserId !== userId) {
     return json(res, 401, { ok: false, code: 'AUTHENTICATION_REQUIRED', message: 'An authenticated session is required.' });
   }
@@ -54,8 +56,10 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
   const bucketId = required('APPWRITE_PROFILE_IMAGES_BUCKET_ID');
 
   let user;
+  log('delete user lookup started');
   try {
     user = await users.get(userId);
+    log('delete user lookup succeeded');
   } catch (err) {
     const details = errorDetails(err);
     error(`delete user lookup failed; code=${details.code}; type=${details.type}`);
@@ -67,7 +71,9 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
   // Password verification is performed by Appwrite; the password is never logged.
   try {
     const account = new Account(adminClient);
+    log('delete password verification started');
     await account.createEmailPasswordSession({ email: user.email, password });
+    log('delete password verification succeeded');
   } catch (err) {
     const details = errorDetails(err);
     error(`delete password verification failed; code=${details.code}; type=${details.type}`);
@@ -78,8 +84,10 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
 
   let profile;
   try {
+    log('delete profile lookup started');
     const result = await tablesDB.listRows({ databaseId, tableId: profilesTableId, queries: [Query.limit(5000)] });
     profile = result.rows.find((row) => String(row.userId ?? '') === userId);
+    log(`delete profile lookup succeeded; found=${profile ? 'true' : 'false'}`);
     if (profile && String(profile.userId ?? '') !== userId) {
       return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
     }
@@ -90,7 +98,9 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
   }
 
   try {
+    log('delete favorites lookup started');
     const favorites = await databases.listDocuments({ databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)] });
+    log(`delete favorites lookup succeeded; count=${favorites.documents.length}`);
     for (const favorite of favorites.documents) {
       if (String(favorite.data?.userId ?? '') !== userId) {
         return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
@@ -106,6 +116,7 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
       await tablesDB.deleteRow({ databaseId, tableId: profilesTableId, rowId: profile.$id });
     }
     await users.delete({ userId });
+    log('delete account completed');
     return json(res, 200, { ok: true });
   } catch (err) {
     const details = errorDetails(err);
@@ -144,7 +155,8 @@ module.exports = async ({ req, res, log, error }) => {
 
     if (action === 'delete_account') {
       phase = 'account_deletion';
-      return deleteAccount({ adminClient, payload, req, res, error });
+      log('delete_account action selected');
+      return deleteAccount({ adminClient, payload, req, res, log, error });
     }
 
     if (action === 'check_username') {
