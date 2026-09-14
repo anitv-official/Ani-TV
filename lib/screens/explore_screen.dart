@@ -11,6 +11,7 @@ import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/segmented_toggle.dart';
 import '../widgets/ui/state_views.dart';
+import '../sources/source_registry.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'search_screen.dart';
@@ -19,12 +20,16 @@ class ExploreScreen extends StatefulWidget {
   final bool initialIsAnime;
   final bool showBackButton;
   final bool embedded;
+  final String? sourceId;
+  final String? title;
 
   const ExploreScreen({
     Key? key,
     this.initialIsAnime = true,
     this.showBackButton = true,
     this.embedded = false,
+    this.sourceId,
+    this.title,
   }) : super(key: key);
 
   @override
@@ -70,9 +75,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     try {
       final isAnime = _currentTabIndex == 0;
       final page = isAnime ? ++_animePage : ++_comicPage;
-      final items = isAnime
-          ? await ApiService.fetchLatestAnime(page: page)
-          : await ApiService.fetchLatestComics(page: page);
+      final items = widget.sourceId != null
+          ? await _fetchSourcePage(widget.sourceId!, page)
+          : isAnime
+              ? await ApiService.fetchLatestAnime(page: page)
+              : await ApiService.fetchLatestComics(page: page);
       if (!mounted) return;
       setState(() {
         final target = isAnime ? latestAnime : latestComics;
@@ -86,6 +93,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _loadData() async {
     try {
+      if (widget.sourceId != null) {
+        final items = await _fetchSourcePage(widget.sourceId!, 1);
+        if (!mounted) return;
+        setState(() {
+          latestAnime = widget.initialIsAnime ? items : [];
+          latestComics = widget.initialIsAnime ? [] : items;
+          _animePage = 1;
+          _comicPage = 1;
+          isLoadingContent = false;
+        });
+        return;
+      }
       final loaded = await Future.wait([
         _fetchAllLatestAnime(),
         _fetchAllLatestComics(),
@@ -107,6 +126,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
         _showErrorDialog('خطأ في التحميل', 'تعذر تحميل المحتوى. حاول مرة أخرى.');
       }
     }
+  }
+
+  Future<List<dynamic>> _fetchSourcePage(String sourceId, int page) async {
+    final source = SourceRegistry.all.firstWhere((item) => item.id == sourceId);
+    return source.latest(page: page);
   }
 
   Future<List<dynamic>> _fetchAllLatestAnime() async {
@@ -156,8 +180,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!widget.embedded) AppFixedHeader(title: 'استكشاف', showBack: widget.showBackButton),
-            Padding(
+            if (!widget.embedded) AppFixedHeader(title: widget.title ?? 'استكشاف', showBack: widget.showBackButton),
+            if (widget.sourceId == null && widget.title == null) Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SegmentedToggle(
                 labels: const ['أنمي', 'مانجا'],
@@ -169,7 +193,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                _currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث المانجا',
+                widget.title ?? (_currentTabIndex == 0 ? 'أحدث الأنمي' : 'أحدث المانجا'),
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
               ),
             ),

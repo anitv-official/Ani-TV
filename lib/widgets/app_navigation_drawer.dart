@@ -37,6 +37,8 @@ class AppNavigationDrawer extends StatelessWidget {
             _item(context, Icons.home_rounded, 'الأحدث', () => _select(context, AppSection.latest), selected: currentSection == AppSection.latest),
             _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime), selected: currentSection == AppSection.anime),
             _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
+            _item(context, Icons.live_tv_rounded, 'لائحة الدراما', () => _select(context, AppSection.drama), selected: currentSection == AppSection.drama),
+            _item(context, Icons.local_movies_rounded, 'لائحة الأفلام', () => _select(context, AppSection.movies), selected: currentSection == AppSection.movies),
             const SizedBox(height: 10),
             const Divider(color: AppTheme.borderColor),
             _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites), selected: currentSection == AppSection.favorites),
