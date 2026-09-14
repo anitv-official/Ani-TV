@@ -1,0 +1,97 @@
+# AniTV Notifications Function
+
+Function مستقلة لإرسال Push Notifications عبر **Appwrite Messaging → FCM**. لا تعدّل Function تسجيل الدخول/حذف الحساب الحالية.
+
+## Runtime and entrypoint
+
+- Runtime: **Node.js 22**
+- Entrypoint: `src/main.js`
+- Package manager: `npm install`
+- Execute access: يمكن جعله `Any` لأن التحقق من هوية المستخدم والصلاحيات يتم داخل Function. لا تترك `ANITV_ADMIN_USER_IDS` فارغًا إذا كان Broadcast مطلوبًا.
+
+## Environment variables داخل Appwrite Function
+
+| Variable | Required | Description |
+|---|---:|---|
+| `APPWRITE_ENDPOINT` | Yes | نفس Endpoint المشروع الحالي، مثل `https://nyc.cloud.appwrite.io/v1` |
+| `APPWRITE_PROJECT_ID` | Yes | Project ID الخاص بـAppwrite، وليس Firebase Project ID |
+| `APPWRITE_API_KEY` | Yes | Secret API key مخصص لهذه Function فقط |
+| `ANITV_ADMIN_USER_IDS` | Yes for broadcast | قائمة Appwrite User IDs للمشرفين مفصولة بفواصل |
+| `ANITV_BROADCAST_TOPIC_ID` | Yes for broadcast | Topic ID الفعلي الذي أنشأته في Appwrite Messaging |
+
+لا تضع أي قيمة سرية في Git أو Flutter. لا تسجل Function الـAPI key أو FCM token أو محتوى بيانات حساس.
+
+## أقل صلاحيات API key
+
+امنح المفتاح صلاحية `messages.write` فقط لإرسال Push عبر Appwrite Messaging. لا تحتاج Function إلى Users/Databases/Storage لأن Appwrite Messaging يستهدف `users` أو `topics` مباشرة.
+
+## Request body
+
+### مستخدم محدد
+
+```json
+{
+  "type": "user",
+  "userId": "APPWRITE_USER_ID",
+  "title": "AniTV",
+  "message": "لديك تحديث جديد",
+  "data": {
+    "type": "new_content",
+    "url": "https://example.invalid/anime/123"
+  }
+}
+```
+
+المستخدم العادي لا يستطيع الإرسال إلى مستخدم آخر؛ يمكنه الإرسال إلى نفسه فقط. المشرف الموجود في `ANITV_ADMIN_USER_IDS` يمكنه الإرسال لأي مستخدم.
+
+### Broadcast
+
+```json
+{
+  "type": "broadcast",
+  "title": "AniTV",
+  "message": "تمت إضافة محتوى جديد",
+  "data": {
+    "type": "new_content",
+    "url": "https://example.invalid/anime/123"
+  }
+}
+```
+
+Broadcast للمشرفين فقط، ويستخدم `ANITV_BROADCAST_TOPIC_ID` ولا يقبل Topic ID من الطلب.
+
+## Appwrite Console setup
+
+1. في **Messaging → Providers** أنشئ/فعّل FCM Android Provider باستخدام إعداد Firebase الرسمي. لا تضع Service Account JSON في المستودع.
+2. أنشئ Topic عام، مثل الاسم `anitv_all`. احتفظ بالـTopic ID الناتج وضعه في `ANITV_BROADCAST_TOPIC_ID`.
+3. اضبط صلاحية الاشتراك في Topic بحيث يسمح للمستخدمين المسجلين بالاشتراك.
+4. أنشئ Function جديدة باسم `AniTV Notifications`، Runtime Node.js 22، ثم ارفع محتويات هذا المجلد.
+5. أضف Environment Variables السابقة، وأنشئ Deployment جديدًا.
+6. لا تغيّر Function الحالية `6aa5ed04000f66117651`.
+
+## Flutter build variables
+
+يحتاج التطبيق إلى تمرير القيم غير السرية التالية عند البناء:
+
+```bash
+flutter build apk --release \
+  --dart-define=ANITV_FCM_PROVIDER_ID=<APPWRITE_FCM_PROVIDER_ID> \
+  --dart-define=ANITV_FCM_TOPIC_ID=<APPWRITE_TOPIC_ID>
+```
+
+لا تضع Provider ID أو Topic ID عشوائيين. يجب نسخهما من Appwrite Console بعد إنشائهما.
+
+## Function deployment archive
+
+من جذر المشروع:
+
+```bash
+cd appwrite-functions/anitv-notifications
+npm install --omit=dev
+cd ../..
+tar -czf anitv-notifications-function.tar.gz \
+  --exclude='*/node_modules/.cache' \
+  appwrite-functions/anitv-notifications
+```
+
+استخدم الملف الناتج للرفع في Appwrite Console. يحتوي المصدر على `package.json` و`src/main.js` ولا يحتوي أي Secret.

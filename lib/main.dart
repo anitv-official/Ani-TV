@@ -17,6 +17,7 @@ import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/toast_utils.dart';
 import 'services/fcm_service.dart';
 
@@ -84,6 +85,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    FcmService.instance.onNotificationOpened = _handleNotificationMessage;
+    final pending = FcmService.instance.takePendingOpenedMessage();
+    if (pending != null) WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationMessage(pending));
     _deepLinkChannel.setMethodCallHandler((call) async {
       if (call.method == 'onLink' && call.arguments is String) _handleUri(Uri.tryParse(call.arguments as String));
       return null;
@@ -91,6 +95,13 @@ class _MyAppState extends State<MyApp> {
     _deepLinkChannel.invokeMethod<String>('getInitialLink').then((value) {
       if (value != null) _handleUri(Uri.tryParse(value));
     });
+  }
+
+  void _handleNotificationMessage(RemoteMessage message) {
+    final url = message.data['url']?.toString();
+    final type = message.data['type']?.toString();
+    if (url == null || url.isEmpty || type == null) return;
+    _handleUri(Uri.tryParse('anitv://$type?url=${Uri.encodeComponent(url)}'));
   }
 
   void _handleUri(Uri? uri) {

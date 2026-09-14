@@ -15,10 +15,11 @@ class AppwriteService {
     client
       ..setEndpoint(_endpoint)
       ..setProject(_projectId);
-    account = Account(client);
-    databases = Databases(client);
-    storage = Storage(client);
-    functions = Functions(client);
+      account = Account(client);
+      databases = Databases(client);
+      storage = Storage(client);
+      functions = Functions(client);
+      messaging = Messaging(client);
   }
 
   static final AppwriteService instance = AppwriteService._internal();
@@ -40,6 +41,7 @@ class AppwriteService {
   late final Databases databases;
   late final Storage storage;
   late final Functions functions;
+  late final Messaging messaging;
 
   Future<models.User?> getCurrentUser() async {
     try {
@@ -195,15 +197,11 @@ class AppwriteService {
     }
   }
 
-  Future<void> updateFcmToken({required String userId, required String token}) async {
-    await _assertCurrentUser(userId);
-    final profile = await getProfile(userId);
-    if (profile == null) return;
-    await updateProfile(
-      documentId: profile.$id,
-      username: (profile.data['username'] ?? '').toString(),
-      fcmToken: token,
-    );
+  Future<models.Target> createPushTarget({required String targetId, required String identifier, String? providerId}) => account.createPushTarget(targetId: targetId, identifier: identifier, providerId: providerId);
+  Future<models.Target> updatePushTarget({required String targetId, required String identifier}) => account.updatePushTarget(targetId: targetId, identifier: identifier);
+  Future<void> deletePushTarget(String targetId) async => await account.deletePushTarget(targetId: targetId);
+  Future<void> subscribePushTarget({required String topicId, required String subscriberId, required String targetId}) async {
+    await messaging.createSubscriber(topicId: topicId, subscriberId: subscriberId, targetId: targetId);
   }
 
   /// Delegates account deletion to the existing trusted Appwrite Function.
@@ -327,7 +325,7 @@ class AppwriteService {
     }
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country, String? fcmToken}) async {
+  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country}) async {
     final response = await client.call(
       HttpMethod.patch,
       path: '/tablesdb/$databaseId/tables/$profilesTableId/rows/$documentId',
@@ -338,7 +336,6 @@ class AppwriteService {
           if (displayName != null) 'displayname': displayName.trim(),
           if (birthDate != null) 'birthdate': birthDate.trim(),
           if (country != null) 'country': country.trim(),
-          if (fcmToken != null) 'fcmToken': fcmToken,
           'updatedAt': DateTime.now().toUtc().toIso8601String(),
         },
       },

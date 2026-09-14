@@ -14,6 +14,7 @@ import 'register_screen.dart';
 import '../utils/toast_utils.dart';
 import '../sources/source_registry.dart';
 import '../services/appwrite_service.dart';
+import '../services/fcm_service.dart';
 import '../services/app_version_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'sources_screen.dart';
@@ -481,7 +482,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SettingsGroup(
                     title: 'الإشعارات',
                     children: [
-                      SettingSwitchTile(icon: Icons.notifications_outlined, title: 'إشعارات التحديث', value: _notificationsEnabled, onChanged: (val) { setState(() => _notificationsEnabled = val); _savePreference('notifications_enabled', val); }),
+                      SettingSwitchTile(icon: Icons.notifications_outlined, title: 'إشعارات التحديث', value: _notificationsEnabled, onChanged: (val) async { setState(() => _notificationsEnabled = val); await _savePreference('notifications_enabled', val); await FcmService.instance.setNotificationsEnabled(val); }),
                     ],
                   ),
                   const SizedBox(height: 18),

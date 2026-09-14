@@ -1,0 +1,9 @@
+{
+  "name": "anitv-notifications",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Secure Appwrite Messaging push notification function for AniTV",
+  "main": "src/main.js",
+  "engines": { "node": ">=22.0.0" },
+  "dependencies": { "node-appwrite": "^18.0.0" }
+}

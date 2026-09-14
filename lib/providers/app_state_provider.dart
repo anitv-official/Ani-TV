@@ -429,6 +429,7 @@ class AppStateProvider extends ChangeNotifier {
     if (userId == null || userId.isEmpty || !_isLoggedIn) {
       throw const AccountDeletionException('NO_SESSION');
     }
+    await FcmService.instance.clearUser();
     await _appwrite.deleteCurrentAccount(password: password);
     await _cache.clearUserData(userId);
     _clearUser();

@@ -46,3 +46,6 @@ app.*.map.json
 *.jks
 *.keystore
 android/key.properties
+
+# Appwrite Function dependencies
+appwrite-functions/**/node_modules/
