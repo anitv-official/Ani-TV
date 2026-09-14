@@ -23,7 +23,7 @@ Function مستقلة لإرسال Push Notifications عبر **Appwrite Messagin
 
 ## أقل صلاحيات API key
 
-امنح المفتاح صلاحية `messages.write` فقط لإرسال Push عبر Appwrite Messaging. لا تحتاج Function إلى Users/Databases/Storage لأن Appwrite Messaging يستهدف `users` أو `topics` مباشرة.
+امنح المفتاح صلاحيات `rows.read` و`rows.write` لقراءة وتحديث Favorites، و`messages.write` لإرسال Push، مع `targets.read` و`topics.read` كما هو مضبوط في المشروع.
 
 ## Request body
 
@@ -36,6 +36,22 @@ For an Appwrite Console smoke test, use **POST** with this JSON body:
 ```
 
 It returns HTTP `200` and only confirms that the deployment entrypoint loaded. It does not bypass the authentication checks for real notification requests.
+
+### Favorite scan (administrative)
+
+Use **POST** with this body:
+
+```json
+{ "type": "favorite_scan", "dryRun": true }
+```
+
+Pass the secret only through this header; never place it in the body or logs:
+
+```text
+x-anitv-favorite-scan-secret: <value configured in Appwrite>
+```
+
+`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The verified adapter currently supports Anime4Up anime Favorites; unsupported sources are reported and do not stop the scan.
 
 ### مستخدم محدد
 

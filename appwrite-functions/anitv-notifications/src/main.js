@@ -1,4 +1,9 @@
-const { Client, ID, Messaging } = require('node-appwrite');
+const crypto = require('node:crypto');
+const { Client, ID, Messaging, Databases, Query } = require('node-appwrite');
+const anime4up = require('./adapters/anime4up');
+
+const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
+const FAVORITES_COLLECTION_ID = '6aa58e3a003b23556872';
 
 const json = (res, statusCode, body) => res.json(body, statusCode);
 const required = (name) => {
@@ -23,6 +28,92 @@ const adminIds = () => new Set(
 );
 const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
 const requestMethod = (req) => String(req.method ?? 'POST').toUpperCase();
+const header = (req, name) => {
+  const headers = req.headers || {};
+  return String(headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()] ?? '').trim();
+};
+const sameSecret = (provided, expected) => {
+  if (!provided || !expected) return false;
+  const left = Buffer.from(provided);
+  const right = Buffer.from(expected);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+};
+
+const sourceAdapter = (favorite) => {
+  const source = String(favorite.source || '').trim().toLowerCase();
+  const itemId = String(favorite.itemId || '').trim();
+  return anime4up.supports(source, itemId) ? anime4up : null;
+};
+
+async function runFavoriteScan({ databases, messaging, payload, log, error }) {
+  const dryRun = payload.dryRun === true;
+  const result = { scanned: 0, checked: 0, notified: 0, initialized: 0, skipped: 0, unsupported: 0, errors: 0, dryRun };
+  log(`favorite scan started; dryRun=${dryRun}`);
+  const documents = await databases.listDocuments({
+    databaseId: FAVORITES_DATABASE_ID,
+    collectionId: FAVORITES_COLLECTION_ID,
+    queries: [Query.limit(5000)],
+  });
+  result.scanned = documents.documents.length;
+  log(`favorites count=${result.scanned}`);
+
+  for (const document of documents.documents) {
+    const favorite = document.data || {};
+    const userId = String(favorite.userId || '').trim();
+    const itemId = String(favorite.itemId || '').trim();
+    const title = String(favorite.title || 'AniTV').trim() || 'AniTV';
+    const adapter = sourceAdapter(favorite);
+    if (!userId || !itemId || !adapter || String(favorite.type || '').toLowerCase() !== 'anime') {
+      result.unsupported += 1;
+      log(`favorite unsupported; document=${document.$id}`);
+      continue;
+    }
+    result.checked += 1;
+    try {
+      const latest = await adapter.latestEpisode({ source: favorite.source, itemId });
+      const checkedAt = new Date().toISOString();
+      if (!latest) {
+        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastCheckedAt: checkedAt } });
+        result.skipped += 1;
+        continue;
+      }
+      const current = String(latest.number);
+      const previous = String(favorite.lastNotifiedEpisode || '').trim();
+      if (!previous) {
+        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+        result.initialized += 1;
+        log(`favorite initialized; document=${document.$id}; episode=${current}`);
+        continue;
+      }
+      if (Number(latest.number) <= Number(previous)) {
+        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastCheckedAt: checkedAt } });
+        result.skipped += 1;
+        continue;
+      }
+      if (!dryRun) {
+        await messaging.createPush({
+          messageId: ID.unique(),
+          users: [userId],
+          title: `حلقة جديدة: ${title}`,
+          body: `تمت إضافة الحلقة ${current}`,
+          data: { type: 'new_content', url: itemId, source: String(favorite.source || 'anime4up'), episode: current },
+          priority: 'high',
+        });
+        await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+        result.notified += 1;
+        log(`notification sent; document=${document.$id}; episode=${current}`);
+      } else {
+        result.notified += 1;
+        log(`notification would be sent; document=${document.$id}; episode=${current}`);
+      }
+    } catch (scanError) {
+      result.errors += 1;
+      error(`favorite source error; document=${document.$id}; type=${scanError?.name || 'unknown'}`);
+    }
+  }
+  log(`favorite scan completed; checked=${result.checked}; notified=${result.notified}; errors=${result.errors}`);
+  return result;
+}
 
 module.exports = async ({ req, res, log, error }) => {
   log('Notification request received');
@@ -40,6 +131,24 @@ module.exports = async ({ req, res, log, error }) => {
   // not bypass authentication for the real user/broadcast paths below.
   if (payload.type === 'health') {
     return json(res, 200, { ok: true, service: 'anitv-notifications', entrypoint: 'src/main.js' });
+  }
+
+  if (type === 'favorite_scan') {
+    const expectedSecret = process.env.ANITV_FAVORITE_SCAN_SECRET;
+    if (!expectedSecret) return json(res, 503, { ok: false, code: 'SCAN_NOT_CONFIGURED' });
+    if (!sameSecret(header(req, 'x-anitv-favorite-scan-secret'), expectedSecret)) {
+      return json(res, 403, { ok: false, code: 'INVALID_SCAN_SECRET' });
+    }
+    try {
+      const client = new Client()
+        .setEndpoint(required('APPWRITE_ENDPOINT'))
+        .setProject(required('APPWRITE_PROJECT_ID'))
+        .setKey(required('APPWRITE_API_KEY'));
+      return json(res, 200, { ok: true, type, ...(await runFavoriteScan({ databases: new Databases(client), messaging: new Messaging(client), payload, log, error })) });
+    } catch (scanError) {
+      error(`favorite scan failed; type=${scanError?.name || 'unknown'}`);
+      return json(res, 502, { ok: false, code: 'SCAN_FAILED' });
+    }
   }
 
   if (!actorId) {
@@ -102,3 +211,7 @@ module.exports = async ({ req, res, log, error }) => {
     return json(res, 502, { ok: false, code: 'DELIVERY_FAILED' });
   }
 };
+
+// Exported only to support local mock tests; Appwrite still invokes the
+// default function above and no credentials are exposed by these helpers.
+module.exports.runFavoriteScan = runFavoriteScan;
