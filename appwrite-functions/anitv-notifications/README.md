@@ -5,7 +5,7 @@ Function مستقلة لإرسال Push Notifications عبر **Appwrite Messagin
 ## Runtime and entrypoint
 
 - Runtime: **Node.js 22**
-- Entrypoint: `src/main.js`
+- Entrypoint: `index.js` (at the deployment archive root)
 - Package manager: `npm install`
 - Execute access: يمكن جعله `Any` لأن التحقق من هوية المستخدم والصلاحيات يتم داخل Function. لا تترك `ANITV_ADMIN_USER_IDS` فارغًا إذا كان Broadcast مطلوبًا.
 
@@ -94,4 +94,4 @@ tar -czf anitv-notifications-function.tar.gz \
   appwrite-functions/anitv-notifications
 ```
 
-استخدم الملف الناتج للرفع في Appwrite Console. يحتوي المصدر على `package.json` و`src/main.js` ولا يحتوي أي Secret.
+استخدم الملف الناتج للرفع في Appwrite Console. يحتوي جذر الأرشيف مباشرة على `package.json` و`index.js` ولا يحتوي أي Secret. ملف `index.js` نسخة مطابقة من `src/main.js` المحفوظ في المستودع.
