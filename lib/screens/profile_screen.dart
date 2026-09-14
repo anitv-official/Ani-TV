@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:appwrite/appwrite.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
@@ -41,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showMatureContent = false;
   bool _notificationsEnabled = true;
   String? _avatarPath;
+  bool _isDeletingAccount = false;
 
   @override
   void initState() {
@@ -130,6 +132,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       _showErrorDialog('خطأ في تسجيل الخروج', 'تعذر تسجيل الخروج. حاول مرة أخرى.');
     }
+  }
+
+  Future<void> _deleteAccountFlow() async {
+    var readWarning = false;
+    var acceptTerms = false;
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: const Text('حذف الحساب نهائيًا'),
+          content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('تحذير: حذف الحساب عملية نهائية ولا يمكن التراجع عنها.'),
+            const SizedBox(height: 10),
+            const Text('بعد حذف حسابك لن تتمكن من الوصول إليه مرة أخرى، وسيتم حذف بيانات الحساب التي يديرها التطبيق من الخدمة السحابية.'),
+            const SizedBox(height: 12),
+            CheckboxListTile(contentPadding: EdgeInsets.zero, value: readWarning, onChanged: (v) => setDialogState(() => readWarning = v ?? false), title: const Text('أقر أنني قرأت التحذير'), controlAffinity: ListTileControlAffinity.leading),
+            CheckboxListTile(contentPadding: EdgeInsets.zero, value: acceptTerms, onChanged: (v) => setDialogState(() => acceptTerms = v ?? false), title: const Text('أوافق على جميع الشروط المتعلقة بحذف الحساب'), controlAffinity: ListTileControlAffinity.leading),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            ElevatedButton(onPressed: readWarning && acceptTerms ? () => Navigator.pop(dialogContext, true) : null, child: const Text('المتابعة')),
+          ],
+        ),
+      ),
+    );
+    if (proceed != true || !mounted) return;
+    final password = await _showPasswordConfirmation();
+    if (password == null || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('هل تريد حذف حسابك نهائيًا؟'),
+        content: const Text('سيتم حذف حسابك والبيانات المرتبطة به التي يديرها AniTV. هذه العملية لا يمكن التراجع عنها.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف الحساب نهائيًا', style: TextStyle(color: AppTheme.primaryColor))),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isDeletingAccount = true);
+    try {
+      await context.read<AppStateProvider>().deleteAccount(password: password);
+      if (!mounted) return;
+      ToastUtils.show('تم حذف الحساب نهائيًا', backgroundColor: AppTheme.primaryColor);
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LandingScreen()), (route) => false);
+    } catch (error) {
+      if (mounted) _showInfoDialog('تعذر حذف الحساب', _accountDeletionMessage(error));
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
+    }
+  }
+
+  Future<String?> _showPasswordConfirmation() async {
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    String? error;
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: const Text('تأكيد كلمة المرور'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: password, obscureText: true, autofocus: true, decoration: const InputDecoration(labelText: 'كلمة المرور')),
+            TextField(controller: confirmation, obscureText: true, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
+            if (error != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(error!, style: const TextStyle(color: AppTheme.primaryColor))),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+            ElevatedButton(onPressed: () {
+              if (password.text.isEmpty || confirmation.text.isEmpty) {
+                setDialogState(() => error = 'يرجى إدخال كلمة المرور وتأكيدها.');
+              } else if (password.text != confirmation.text) {
+                setDialogState(() => error = 'كلمتا المرور غير متطابقتين.');
+              } else {
+                Navigator.pop(dialogContext, password.text);
+              }
+            }, child: const Text('متابعة')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _accountDeletionMessage(Object error) {
+    if (error is AccountDeletionException && error.code == 'NO_EMAIL') return 'هذا الحساب لا يملك كلمة مرور محلية. لا يمكن تنفيذ الحذف بأمان من هذا الإصدار.';
+    if (error is AppwriteException && error.code == 401) return 'تعذر التحقق من كلمة المرور.';
+    return 'تعذر حذف الحساب حاليًا. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
   }
 
   Future<void> _openPrivacyPolicy() async {
@@ -343,6 +436,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             SettingTile(icon: Icons.alternate_email, title: 'تغيير Username', subtitle: username.isEmpty ? 'غير متوفر' : '@$username', onTap: _showEditUsernameDialog),
                             SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
                             SettingTile(icon: Icons.email_outlined, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
+                            SettingTile(icon: Icons.delete_forever_outlined, title: 'حذف الحساب', subtitle: 'حذف نهائي لا يمكن التراجع عنه', onTap: _isDeletingAccount ? null : _deleteAccountFlow),
                           ]
                         : [
                             SettingTile(icon: Icons.login_rounded, title: 'تسجيل الدخول', subtitle: 'للوصول إلى ملفك الشخصي', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),

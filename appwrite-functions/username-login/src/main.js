@@ -1,4 +1,4 @@
-const { Client, Account, TablesDB, Query, Users } = require('node-appwrite');
+const { Client, Account, Databases, TablesDB, Query, Storage, Users } = require('node-appwrite');
 
 const json = (res, statusCode, body) => res.json(body, statusCode);
 const invalidCredentials = (res) => json(res, 401, {
@@ -30,6 +30,87 @@ const errorDetails = (err) => ({
   message: String(err?.message ?? 'unknown').replace(/[\r\n]/g, ' ').slice(0, 240),
 });
 
+const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
+  const userId = typeof payload.userId === 'string' ? payload.userId.trim() : '';
+  const password = typeof payload.password === 'string' ? payload.password : '';
+  if (!userId || !password) {
+    return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'User identity and password are required.' });
+  }
+  const authenticatedUserId = String(req.headers?.['x-appwrite-user-id'] ?? '').trim();
+  if (!authenticatedUserId || authenticatedUserId !== userId) {
+    return json(res, 401, { ok: false, code: 'AUTHENTICATION_REQUIRED', message: 'An authenticated session is required.' });
+  }
+
+  const users = new Users(adminClient);
+  const tablesDB = new TablesDB(adminClient);
+  const databases = new Databases(adminClient);
+  const storage = new Storage(adminClient);
+  const databaseId = required('APPWRITE_DATABASE_ID');
+  const profilesTableId = required('APPWRITE_PROFILES_TABLE_ID');
+  const favoritesTableId = required('APPWRITE_FAVORITES_TABLE_ID');
+  const bucketId = required('APPWRITE_PROFILE_IMAGES_BUCKET_ID');
+
+  let user;
+  try {
+    user = await users.get(userId);
+  } catch (err) {
+    const details = errorDetails(err);
+    error(`delete user lookup failed; code=${details.code}; type=${details.type}`);
+    return Number(details.code) === 404
+      ? json(res, 404, { ok: false, code: 'USER_NOT_FOUND', message: 'Account was not found.' })
+      : serverError(res, 'USER_ERROR');
+  }
+
+  // Password verification is performed by Appwrite; the password is never logged.
+  try {
+    const account = new Account(adminClient);
+    await account.createEmailPasswordSession({ email: user.email, password });
+  } catch (err) {
+    const details = errorDetails(err);
+    error(`delete password verification failed; code=${details.code}; type=${details.type}`);
+    return Number(details.code) === 401
+      ? json(res, 401, { ok: false, code: 'INVALID_CREDENTIALS', message: 'Unable to verify credentials.' })
+      : serverError(res, 'AUTH_ERROR');
+  }
+
+  let profile;
+  try {
+    const result = await tablesDB.listRows({ databaseId, tableId: profilesTableId, queries: [Query.limit(5000)] });
+    profile = result.rows.find((row) => String(row.userId ?? '') === userId);
+    if (profile && String(profile.userId ?? '') !== userId) {
+      return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
+    }
+  } catch (err) {
+    const details = errorDetails(err);
+    error(`delete profile lookup failed; code=${details.code}; type=${details.type}`);
+    return serverError(res, 'PROFILE_ERROR');
+  }
+
+  try {
+    const favorites = await databases.listDocuments({ databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)] });
+    for (const favorite of favorites.documents) {
+      if (String(favorite.data?.userId ?? '') !== userId) {
+        return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
+      }
+    }
+    if (profile?.profileImageId) {
+      await storage.deleteFile({ bucketId, fileId: String(profile.profileImageId) });
+    }
+    for (const favorite of favorites.documents) {
+      await databases.deleteDocument({ databaseId, collectionId: favoritesTableId, documentId: favorite.$id });
+    }
+    if (profile) {
+      await tablesDB.deleteRow({ databaseId, tableId: profilesTableId, rowId: profile.$id });
+    }
+    await users.delete({ userId });
+    return json(res, 200, { ok: true });
+  } catch (err) {
+    const details = errorDetails(err);
+    error(`delete account failed; code=${details.code}; type=${details.type}`);
+    return serverError(res, 'DELETE_ERROR');
+  }
+};
+
 module.exports = async ({ req, res, log, error }) => {
   let username = '';
   let phase = 'request';
@@ -45,10 +126,10 @@ module.exports = async ({ req, res, log, error }) => {
     const password = typeof payload.password === 'string' ? payload.password : '';
     log(`username normalized: ${username || '[empty]'}`);
 
-    if (!username || (action !== 'check_username' && !password)) {
+    if (action !== 'delete_account' && (!username || (action !== 'check_username' && !password))) {
       return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'Username and password are required.' });
     }
-    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+    if (action !== 'delete_account' && !/^[a-z0-9_]{3,24}$/.test(username)) {
       return json(res, 400, { ok: false, code: 'INVALID_USERNAME', message: 'Invalid username.' });
     }
 
@@ -57,6 +138,11 @@ module.exports = async ({ req, res, log, error }) => {
       .setProject(required('APPWRITE_PROJECT_ID'))
       .setKey(required('APPWRITE_API_KEY'));
     const tablesDB = new TablesDB(adminClient);
+
+    if (action === 'delete_account') {
+      phase = 'account_deletion';
+      return deleteAccount({ adminClient, payload, req, res, error });
+    }
 
     if (action === 'check_username') {
       phase = 'username_availability_lookup';

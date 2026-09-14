@@ -418,6 +418,17 @@ class AppStateProvider extends ChangeNotifier {
     } catch (_) { _setErrorMessage('تعذر تسجيل الخروج. حاول مرة أخرى.'); rethrow; }
   }
 
+  Future<void> deleteAccount({required String password}) async {
+    final userId = _userId;
+    if (userId == null || userId.isEmpty || !_isLoggedIn) {
+      throw const AccountDeletionException('NO_SESSION');
+    }
+    await _appwrite.deleteCurrentAccount(password: password);
+    await _cache.clearUserData(userId);
+    _clearUser();
+    notifyListeners();
+  }
+
   Future<void> updateProfileName(String name) async {
     final user = await _appwrite.updateName(name);
     final documentId = _profileDocumentId;

@@ -194,6 +194,31 @@ class AppwriteService {
       client.setSession('');
     }
   }
+
+  /// Delegates account deletion to the existing trusted Appwrite Function.
+  /// The Function owns the server key and validates resource ownership.
+  Future<void> deleteCurrentAccount({required String password}) async {
+    final user = await getCurrentUser();
+    if (user == null || user.$id.isEmpty) throw const AccountDeletionException('NO_SESSION');
+    if (user.email.trim().isEmpty) throw const AccountDeletionException('NO_EMAIL');
+
+    final execution = await functions.createExecution(
+      functionId: usernameLoginFunctionId,
+      body: jsonEncode({'action': 'delete_account', 'userId': user.$id, 'password': password}),
+      xasync: false,
+    );
+    Map<String, dynamic> body = const {};
+    try {
+      final decoded = jsonDecode(execution.responseBody);
+      if (decoded is Map) body = Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    if (execution.responseStatusCode != 200 || body['ok'] != true) {
+      throw AccountDeletionException(body['code']?.toString() ?? 'DELETE_ERROR');
+    }
+    await _secureStorage.delete(key: _sessionSecretKey);
+    client.setSession('');
+  }
+
   Future<void> ping() async => client.ping();
   Future<models.User> updateName(String name) async => account.updateName(name: name.trim());
   Future<models.User> updatePassword({required String password, required String oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
@@ -402,6 +427,11 @@ String authErrorMessage(Object error, {required bool registering}) {
 class UsernameLoginException implements Exception {
   final String code;
   const UsernameLoginException(this.code);
+}
+
+class AccountDeletionException implements Exception {
+  final String code;
+  const AccountDeletionException(this.code);
 }
 
 class UsernameAvailabilityException implements Exception {

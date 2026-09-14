@@ -64,6 +64,33 @@ class LocalCacheService {
     await writePendingFavorites(userId, values);
   }
 
+  Future<void> clearUserData(String userId) async {
+    final prefs = await _prefs;
+    final encoded = Uri.encodeComponent(userId);
+    final keys = prefs.getKeys().where((key) =>
+        key.contains('user_$userId') ||
+        key.contains('user_$encoded') ||
+        key.endsWith('_$userId'));
+    for (final key in keys.toList()) {
+      await prefs.remove(key);
+    }
+    // These legacy keys are account data from older app versions. Do not
+    // remove general app settings or local downloads.
+    for (final key in <String>[
+      'username',
+      'email',
+      'isLoggedIn',
+      'remembered_email',
+      'profile_avatar_path_$userId',
+      'favorite_anime_$userId',
+      'favorite_comics_$userId',
+      'anime_history_$userId',
+      'comic_history_$userId',
+    ]) {
+      await prefs.remove(key);
+    }
+  }
+
   Future<List<dynamic>> _readList(String key) async {
     final prefs = await _prefs;
     final raw = prefs.getString(key);

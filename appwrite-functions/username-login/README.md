@@ -16,9 +16,11 @@
 |---|---|
 | `APPWRITE_ENDPOINT` | `https://nyc.cloud.appwrite.io/v1` |
 | `APPWRITE_PROJECT_ID` | `6aa4295900094d600163` |
-| `APPWRITE_API_KEY` | API key server-side بصلاحيات `databases.read` و`users.read` و`sessions.write` فقط |
+| `APPWRITE_API_KEY` | API key server-side بصلاحيات `databases.read`, `databases.write`, `users.read`, `users.write`, `files.write`, و`sessions.write` فقط |
 | `APPWRITE_DATABASE_ID` | `6aa58db9001a5f53312d` |
 | `APPWRITE_PROFILES_TABLE_ID` | `6aa58dec001acc5ce962` |
+| `APPWRITE_FAVORITES_TABLE_ID` | `6aa58e3a003b23556872` |
+| `APPWRITE_PROFILE_IMAGES_BUCKET_ID` | `6aa592fc0003195a524b` |
 
 لا تسجل كلمة المرور أو قيم الطلب في logs. الـAPI key يجب أن يبقى Secret داخل Appwrite Function.
 
@@ -29,7 +31,7 @@
 3. اجعل Entrypoint هو `src/main.js`.
 4. ارفع محتويات هذا المجلد كـsource/deployment.
 5. أضف Environment Variables السابقة.
-6. فعّل HTTP execution للتطبيق، واضبط صلاحية التنفيذ للمستخدمين الضيوف (`Any`) لأن التحقق يتم داخل Function. لا تمنح Function صلاحيات كتابة قاعدة البيانات أو إدارة المستخدمين.
+6. فعّل HTTP execution للتطبيق، واضبط صلاحية التنفيذ للمستخدمين الضيوف (`Any`) لأن تسجيل الدخول وفحص Username عامان. مسار حذف الحساب يرفض أي طلب لا يحتوي على `x-appwrite-user-id` مطابقًا لـ`userId`، لذلك لا يمكن استدعاؤه من جلسة غير مصادق عليها.
 7. تأكد أن أعمدة Profiles هي `userId`, `username`, `profileImageId`, و`updatedAt`، وأن قيمة `userId` داخل بيانات الـDocument تطابق Appwrite User `$id`.
 8. اضبط `APPWRITE_USERNAME_LOGIN_FUNCTION_ID=username-login` عند بناء Flutter إن كان معرف Function مختلفًا.
 
@@ -54,6 +56,16 @@ Request body:
 ```
 
 يمكن إرسال `currentDocumentId` عند تغيير Username لاستثناء صف المستخدم نفسه من نتيجة «مأخوذ». هذا الفحص يتم بصلاحية الخادم داخل Function لأن Profiles Table خاصة ولا ينبغي فتح قراءتها للضيوف.
+
+### حذف الحساب
+
+يستخدم التطبيق نفس الـFunction بطلب متزامن:
+
+```json
+{"action":"delete_account","userId":"current-user-id","password":"..."}
+```
+
+لا تثق Function في `userId` وحده؛ يجب أن يرسله Appwrite Runtime أيضًا في `x-appwrite-user-id`، ويجب أن تتطابق القيمتان. بعد إعادة التحقق من كلمة المرور، تتحقق Function من ملكية Profile وFavorites وتحذف صورة الملف التابعة للمستخدم والمفضلة والـProfile ثم تحذف Appwrite User عبر Server SDK. العملية قابلة لإعادة المحاولة، ولا تسجل كلمة المرور أو Tokens. حسابات Google/OAuth التي لا تملك كلمة مرور محلية تُرفض بأمان حتى يتوفر مسار إعادة تحقق OAuth.
 
 نجاح:
 
