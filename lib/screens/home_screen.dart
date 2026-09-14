@@ -12,6 +12,7 @@ import 'favorites_screen.dart';
 import 'downloads_screen.dart';
 import 'sources_screen.dart';
 import 'profile_screen.dart';
+import 'about_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -113,6 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
         return const SourcesScreen(embedded: true);
       case AppSection.account:
         return ProfileScreen(embedded: true);
+      case AppSection.settings:
+        return const ProfileScreen(embedded: true, settingsOnly: true);
+      case AppSection.about:
+        return const AboutScreen(embedded: true);
     }
   }
 

@@ -28,8 +28,9 @@ import '../widgets/auth_required_view.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool embedded;
+  final bool settingsOnly;
 
-  const ProfileScreen({super.key, this.embedded = false});
+  const ProfileScreen({super.key, this.embedded = false, this.settingsOnly = false});
 
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
@@ -410,7 +411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!isLoading && !isLoggedIn) {
+    if (!isLoading && !isLoggedIn && !widget.settingsOnly) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundColor,
       endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
@@ -431,13 +432,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? const LoadingView(message: 'جارٍ تحميل الحساب...', size: 64)
             : Column(
                 children: [
-                  if (!widget.embedded) const AppFixedHeader(title: 'الحساب'),
+                  if (!widget.embedded) AppFixedHeader(title: widget.settingsOnly ? 'الإعدادات' : 'الحساب'),
                   Expanded(child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                     children: [
-                  _buildProfileCard(),
+                  if (!widget.settingsOnly) _buildProfileCard(),
                   const SizedBox(height: 22),
-                  SettingsGroup(
+                  if (!widget.settingsOnly) SettingsGroup(
                     title: 'الحساب',
                     children: isLoggedIn
                         ? [
@@ -452,14 +453,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             SettingTile(icon: Icons.login_rounded, title: 'تسجيل الدخول', subtitle: 'للوصول إلى ملفك الشخصي', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen()))),
                             SettingTile(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
                           ],
-                  ),
-                  const SizedBox(height: 18),
-                  SettingsGroup(
-                    title: 'المحتوى والمصادر',
-                    children: [
-                      SettingTile(icon: Icons.hub_outlined, title: 'المصادر', subtitle: 'تصفح مصادر الأنمي والمانجا', onTap: _showSourcesDialog),
-                      SettingTile(icon: Icons.download_for_offline_outlined, title: 'التنزيلات', subtitle: 'الحلقات والفصول المحفوظة', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
-                    ],
                   ),
                   const SizedBox(height: 18),
                   SettingsGroup(
@@ -494,7 +487,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  SettingsGroup(
+                  if (!widget.settingsOnly) SettingsGroup(
                     title: 'الخصوصية',
                     children: [
                       SettingTile(icon: Icons.privacy_tip_outlined, title: 'سياسة الخصوصية', onTap: _openPrivacyPolicy),
@@ -502,14 +495,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  SettingsGroup(
+                  if (!widget.settingsOnly) SettingsGroup(
                     title: 'حول',
                     children: [
                       SettingTile(icon: Icons.info_outline, title: 'حول AniTV', onTap: _showAboutDialog),
                     ],
                   ),
                   const SizedBox(height: 28),
-                  PrimaryButton(
+                  if (!widget.settingsOnly) PrimaryButton(
                     expanded: true,
                     label: isLoggedIn ? 'تسجيل الخروج' : 'تسجيل الدخول',
                     onPressed: isLoggedIn ? _showLogoutDialog : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
