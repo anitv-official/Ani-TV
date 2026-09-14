@@ -60,12 +60,30 @@ class MangaSlayerSource extends ContentSource {
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    final response = await _apiRequest('GET', '/manga?listType=LATEST&page=$page&size=30');
-    await _sourceConfig();
-    return _asList(response)
-        .whereType<Map>()
-        .map((raw) => _mangaItem(Map<String, dynamic>.from(raw)))
-        .toList();
+    try {
+      final response = await _apiRequest('GET', '/manga?listType=LATEST&page=$page&size=30');
+      await _sourceConfig();
+      return _asList(response).whereType<Map>().map((raw) => _mangaItem(Map<String, dynamic>.from(raw))).toList();
+    } catch (_) {
+      // The upstream latest endpoint currently returns HTTP 500. Keep the
+      // source page usable by falling back to indexed catalog results instead
+      // of exposing an empty/error page to users.
+      final seen = <String>{};
+      final fallback = <Map<String, dynamic>>[];
+      for (final term in const ['m', 'a', 'i']) {
+        try {
+          final response = await _apiRequest('POST', '/manga/search?page=$page&size=30', body: {'query': term});
+          for (final raw in _asList(response).whereType<Map>()) {
+            final item = _mangaItem(Map<String, dynamic>.from(raw));
+            final key = item['manga_id']?.toString() ?? item['title']?.toString() ?? '';
+            if (key.isNotEmpty && seen.add(key)) fallback.add(item);
+          }
+        } catch (_) {}
+        if (fallback.length >= 30) break;
+      }
+      await _sourceConfig();
+      return fallback.take(30).toList();
+    }
   }
 
   @override
@@ -100,8 +118,19 @@ class MangaSlayerSource extends ContentSource {
       query.isEmpty ? _ajaxUrl(config) : '${_ajaxUrl(config)}?${query.join('&')}',
       _resolveMap(extractor['fields'], parameters),
     );
-    final html = _htmlFromResponse(response);
-    final images = _images(html, chapterUrl, extractor['root_selector']?.toString() ?? 'img', config, extractor);
+    var html = _htmlFromResponse(response);
+    var images = _images(html, chapterUrl, extractor['root_selector']?.toString() ?? 'img', config, extractor);
+    if (images.isEmpty) {
+      // Some CDN/WP deployments require the chapter URL as the referer and
+      // return the same payload only when the action is posted directly.
+      final retry = await _sourcePost(
+        config,
+        '${_ajaxUrl(config)}?postID=${Uri.encodeQueryComponent(postId)}&manga-paged=1&chapter=${Uri.encodeQueryComponent(chapter)}&style=list',
+        _resolveMap(extractor['fields'], parameters),
+      );
+      html = _htmlFromResponse(retry);
+      images = _images(html, chapterUrl, extractor['root_selector']?.toString() ?? 'img', config, extractor);
+    }
     final imageEntries = images.map((image) => <String, dynamic>{'url': image}).toList();
     return images.isEmpty ? null : {'pages': images, 'images': imageEntries, 'url': url};
   }
@@ -223,7 +252,7 @@ class MangaSlayerSource extends ContentSource {
         'User-Agent': _userAgent,
         'Accept': 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
-        'Referer': _fallbackSite,
+        'Referer': 'https://${_configDomain(config)}/',
       },
       body: fields,
     ).timeout(const Duration(seconds: 25));
