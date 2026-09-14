@@ -454,8 +454,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             SettingTile(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
                           ],
                   ),
-                  const SizedBox(height: 18),
-                  SettingsGroup(
+                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) SettingsGroup(
                     title: 'المظهر واللغة',
                     children: [
                       SettingSwitchTile(
@@ -471,15 +471,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SettingTile(icon: Icons.language, title: 'اللغة', value: 'العربية'),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  SettingsGroup(
+                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) SettingsGroup(
                     title: 'الإشعارات',
                     children: [
                       SettingSwitchTile(icon: Icons.notifications_outlined, title: 'إشعارات التحديث', value: _notificationsEnabled, onChanged: (val) async { setState(() => _notificationsEnabled = val); await _savePreference('notifications_enabled', val); await FcmService.instance.setNotificationsEnabled(val); }),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  SettingsGroup(
+                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) SettingsGroup(
                     title: 'التخزين والتشغيل',
                     children: [
                       SettingSwitchTile(icon: Icons.signal_cellular_alt, title: 'استخدام بيانات الهاتف', subtitle: 'السماح بالتشغيل عبر الشبكة الخلوية', value: _streamCellular, onChanged: (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
