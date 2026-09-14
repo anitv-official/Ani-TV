@@ -128,7 +128,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     });
                   },
                 ),
-              )
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: SegmentedToggle(
