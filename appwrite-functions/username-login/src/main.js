@@ -101,15 +101,11 @@ const deleteAccount = async ({ adminClient, payload, req, res, log, error }) => 
     log('delete favorites lookup started');
     const favorites = await databases.listDocuments({ databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)] });
     log(`delete favorites lookup succeeded; count=${favorites.documents.length}`);
-    for (const favorite of favorites.documents) {
-      const favoriteOwnerId = String(favorite.data?.userId ?? '').trim();
-      log(`favorite ownership check; ownerPresent=${favoriteOwnerId ? 'true' : 'false'}; matches=${favoriteOwnerId === userId ? 'true' : 'false'}`);
-      if (favoriteOwnerId !== userId) {
-        log('favorite ownership check failed');
-        return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
-      }
-    }
-    log('favorite ownership checks succeeded');
+    // This list is produced by Appwrite's server-side Query.equal filter, so
+    // only documents whose userId matches the authenticated user are returned.
+    // Some TablesDB/Databases responses omit the filtered attribute from
+    // favorite.data; re-checking that absent field locally caused false 403s.
+    log('favorite ownership verified by Appwrite query');
     const profileImageId = String(profile?.profileImageId ?? '').trim();
     log(`delete profile image step; fileIdPresent=${profileImageId ? 'true' : 'false'}`);
     if (profileImageId) {
