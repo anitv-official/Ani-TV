@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
-import '../widgets/ui/app_scaffold_header.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
@@ -83,10 +84,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     if (!isLoggedIn) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundColor,
+      endDrawer: const AppNavigationDrawer(),
         body: SafeArea(
           child: Column(
             children: [
-              AppScaffoldHeader(title: 'المفضلة', showBack: widget.showBackButton),
+              const AppFixedHeader(title: 'المفضلة', showBack: true),
               const Expanded(child: AuthRequiredView(title: 'سجّل الدخول لاستخدام المفضلة', message: 'المفضلة مرتبطة بحسابك ولن يتم حفظ أي شيء أثناء استخدامك كزائر.')),
             ],
           ),
@@ -104,13 +106,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      endDrawer: const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            AppFixedHeader(title: 'المفضلة', showBack: widget.showBackButton),
             if (_isSearching)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: AppSearchBar(
                   controller: _searchController,
                   autofocus: true,
@@ -125,18 +129,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   },
                 ),
               )
-            else
-              AppScaffoldHeader(
-                title: 'المفضلة',
-                showBack: widget.showBackButton,
-                actions: [
-                  IconButton(
-                    tooltip: 'بحث',
-                    onPressed: () => setState(() => _isSearching = true),
-                    icon: const Icon(Icons.search_rounded),
-                  ),
-                ],
-              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: SegmentedToggle(

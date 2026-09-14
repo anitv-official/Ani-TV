@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 
@@ -16,10 +18,12 @@ class SourcesScreen extends StatelessWidget {
     final sources = SourceRegistry.all;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('مصادر المحتوى'),
-      ),
-      body: ListView.separated(
+      endDrawer: const AppNavigationDrawer(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const AppFixedHeader(title: 'مصادر المحتوى'),
+            Expanded(child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: sources.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -27,6 +31,9 @@ class SourcesScreen extends StatelessWidget {
           final source = sources[index];
           return _SourceTile(source: source);
         },
+            )),
+          ],
+        ),
       ),
     );
   }
@@ -148,10 +155,10 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
     final isVideo = widget.source.kind != 'manga';
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: Text(widget.source.name),
-      ),
-      body: Column(children: [
+      endDrawer: const AppNavigationDrawer(),
+      body: SafeArea(
+        child: Column(children: [
+        AppFixedHeader(title: widget.source.name, showBack: true),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: TextField(
@@ -210,7 +217,8 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
           );
         },
       )),
-      ]),
+        ]),
+      ),
     );
   }
 }

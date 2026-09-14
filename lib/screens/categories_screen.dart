@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ui/app_scaffold_header.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/segmented_toggle.dart';
 import 'search_screen.dart';
 
@@ -25,21 +26,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      endDrawer: const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppScaffoldHeader(
-              title: 'التصنيفات',
-              showBack: true,
-              actions: [
-                IconButton(
-                  tooltip: 'بحث',
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-                  icon: const Icon(Icons.search_rounded),
-                ),
-              ],
-            ),
+            const AppFixedHeader(title: 'التصنيفات', showBack: true),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: SegmentedToggle(

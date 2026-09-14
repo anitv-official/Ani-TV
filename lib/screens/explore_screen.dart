@@ -4,7 +4,8 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
-import '../widgets/ui/app_scaffold_header.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
@@ -148,27 +149,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      endDrawer: const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppScaffoldHeader(
-              title: 'استكشاف',
-              showBack: widget.showBackButton,
-              actions: [
-                IconButton(
-                  tooltip: 'بحث',
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-                  icon: const Icon(Icons.search_rounded),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: SearchLaunchField(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true))),
-              ),
-            ),
+            AppFixedHeader(title: 'استكشاف', showBack: widget.showBackButton),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SegmentedToggle(

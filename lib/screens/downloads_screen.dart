@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/download_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/poster_image.dart';
 import '../widgets/ui/state_views.dart';
 import 'manga_reader_screen.dart';
@@ -49,8 +51,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final anime = _group('anime');
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: const Text('التنزيلات')),
-      body: _loading
+      endDrawer: const AppNavigationDrawer(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const AppFixedHeader(title: 'التنزيلات'),
+            Expanded(child: _loading
           ? const LoadingView(message: 'جارٍ تحميل التنزيلات...', size: 64)
           : _items.isEmpty
               ? const EmptyState(
@@ -61,7 +67,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), children: [
                   if (manga.isNotEmpty) _section('المانجا المنزلة', manga, true),
                   if (anime.isNotEmpty) _section('الأنمي المنزّل', anime, false),
-                ]),
+                ])),
+          ],
+        ),
+      ),
     );
   }
 

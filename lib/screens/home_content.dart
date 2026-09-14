@@ -10,7 +10,7 @@ import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'search_screen.dart';
-import '../widgets/app_navigation_drawer.dart';
+
 
 class HomeContent extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -192,38 +192,8 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         controller: _scrollController,
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         slivers: [
-          SliverToBoxAdapter(child: _buildLatestHeader()),
           SliverToBoxAdapter(child: _buildContentGrid()),
           SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.of(context).padding.bottom)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLatestHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 42, 16, 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/images/anitv_logo_transparent.png',
-                width: 104,
-                height: 38,
-                fit: BoxFit.contain,
-              ),
-              const Spacer(),
-              const AppDrawerButton(),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SearchLaunchField(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchScreen(autoFocus: true)),
-            ),
-          ),
         ],
       ),
     );

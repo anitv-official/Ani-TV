@@ -18,7 +18,8 @@ import '../services/app_version_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'sources_screen.dart';
 import 'downloads_screen.dart';
-import '../widgets/ui/app_scaffold_header.dart';
+import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/setting_tile.dart';
 import '../widgets/ui/state_views.dart';
@@ -407,10 +408,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!isLoading && !isLoggedIn) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundColor,
+      endDrawer: const AppNavigationDrawer(),
         body: SafeArea(
           child: Column(
             children: [
-              AppScaffoldHeader(title: 'الحساب'),
+              const AppFixedHeader(title: 'الحساب'),
               Expanded(child: AuthRequiredView(title: 'أنشئ حسابك للوصول إلى الملف الشخصي', message: 'تسجيل الدخول مطلوب للبريد الإلكتروني والملف الشخصي والإعدادات المرتبطة بالحساب.')),
             ],
           ),
@@ -422,10 +424,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: isLoading
             ? const LoadingView(message: 'جارٍ تحميل الحساب...', size: 64)
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+            : Column(
                 children: [
-                  const AppScaffoldHeader(title: 'الحساب'),
+                  const AppFixedHeader(title: 'الحساب'),
+                  Expanded(child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+                    children: [
                   _buildProfileCard(),
                   const SizedBox(height: 22),
                   SettingsGroup(
@@ -506,6 +510,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: isLoggedIn ? _showLogoutDialog : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LoginScreen())),
                   ),
                   const SizedBox(height: 24),
+                    ],
+                  )),
                 ],
               ),
       ),

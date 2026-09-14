@@ -5,6 +5,7 @@ import '../widgets/update_bottom_sheet.dart';
 import '../services/app_version_service.dart';
 import 'home_content.dart';
 import '../widgets/app_navigation_drawer.dart';
+import '../widgets/ui/app_fixed_header.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -55,10 +56,19 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         endDrawer: const AppNavigationDrawer(),
-        body: HomeContent(
-          preloadedAnime: widget.preloadedAnime,
-          preloadedComics: widget.preloadedComics,
-          preloadedFeaturedContent: widget.preloadedFeaturedContent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              const AppFixedHeader(),
+              Expanded(
+                child: HomeContent(
+                  preloadedAnime: widget.preloadedAnime,
+                  preloadedComics: widget.preloadedComics,
+                  preloadedFeaturedContent: widget.preloadedFeaturedContent,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
