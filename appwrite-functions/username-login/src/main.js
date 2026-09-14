@@ -106,15 +106,25 @@ const deleteAccount = async ({ adminClient, payload, req, res, log, error }) => 
         return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
       }
     }
-    if (profile?.profileImageId) {
-      await storage.deleteFile({ bucketId, fileId: String(profile.profileImageId) });
+    const profileImageId = String(profile?.profileImageId ?? '').trim();
+    log(`delete profile image step; fileIdPresent=${profileImageId ? 'true' : 'false'}`);
+    if (profileImageId) {
+      await storage.deleteFile({ bucketId, fileId: profileImageId });
+      log('delete profile image succeeded');
+    } else {
+      log('delete profile image skipped');
     }
     for (const favorite of favorites.documents) {
+      log(`delete favorite started; documentIdPresent=${favorite.$id ? 'true' : 'false'}`);
       await databases.deleteDocument({ databaseId, collectionId: favoritesTableId, documentId: favorite.$id });
+      log('delete favorite succeeded');
     }
     if (profile) {
+      log('delete profile started');
       await tablesDB.deleteRow({ databaseId, tableId: profilesTableId, rowId: profile.$id });
+      log('delete profile succeeded');
     }
+    log('delete user started');
     await users.delete({ userId });
     log('delete account completed');
     return json(res, 200, { ok: true });
