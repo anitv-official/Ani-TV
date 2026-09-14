@@ -104,7 +104,8 @@ class AppStateProvider extends ChangeNotifier {
     } catch (error) {
       final prefs = await SharedPreferences.getInstance();
       final cachedUserId = prefs.getString(_lastUserIdKey);
-      final isNetworkFailure = error is AppwriteException && (error.code == 0 || error.code >= 500);
+      final errorCode = error is AppwriteException ? (error.code ?? -1) : -1;
+      final isNetworkFailure = error is AppwriteException && (errorCode == 0 || errorCode >= 500);
       if (isNetworkFailure && cachedUserId != null && cachedUserId.isNotEmpty) {
         await _loadLocalAccountCache(cachedUserId);
         _userId = cachedUserId;
