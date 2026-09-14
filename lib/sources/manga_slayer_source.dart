@@ -25,7 +25,7 @@ class MangaSlayerSource extends ContentSource {
   String get kind => 'manga';
 
   @override
-  List<String> get hosts => ['mangaslayers.com', 'api.mangaslayers.com'];
+  List<String> get hosts => ['mangaslayers.com', 'api.mangaslayers.com', 'sparkmanga.net', 'link-manga.net'];
 
   @override
   bool handles(String url) => url.startsWith('mangaslayer://') || super.handles(url);
@@ -207,7 +207,8 @@ class MangaSlayerSource extends ContentSource {
   }
 
   Future<dynamic> _apiRequest(String method, String path, {Map<String, dynamic>? body}) async {
-    final headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': _userAgent, 'Authorization': '', 'X-Api-Key': _apiKey};
+    // The API rejects an empty Authorization header even when X-Api-Key is valid.
+    final headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': _userAgent, 'X-Api-Key': _apiKey};
     final response = method == 'POST'
         ? await http.post(Uri.parse('$_api$path'), headers: headers, body: jsonEncode(body ?? {})).timeout(const Duration(seconds: 20))
         : await http.get(Uri.parse('$_api$path'), headers: headers).timeout(const Duration(seconds: 20));
@@ -271,7 +272,7 @@ class MangaSlayerSource extends ContentSource {
       final classes = RegExp('\\bclass=["\\\']([^"\\\']*)', caseSensitive: false).firstMatch(tag)?.group(1) ?? '';
       if (requiredClass.isNotEmpty && !classes.split(RegExp(r'\s+')).contains(requiredClass)) continue;
       final source = RegExp('\\bsrc=["\\\']([^"\\\']+)', caseSensitive: false).firstMatch(tag)?.group(1) ?? '';
-      var url = HtmlParse.absUrl(base, source);
+      var url = HtmlParse.absUrl(base, source.trim());
       url = _transformUrl(url, transformations);
       if (url.isNotEmpty) urls.add(_imageUrl(url, config));
     }
@@ -279,16 +280,7 @@ class MangaSlayerSource extends ContentSource {
   }
 
   String _imageUrl(String url, Map<String, dynamic> config) {
-    final parsed = Uri.tryParse(url);
-    if (parsed == null || parsed.host.isEmpty) return url;
-    final mapping = config['ip_mapping'] as Map?;
-    if (config['direct_ip_mode'] == true && mapping != null) {
-      final overrides = mapping['overrides'] as Map? ?? const {};
-      final host = parsed.host;
-      final key = host.split('.').isNotEmpty ? host.split('.').first : '';
-      final ip = _string(overrides[key]) .isNotEmpty ? _string(overrides[key]) : _string(mapping['default']);
-      if (ip.isNotEmpty) return url.replaceFirst(host, ip).replaceFirst('https://', 'http://');
-    }
+    // Keep the configured CDN hostname: it is required for TLS and virtual-host routing.
     return url;
   }
 
