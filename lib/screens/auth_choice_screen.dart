@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/auth_branding.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
+import 'home_screen.dart';
 
 class AuthChoiceScreen extends StatelessWidget {
   const AuthChoiceScreen({super.key});
@@ -25,6 +26,12 @@ class AuthChoiceScreen extends StatelessWidget {
             const SizedBox(height: 14),
             _ChoiceCard(icon: Icons.login_rounded, title: 'مستخدم سابق', subtitle: 'سجّل الدخول إلى حسابك', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()))),
             const SizedBox(height: 24),
+            TextButton.icon(
+              onPressed: () => Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false),
+              icon: const Icon(Icons.visibility_outlined, color: AppTheme.textSecondaryColor),
+              label: const Text('المتابعة كزائر', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15)),
+            ),
+            const SizedBox(height: 8),
             OutlinedButton.icon(onPressed: null, icon: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)), label: const Text('التسجيل باستخدام Google — قريبًا'), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), side: const BorderSide(color: AppTheme.borderColor), disabledForegroundColor: AppTheme.textSecondaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)))),
             const SizedBox(height: 14),
             const Text('تسجيل Google غير متاح حاليًا وسيتم تفعيله قريبًا.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textMutedColor, fontSize: 12)),
