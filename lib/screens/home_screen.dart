@@ -84,7 +84,10 @@ class _HomeScreenState extends State<HomeScreen> {
       value: AppTheme.systemOverlay,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        endDrawer: AppNavigationDrawer(onSectionSelected: _selectSection),
+        endDrawer: AppNavigationDrawer(
+          currentSection: _section,
+          onSectionSelected: _selectSection,
+        ),
         body: SafeArea(
           child: Column(
             children: [

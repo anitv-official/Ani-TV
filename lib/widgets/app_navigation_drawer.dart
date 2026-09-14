@@ -7,8 +7,9 @@ import 'app_section.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
   final ValueChanged<AppSection>? onSectionSelected;
+  final AppSection currentSection;
 
-  const AppNavigationDrawer({super.key, this.onSectionSelected});
+  const AppNavigationDrawer({super.key, this.onSectionSelected, this.currentSection = AppSection.latest});
 
   void _select(BuildContext context, AppSection section) {
     Navigator.pop(context);
@@ -33,15 +34,15 @@ class AppNavigationDrawer extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             const Divider(color: AppTheme.borderColor),
-            _item(context, Icons.home_rounded, 'الأحدث', () => _select(context, AppSection.latest), selected: true),
-            _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime)),
-            _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga)),
+            _item(context, Icons.home_rounded, 'الأحدث', () => _select(context, AppSection.latest), selected: currentSection == AppSection.latest),
+            _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime), selected: currentSection == AppSection.anime),
+            _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
             const SizedBox(height: 10),
             const Divider(color: AppTheme.borderColor),
-            _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites)),
-            _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _select(context, AppSection.downloads)),
-            _item(context, Icons.hub_outlined, 'المصادر', () => _select(context, AppSection.sources)),
-            _item(context, Icons.settings_outlined, 'الإعدادات', () => _select(context, AppSection.account)),
+            _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites), selected: currentSection == AppSection.favorites),
+            _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _select(context, AppSection.downloads), selected: currentSection == AppSection.downloads),
+            _item(context, Icons.hub_outlined, 'المصادر', () => _select(context, AppSection.sources), selected: currentSection == AppSection.sources),
+            _item(context, Icons.settings_outlined, 'الإعدادات', () => _select(context, AppSection.account), selected: currentSection == AppSection.account),
           ],
         ),
       ),
@@ -49,14 +50,17 @@ class AppNavigationDrawer extends StatelessWidget {
   }
 
   Widget _item(BuildContext context, IconData icon, String label, VoidCallback onTap, {bool selected = false}) {
-    return ListTile(
-      onTap: onTap,
-      dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: selected ? AppTheme.primaryColor.withOpacity(.14) : null,
-      leading: Icon(icon, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor),
-      title: Text(label, style: TextStyle(color: selected ? AppTheme.textPrimaryColor : AppTheme.textSecondaryColor, fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
-      trailing: selected ? const Icon(Icons.chevron_left_rounded, color: AppTheme.primaryColor) : null,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: ListTile(
+        onTap: onTap,
+        minVerticalPadding: 10,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        tileColor: selected ? AppTheme.primaryColor.withOpacity(.14) : null,
+        leading: Icon(icon, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor),
+        title: Text(label, style: TextStyle(color: selected ? AppTheme.textPrimaryColor : AppTheme.textSecondaryColor, fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+        trailing: selected ? const Icon(Icons.chevron_left_rounded, color: AppTheme.primaryColor) : null,
+      ),
     );
   }
 }
