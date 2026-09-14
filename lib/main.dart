@@ -85,9 +85,11 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    FcmService.instance.onNotificationOpened = _handleNotificationMessage;
-    final pending = FcmService.instance.takePendingOpenedMessage();
-    if (pending != null) WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationMessage(pending));
+    if (Firebase.apps.isNotEmpty) {
+      FcmService.instance.onNotificationOpened = _handleNotificationMessage;
+      final pending = FcmService.instance.takePendingOpenedMessage();
+      if (pending != null) WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationMessage(pending));
+    }
     _deepLinkChannel.setMethodCallHandler((call) async {
       if (call.method == 'onLink' && call.arguments is String) _handleUri(Uri.tryParse(call.arguments as String));
       return null;
