@@ -152,6 +152,10 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   }
 
   Future<bool> _downloadChapter(Map<String, dynamic> chapter) async {
+    if (!context.read<AppStateProvider>().isLoggedIn) {
+      ToastUtils.show('سجّل الدخول لاستخدام التنزيلات', backgroundColor: Colors.orange);
+      return false;
+    }
     ToastUtils.show('جارٍ تنزيل الفصل...', backgroundColor: Colors.green);
     try {
       final data = await ApiService.fetchChapterImages(chapter['url'].toString());
@@ -514,6 +518,10 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
          try {
                  final provider = Provider.of<AppStateProvider>(context, listen: false);
                  await provider.initialize();
+                 if (!provider.isLoggedIn) {
+                   ToastUtils.show('سجّل الدخول لاستخدام المفضلة', backgroundColor: Colors.orange);
+                   return;
+                 }
                  if (isFavorited) {
                final items = provider.favoriteComics.where((x) => x['url'] == widget.url).toList();
                if(items.isNotEmpty) {

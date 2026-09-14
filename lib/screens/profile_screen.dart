@@ -21,6 +21,7 @@ import '../widgets/ui/app_scaffold_header.dart';
 import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/setting_tile.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/auth_required_view.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -309,6 +310,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!isLoading && !isLoggedIn) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              AppScaffoldHeader(title: 'الحساب'),
+              Expanded(child: AuthRequiredView(title: 'أنشئ حسابك للوصول إلى الملف الشخصي', message: 'تسجيل الدخول مطلوب للبريد الإلكتروني والملف الشخصي والإعدادات المرتبطة بالحساب.')),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(

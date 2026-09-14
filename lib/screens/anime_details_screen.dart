@@ -219,6 +219,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<void> _downloadAnimeEpisode(Map<String, dynamic> link, Map<String, dynamic> episode) async {
+    if (!context.read<AppStateProvider>().isLoggedIn) {
+      ToastUtils.show('سجّل الدخول لاستخدام التنزيلات', backgroundColor: Colors.orange);
+      return;
+    }
     final url = link['url']?.toString() ?? '';
     if (url.isEmpty) return;
     try {
@@ -231,6 +235,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<bool> _downloadAnimeEpisodeInternal(Map<String, dynamic> link, Map<String, dynamic> episode) async {
+    if (!context.read<AppStateProvider>().isLoggedIn) {
+      ToastUtils.show('سجّل الدخول لاستخدام التنزيلات', backgroundColor: Colors.orange);
+      return false;
+    }
     final url = link['url']?.toString() ?? '';
     if (url.isEmpty) return false;
     try {
@@ -693,6 +701,10 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
          try {
             final provider = Provider.of<AppStateProvider>(context, listen: false);
             await provider.initialize();
+            if (!provider.isLoggedIn) {
+              ToastUtils.show('سجّل الدخول لاستخدام المفضلة', backgroundColor: Colors.orange);
+              return;
+            }
             if (isFavorited) {
                final item = provider.favoriteAnime.firstWhere((x) => x['url'] == widget.url);
                await provider.removeFromFavorites(item['id'], true);

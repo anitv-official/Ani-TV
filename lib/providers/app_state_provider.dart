@@ -73,8 +73,16 @@ class AppStateProvider extends ChangeNotifier {
     await _loadUserData();
     // Authenticated users are hydrated by _syncAccountFromCloud. Reading the
     // local cache afterwards used to overwrite that cloud snapshot.
-    if (!_isLoggedIn) await _loadFavorites();
-    await _loadHistory();
+    if (_isLoggedIn) {
+      await _loadHistory();
+    } else {
+      // Guest mode is deliberately stateless: do not hydrate account data
+      // from SharedPreferences and do not create a local browsing history.
+      _favoriteAnime = [];
+      _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -600,6 +608,7 @@ class AppStateProvider extends ChangeNotifier {
     } catch (_) { _setErrorMessage('تعذر تحميل السجل. حاول مرة أخرى.'); }
   }
   Future<void> addToHistory(dynamic item, bool isAnime) async {
+    if (!_isLoggedIn) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = isAnime ? 'anime_history' : 'comic_history';

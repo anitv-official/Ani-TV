@@ -12,6 +12,7 @@ import '../utils/toast_utils.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'explore_screen.dart';
+import '../widgets/auth_required_view.dart';
 
 class FavoritesScreen extends StatefulWidget {
   final bool showBackButton;
@@ -78,6 +79,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLoggedIn = context.watch<AppStateProvider>().isLoggedIn;
+    if (!isLoggedIn) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              AppScaffoldHeader(title: 'المفضلة', showBack: widget.showBackButton),
+              const Expanded(child: AuthRequiredView(title: 'سجّل الدخول لاستخدام المفضلة', message: 'المفضلة مرتبطة بحسابك ولن يتم حفظ أي شيء أثناء استخدامك كزائر.')),
+            ],
+          ),
+        ),
+      );
+    }
     List<dynamic> items = _currentTabIndex == 0 ? favoriteAnime : favoriteComics;
     final isAnime = _currentTabIndex == 0;
     if (_searchQuery.isNotEmpty) {
