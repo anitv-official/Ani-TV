@@ -436,6 +436,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                     children: [
+                  if (widget.embedded) _embeddedTitle(),
                   if (!widget.settingsOnly) _buildProfileCard(),
                   const SizedBox(height: 22),
                   if (!widget.settingsOnly) SettingsGroup(
@@ -486,21 +487,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SettingSwitchTile(icon: Icons.visibility_outlined, title: 'عرض محتوى البالغين', subtitle: 'محتوى +18', value: _showMatureContent, onChanged: (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  if (!widget.settingsOnly) SettingsGroup(
-                    title: 'الخصوصية',
-                    children: [
-                      SettingTile(icon: Icons.privacy_tip_outlined, title: 'سياسة الخصوصية', onTap: _openPrivacyPolicy),
-                      SettingTile(icon: Icons.security_outlined, title: 'الخصوصية والأمان', onTap: _showAboutDialog),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  if (!widget.settingsOnly) SettingsGroup(
-                    title: 'حول',
-                    children: [
-                      SettingTile(icon: Icons.info_outline, title: 'حول AniTV', onTap: _showAboutDialog),
-                    ],
-                  ),
                   const SizedBox(height: 28),
                   if (!widget.settingsOnly) PrimaryButton(
                     expanded: true,
@@ -515,6 +501,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  Widget _embeddedTitle() => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          children: [
+            Icon(widget.settingsOnly ? Icons.tune_rounded : Icons.person_outline_rounded, color: AppTheme.primaryColor, size: 24),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.settingsOnly ? 'إعدادات التطبيق' : 'إدارة الحساب', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                Text(widget.settingsOnly ? 'تحكم بالمظهر والإشعارات والتشغيل' : 'بياناتك وإعدادات حسابك فقط', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+              ],
+            ),
+          ],
+        ),
+      );
 
   Widget _buildProfileCard() {
     final hasAvatar = _avatarPath != null && File(_avatarPath!).existsSync();
