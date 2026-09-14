@@ -27,6 +27,7 @@ import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'sources_screen.dart';
 import 'downloads_screen.dart';
+import '../widgets/app_navigation_drawer.dart';
 
 class HomeContent extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -264,6 +265,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         children: [
           Consumer<AppStateProvider>(
             builder: (context, appState, _) => Row(children: [
+              const AppDrawerButton(),
               Image.asset('assets/images/anitv_logo_transparent.png', width: 104, height: 38, fit: BoxFit.contain),
               const Spacer(),
               IconButton(
