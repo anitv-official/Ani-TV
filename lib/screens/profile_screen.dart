@@ -438,7 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                   if (widget.embedded) _embeddedTitle(),
                   if (!widget.settingsOnly) _buildProfileCard(),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 12),
                   if (!widget.settingsOnly) SettingsGroup(
                     title: 'الحساب',
                     children: isLoggedIn
@@ -455,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             SettingTile(icon: Icons.person_add_alt_1_outlined, title: 'إنشاء حساب', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()))),
                           ],
                   ),
-                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) const SizedBox(height: 8),
                   if (widget.settingsOnly) SettingsGroup(
                     title: 'المظهر واللغة',
                     children: [
@@ -503,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _embeddedTitle() => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Row(
           children: [
             Icon(widget.settingsOnly ? Icons.tune_rounded : Icons.person_outline_rounded, color: AppTheme.primaryColor, size: 24),
@@ -512,7 +512,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.settingsOnly ? 'إعدادات التطبيق' : 'إدارة الحساب', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                Text(widget.settingsOnly ? 'تحكم بالمظهر والإشعارات والتشغيل' : 'بياناتك وإعدادات حسابك فقط', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
               ],
             ),
           ],
