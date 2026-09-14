@@ -10,7 +10,8 @@ import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
 
 class DownloadsScreen extends StatefulWidget {
-  const DownloadsScreen({super.key});
+  final bool embedded;
+  const DownloadsScreen({super.key, this.embedded = false});
   @override
   State<DownloadsScreen> createState() => _DownloadsScreenState();
 }
@@ -51,11 +52,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     final anime = _group('anime');
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           children: [
-            const AppFixedHeader(title: 'التنزيلات'),
+            if (!widget.embedded) const AppFixedHeader(title: 'التنزيلات'),
             Expanded(child: _loading
           ? const LoadingView(message: 'جارٍ تحميل التنزيلات...', size: 64)
           : _items.isEmpty

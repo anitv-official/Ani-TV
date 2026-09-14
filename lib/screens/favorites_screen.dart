@@ -7,7 +7,6 @@ import '../widgets/app_navigation_drawer.dart';
 import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
-import '../widgets/ui/segmented_toggle.dart';
 import '../widgets/ui/state_views.dart';
 import '../utils/toast_utils.dart';
 import 'anime_details_screen.dart';
@@ -17,15 +16,15 @@ import '../widgets/auth_required_view.dart';
 
 class FavoritesScreen extends StatefulWidget {
   final bool showBackButton;
+  final bool embedded;
 
-  const FavoritesScreen({Key? key, this.showBackButton = true}) : super(key: key);
+  const FavoritesScreen({Key? key, this.showBackButton = true, this.embedded = false}) : super(key: key);
 
   @override
   _FavoritesScreenState createState() => _FavoritesScreenState();
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  int _currentTabIndex = 0;
   List<dynamic> favoriteAnime = [];
   List<dynamic> favoriteComics = [];
   bool isLoading = true;
@@ -84,19 +83,21 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     if (!isLoggedIn) {
       return Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
         body: SafeArea(
           child: Column(
             children: [
-              const AppFixedHeader(title: 'المفضلة', showBack: true),
+              if (!widget.embedded) const AppFixedHeader(title: 'المفضلة', showBack: true),
               const Expanded(child: AuthRequiredView(title: 'سجّل الدخول لاستخدام المفضلة', message: 'المفضلة مرتبطة بحسابك ولن يتم حفظ أي شيء أثناء استخدامك كزائر.')),
             ],
           ),
         ),
       );
     }
-    List<dynamic> items = _currentTabIndex == 0 ? favoriteAnime : favoriteComics;
-    final isAnime = _currentTabIndex == 0;
+    List<dynamic> items = [
+      ...favoriteAnime.map((item) => {...item, '_isAnime': true}),
+      ...favoriteComics.map((item) => {...item, '_isAnime': false}),
+    ];
     if (_searchQuery.isNotEmpty) {
       items = items.where((item) {
         final title = (item['title'] ?? '').toString().toLowerCase();
@@ -106,12 +107,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppFixedHeader(title: 'المفضلة', showBack: widget.showBackButton),
+            if (!widget.embedded) AppFixedHeader(title: 'المفضلة', showBack: widget.showBackButton),
             if (_isSearching)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -129,18 +130,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   },
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: SegmentedToggle(
-                labels: const ['أنمي', 'مانجا'],
-                index: _currentTabIndex,
-                onChanged: (i) => setState(() => _currentTabIndex = i),
-              ),
-            ),
             Expanded(
               child: isLoading
                   ? const LoadingView(message: 'جارٍ تحميل المفضلة...', size: 64)
-                  : _buildContent(items, isAnime),
+                  : _buildContent(items),
             ),
           ],
         ),
@@ -148,17 +141,17 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
-  Widget _buildContent(List<dynamic> items, bool isAnime) {
+  Widget _buildContent(List<dynamic> items) {
     if (items.isEmpty) {
       return EmptyState(
         icon: Icons.favorite_border_rounded,
         title: 'لا توجد عناصر مفضلة',
-        message: isAnime ? 'أضف أنمي إلى المفضلة ليظهر هنا.' : 'أضف مانجا إلى المفضلة ليظهر هنا.',
+        message: 'أضف أعمالاً إلى المفضلة ليظهر محتواها هنا.',
         actionLabel: 'استكشف المحتوى',
         onAction: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => ExploreScreen(initialIsAnime: isAnime)),
+            const MaterialPageRoute(builder: (_) => ExploreScreen()),
           );
         },
       );
@@ -172,12 +165,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         return ContentCard(
           title: item['title']?.toString(),
           imageUrl: item['image_url']?.toString(),
-          badge: isAnime ? 'أنمي' : item['type']?.toString(),
+          badge: item['_isAnime'] == true ? 'أنمي' : item['type']?.toString(),
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => isAnime
+                builder: (context) => item['_isAnime'] == true
                     ? AnimeDetailsScreen(url: item['url'])
                     : ComicDetailsScreen(url: item['url'], type: item['type']),
               ),
@@ -192,7 +185,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: () => _removeFavorite(item['id'], isAnime),
+                onTap: () => _removeFavorite(item['id'], item['_isAnime'] == true),
                 child: const SizedBox(
                   width: 34,
                   height: 34,

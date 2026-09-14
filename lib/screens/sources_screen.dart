@@ -11,18 +11,19 @@ import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 
 class SourcesScreen extends StatelessWidget {
-  const SourcesScreen({super.key});
+  final bool embedded;
+  const SourcesScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context) {
     final sources = SourceRegistry.all;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           children: [
-            const AppFixedHeader(title: 'مصادر المحتوى'),
+            if (!widget.embedded) const AppFixedHeader(title: 'مصادر المحتوى'),
             Expanded(child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: sources.length,

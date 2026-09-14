@@ -18,11 +18,13 @@ import 'search_screen.dart';
 class ExploreScreen extends StatefulWidget {
   final bool initialIsAnime;
   final bool showBackButton;
+  final bool embedded;
 
   const ExploreScreen({
     Key? key,
     this.initialIsAnime = true,
     this.showBackButton = true,
+    this.embedded = false,
   }) : super(key: key);
 
   @override
@@ -149,12 +151,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppFixedHeader(title: 'استكشاف', showBack: widget.showBackButton),
+            if (!widget.embedded) AppFixedHeader(title: 'استكشاف', showBack: widget.showBackButton),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: SegmentedToggle(

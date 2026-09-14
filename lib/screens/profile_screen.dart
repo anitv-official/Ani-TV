@@ -26,6 +26,10 @@ import '../widgets/ui/state_views.dart';
 import '../widgets/auth_required_view.dart';
 
 class ProfileScreen extends StatefulWidget {
+  final bool embedded;
+
+  const ProfileScreen({super.key, this.embedded = false});
+
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
@@ -408,11 +412,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!isLoading && !isLoggedIn) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-      endDrawer: const AppNavigationDrawer(),
+      endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
         body: SafeArea(
           child: Column(
             children: [
-              const AppFixedHeader(title: 'الحساب'),
+              if (!widget.embedded) const AppFixedHeader(title: 'الحساب'),
               Expanded(child: AuthRequiredView(title: 'أنشئ حسابك للوصول إلى الملف الشخصي', message: 'تسجيل الدخول مطلوب للبريد الإلكتروني والملف الشخصي والإعدادات المرتبطة بالحساب.')),
             ],
           ),
@@ -426,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? const LoadingView(message: 'جارٍ تحميل الحساب...', size: 64)
             : Column(
                 children: [
-                  const AppFixedHeader(title: 'الحساب'),
+                  if (!widget.embedded) const AppFixedHeader(title: 'الحساب'),
                   Expanded(child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
                     children: [

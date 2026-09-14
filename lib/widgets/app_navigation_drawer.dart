@@ -2,19 +2,17 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
-import '../screens/downloads_screen.dart';
-import '../screens/explore_screen.dart';
-import '../screens/favorites_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/sources_screen.dart';
 import '../theme/app_theme.dart';
+import 'app_section.dart';
 
 class AppNavigationDrawer extends StatelessWidget {
-  const AppNavigationDrawer({super.key});
+  final ValueChanged<AppSection>? onSectionSelected;
 
-  void _open(BuildContext context, Widget page) {
+  const AppNavigationDrawer({super.key, this.onSectionSelected});
+
+  void _select(BuildContext context, AppSection section) {
     Navigator.pop(context);
-    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    onSectionSelected?.call(section);
   }
 
   @override
@@ -30,23 +28,20 @@ class AppNavigationDrawer extends StatelessWidget {
           children: [
             InkWell(
               borderRadius: BorderRadius.circular(18),
-              onTap: () => _open(context, ProfileScreen()),
+              onTap: () => _select(context, AppSection.account),
               child: _ProfileHeader(state: state),
             ),
             const SizedBox(height: 14),
             const Divider(color: AppTheme.borderColor),
-            _item(context, Icons.home_rounded, 'الأحدث', () => Navigator.pop(context), selected: true),
-            _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _open(context, const ExploreScreen(initialIsAnime: true))),
-            _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _open(context, const ExploreScreen(initialIsAnime: false))),
-            _item(context, Icons.live_tv_outlined, 'الأفلام والمسلسلات', () => _open(context, const SourcesScreen())),
-            _item(context, Icons.theater_comedy_outlined, 'الدراما', () => _open(context, const SourcesScreen())),
+            _item(context, Icons.home_rounded, 'الأحدث', () => _select(context, AppSection.latest), selected: true),
+            _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime)),
+            _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga)),
             const SizedBox(height: 10),
             const Divider(color: AppTheme.borderColor),
-            _item(context, Icons.favorite_rounded, 'المفضلات', () => _open(context, const FavoritesScreen())),
-            _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _open(context, const DownloadsScreen())),
-            _item(context, Icons.hub_outlined, 'المصادر', () => _open(context, const SourcesScreen())),
-            _item(context, Icons.settings_outlined, 'الإعدادات', () => _open(context, ProfileScreen())),
-            _item(context, Icons.info_outline_rounded, 'حول', () => _open(context, ProfileScreen())),
+            _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites)),
+            _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _select(context, AppSection.downloads)),
+            _item(context, Icons.hub_outlined, 'المصادر', () => _select(context, AppSection.sources)),
+            _item(context, Icons.settings_outlined, 'الإعدادات', () => _select(context, AppSection.account)),
           ],
         ),
       ),
