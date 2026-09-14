@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "552497307402",
+    "project_id": "anitv-b98d5",
+    "storage_bucket": "anitv-b98d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:552497307402:android:dfee575589683b78af64f3",
+        "android_client_info": {
+          "package_name": "com.anitv.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQAdEPTRZhVkpDZwXKlBzx2MhSS4_bgMk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import '../services/appwrite_service.dart';
 import '../services/local_cache_service.dart';
+import '../services/fcm_service.dart';
 
 class RegistrationResult {
   final bool accountCreated;
@@ -104,6 +105,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _applyAuthenticatedUser(dynamic user, {required bool syncCloud}) async {
     if (user == null) {
       _clearUser();
+      await FcmService.instance.clearUser();
       return;
     }
     _userId = user.$id as String;
@@ -111,6 +113,7 @@ class AppStateProvider extends ChangeNotifier {
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
     _isLoggedIn = _emailVerified;
+    if (_isLoggedIn) await FcmService.instance.setUser(_userId);
     if (syncCloud && _emailVerified) await _syncAccountFromCloud();
   }
 
@@ -151,6 +154,7 @@ class AppStateProvider extends ChangeNotifier {
       // the user explicitly chooses one; never use displayName as identity.
       final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
       _profileDocumentId = profile.$id;
+      await FcmService.instance.setUser(userId);
       final data = profile.data;
       final cloudName = (data['username'] ?? '').toString().trim();
       if (cloudName.isNotEmpty) _username = cloudName;
@@ -339,6 +343,7 @@ class AppStateProvider extends ChangeNotifier {
             country: country,
           );
           _profileDocumentId = profile.$id;
+          await FcmService.instance.setUser(_userId);
           final savedUsername = (profile.data['username'] ?? '').toString().trim();
           if (savedUsername.isNotEmpty) _username = savedUsername;
           _displayName = (profile.data['displayname'] ?? name).toString();
@@ -412,6 +417,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      await FcmService.instance.clearUser();
       await _appwrite.logout();
       _clearUser();
       notifyListeners();

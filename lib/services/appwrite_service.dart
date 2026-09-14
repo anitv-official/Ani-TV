@@ -195,6 +195,17 @@ class AppwriteService {
     }
   }
 
+  Future<void> updateFcmToken({required String userId, required String token}) async {
+    await _assertCurrentUser(userId);
+    final profile = await getProfile(userId);
+    if (profile == null) return;
+    await updateProfile(
+      documentId: profile.$id,
+      username: (profile.data['username'] ?? '').toString(),
+      fcmToken: token,
+    );
+  }
+
   /// Delegates account deletion to the existing trusted Appwrite Function.
   /// The Function owns the server key and validates resource ownership.
   Future<void> deleteCurrentAccount({required String password}) async {
@@ -316,7 +327,7 @@ class AppwriteService {
     }
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country}) async {
+  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country, String? fcmToken}) async {
     final response = await client.call(
       HttpMethod.patch,
       path: '/tablesdb/$databaseId/tables/$profilesTableId/rows/$documentId',
@@ -327,6 +338,7 @@ class AppwriteService {
           if (displayName != null) 'displayname': displayName.trim(),
           if (birthDate != null) 'birthdate': birthDate.trim(),
           if (country != null) 'country': country.trim(),
+          if (fcmToken != null) 'fcmToken': fcmToken,
           'updatedAt': DateTime.now().toUtc().toIso8601String(),
         },
       },
