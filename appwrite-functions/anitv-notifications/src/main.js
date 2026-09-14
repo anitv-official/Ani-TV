@@ -1,5 +1,5 @@
 const crypto = require('node:crypto');
-const { Client, ID, Messaging, Databases, Query } = require('node-appwrite');
+const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
@@ -14,6 +14,7 @@ const required = (name) => {
 const errorDetails = (error) => ({
   code: error?.code ?? 'unknown',
   type: error?.type ?? 'unknown',
+  message: String(error?.message ?? 'Unknown Appwrite error').replace(/\s+/g, ' ').slice(0, 240),
 });
 const parseBody = (req) => {
   if (req.bodyJson && typeof req.bodyJson === 'object') return req.bodyJson;
@@ -45,20 +46,28 @@ const sourceAdapter = (favorite) => {
   return anime4up.supports(source, itemId) ? anime4up : null;
 };
 
-async function runFavoriteScan({ databases, messaging, payload, log, error }) {
+async function runFavoriteScan({ rows, messaging, payload, log, error }) {
   const dryRun = payload.dryRun === true;
   const result = { scanned: 0, checked: 0, notified: 0, initialized: 0, skipped: 0, unsupported: 0, errors: 0, dryRun };
   log(`favorite scan started; dryRun=${dryRun}`);
-  const documents = await databases.listDocuments({
-    databaseId: FAVORITES_DATABASE_ID,
-    collectionId: FAVORITES_COLLECTION_ID,
-    queries: [Query.limit(5000)],
-  });
-  result.scanned = documents.documents.length;
+  log(`favorite scan reading rows; database=${FAVORITES_DATABASE_ID}; table=${FAVORITES_COLLECTION_ID}`);
+  let documents;
+  try {
+    documents = await rows.listRows({
+      databaseId: FAVORITES_DATABASE_ID,
+      tableId: FAVORITES_COLLECTION_ID,
+      queries: [Query.limit(5000)],
+    });
+  } catch (readError) {
+    const details = errorDetails(readError);
+    error(`favorite rows read failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+    throw readError;
+  }
+  result.scanned = documents.rows.length;
   log(`favorites count=${result.scanned}`);
 
-  for (const document of documents.documents) {
-    const favorite = document.data || {};
+  for (const document of documents.rows) {
+    const favorite = document || {};
     const userId = String(favorite.userId || '').trim();
     const itemId = String(favorite.itemId || '').trim();
     const title = String(favorite.title || 'AniTV').trim() || 'AniTV';
@@ -73,20 +82,20 @@ async function runFavoriteScan({ databases, messaging, payload, log, error }) {
       const latest = await adapter.latestEpisode({ source: favorite.source, itemId });
       const checkedAt = new Date().toISOString();
       if (!latest) {
-        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastCheckedAt: checkedAt } });
+        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
         result.skipped += 1;
         continue;
       }
       const current = String(latest.number);
       const previous = String(favorite.lastNotifiedEpisode || '').trim();
       if (!previous) {
-        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
         result.initialized += 1;
         log(`favorite initialized; document=${document.$id}; episode=${current}`);
         continue;
       }
       if (Number(latest.number) <= Number(previous)) {
-        if (!dryRun) await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastCheckedAt: checkedAt } });
+        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
         result.skipped += 1;
         continue;
       }
@@ -99,7 +108,7 @@ async function runFavoriteScan({ databases, messaging, payload, log, error }) {
           data: { type: 'new_content', url: itemId, source: String(favorite.source || 'anime4up'), episode: current },
           priority: 'high',
         });
-        await databases.updateDocument({ databaseId: FAVORITES_DATABASE_ID, collectionId: FAVORITES_COLLECTION_ID, documentId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+        await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
         result.notified += 1;
         log(`notification sent; document=${document.$id}; episode=${current}`);
       } else {
@@ -144,10 +153,11 @@ module.exports = async ({ req, res, log, error }) => {
         .setEndpoint(required('APPWRITE_ENDPOINT'))
         .setProject(required('APPWRITE_PROJECT_ID'))
         .setKey(required('APPWRITE_API_KEY'));
-      return json(res, 200, { ok: true, type, ...(await runFavoriteScan({ databases: new Databases(client), messaging: new Messaging(client), payload, log, error })) });
+      return json(res, 200, { ok: true, type, ...(await runFavoriteScan({ rows: new TablesDB(client), messaging: new Messaging(client), payload, log, error })) });
     } catch (scanError) {
-      error(`favorite scan failed; type=${scanError?.name || 'unknown'}`);
-      return json(res, 502, { ok: false, code: 'SCAN_FAILED' });
+      const details = errorDetails(scanError);
+      error(`favorite scan failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+      return json(res, 502, { ok: false, code: 'SCAN_FAILED', error: { code: details.code, type: details.type, message: details.message } });
     }
   }
 
