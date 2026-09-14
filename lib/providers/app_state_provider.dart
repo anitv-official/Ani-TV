@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:appwrite/appwrite.dart';
 import '../services/appwrite_service.dart';
 import '../services/local_cache_service.dart';
 import '../services/fcm_service.dart';
@@ -21,6 +22,7 @@ class RegistrationResult {
 }
 
 class AppStateProvider extends ChangeNotifier {
+  static const _lastUserIdKey = 'anitv_last_authenticated_user_id';
   String _username = '';
   String _displayName = '';
   String _email = '';
@@ -41,6 +43,7 @@ class AppStateProvider extends ChangeNotifier {
   List<dynamic> _animeHistory = [];
   List<dynamic> _comicHistory = [];
   bool _isLoading = false;
+  bool _isOffline = false;
   String _errorMessage = '';
   Future<void>? _initializationFuture;
   Future<void>? _cloudSyncFuture;
@@ -60,6 +63,7 @@ class AppStateProvider extends ChangeNotifier {
   List<dynamic> get animeHistory => _animeHistory;
   List<dynamic> get comicHistory => _comicHistory;
   bool get isLoading => _isLoading;
+  bool get isOffline => _isOffline;
   String get errorMessage => _errorMessage;
 
   Future<void> initialize() {
@@ -90,13 +94,26 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final user = await _appwrite.getCurrentUser();
+      _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
       _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
       await _applyAuthenticatedUser(user, syncCloud: false);
       if (_isLoggedIn && _userId != null) await _loadLocalAccountCache(_userId!);
       notifyListeners();
       if (_isLoggedIn) unawaited(_syncAccountFromCloud());
-    } catch (_) {
+    } catch (error) {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedUserId = prefs.getString(_lastUserIdKey);
+      final isNetworkFailure = error is AppwriteException && (error.code == 0 || error.code >= 500);
+      if (isNetworkFailure && cachedUserId != null && cachedUserId.isNotEmpty) {
+        await _loadLocalAccountCache(cachedUserId);
+        _userId = cachedUserId;
+        _isLoggedIn = true;
+        _emailVerified = true;
+        _isOffline = true;
+        notifyListeners();
+        return;
+      }
       _clearUser();
       _setErrorMessage('تعذر التحقق من جلسة الحساب. حاول مرة أخرى.');
     }
@@ -109,6 +126,9 @@ class AppStateProvider extends ChangeNotifier {
       return;
     }
     _userId = user.$id as String;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastUserIdKey, _userId!);
+    _isOffline = false;
     _displayName = (user.name as String?)?.trim() ?? '';
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;

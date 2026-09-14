@@ -126,6 +126,7 @@ class _SplashScreenState extends State<SplashScreen>
             preloadedAnime: anime,
             preloadedComics: comics,
             preloadedFeaturedContent: featuredContent,
+            showOfflineNotice: Provider.of<AppStateProvider>(context, listen: false).isOffline,
           ),
         ),
       );

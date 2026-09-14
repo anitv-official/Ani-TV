@@ -17,12 +17,14 @@ class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
   final List<dynamic>? preloadedComics;
   final List<dynamic>? preloadedFeaturedContent;
+  final bool showOfflineNotice;
 
   const HomeScreen({
     Key? key,
     this.preloadedAnime,
     this.preloadedComics,
     this.preloadedFeaturedContent,
+    this.showOfflineNotice = false,
   }) : super(key: key);
 
   @override
@@ -36,6 +38,38 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkForAppUpdate();
+    if (widget.showOfflineNotice) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showOfflineNotice());
+    }
+  }
+
+  void _showOfflineNotice() {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(children: [
+          Icon(Icons.cloud_off_rounded, color: AppTheme.primaryColor),
+          SizedBox(width: 10),
+          Expanded(child: Text('أنت غير متصل بالإنترنت', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+        ]),
+        content: const Text('يمكنك متابعة المحتوى الذي سبق تنزيله حتى يعود اتصال الإنترنت.', style: TextStyle(color: AppTheme.textSecondaryColor, height: 1.5)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('حسنًا')),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen(embedded: false)));
+            },
+            icon: const Icon(Icons.download_for_offline_rounded),
+            label: const Text('التوجه إلى التنزيلات'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _checkForAppUpdate() async {
