@@ -11,6 +11,23 @@ const required = (name) => {
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
   return value;
 };
+const runtimeAppwriteKey = (req) => {
+  // Appwrite provides this dynamic key automatically to Function executions.
+  // The explicit API-key fallback is retained only for local/custom runners.
+  return process.env.APPWRITE_FUNCTION_API_KEY
+    || req.headers?.['x-appwrite-key']
+    || req.headers?.['X-Appwrite-Key']
+    || process.env.APPWRITE_API_KEY
+    || '';
+};
+const appwriteClient = (req) => {
+  const key = runtimeAppwriteKey(req);
+  if (!key) throw new Error('Missing Appwrite Function execution key');
+  return new Client()
+    .setEndpoint(required('APPWRITE_ENDPOINT'))
+    .setProject(required('APPWRITE_PROJECT_ID'))
+    .setKey(key);
+};
 const errorDetails = (error) => ({
   code: error?.code ?? 'unknown',
   type: error?.type ?? 'unknown',
@@ -150,15 +167,13 @@ module.exports = async ({ req, res, log, error }) => {
     }
     try {
       log('favorite scan: checking required environment variables');
-      const requiredNames = ['APPWRITE_ENDPOINT', 'APPWRITE_PROJECT_ID', 'APPWRITE_API_KEY', 'ANITV_FAVORITE_SCAN_SECRET'];
+      const requiredNames = ['APPWRITE_ENDPOINT', 'APPWRITE_PROJECT_ID', 'ANITV_FAVORITE_SCAN_SECRET'];
       const missing = requiredNames.filter((name) => !process.env[name]);
+      if (!runtimeAppwriteKey(req)) missing.push('APPWRITE_FUNCTION_API_KEY');
       log(`favorite scan: environment presence checked; missing=${missing.length}`);
       if (missing.length > 0) return json(res, 503, { ok: false, code: 'SCAN_NOT_CONFIGURED', missing });
       log('favorite scan: initializing appwrite client');
-      const client = new Client()
-        .setEndpoint(required('APPWRITE_ENDPOINT'))
-        .setProject(required('APPWRITE_PROJECT_ID'))
-        .setKey(required('APPWRITE_API_KEY'));
+      const client = appwriteClient(req);
       log('favorite scan: appwrite client ready');
       log('favorite scan: initializing tables api');
       const rows = new TablesDB(client);
@@ -194,10 +209,7 @@ module.exports = async ({ req, res, log, error }) => {
   }
   if (type === 'user' && !userId) return json(res, 400, { ok: false, code: 'USER_ID_REQUIRED' });
 
-  const client = new Client()
-    .setEndpoint(required('APPWRITE_ENDPOINT'))
-    .setProject(required('APPWRITE_PROJECT_ID'))
-    .setKey(required('APPWRITE_API_KEY'));
+  const client = appwriteClient(req);
   const messaging = new Messaging(client);
   const data = {};
   if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {

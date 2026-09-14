@@ -15,11 +15,11 @@ Function مستقلة لإرسال Push Notifications عبر **Appwrite Messagin
 |---|---:|---|
 | `APPWRITE_ENDPOINT` | Yes | نفس Endpoint المشروع الحالي، مثل `https://nyc.cloud.appwrite.io/v1` |
 | `APPWRITE_PROJECT_ID` | Yes | Project ID الخاص بـAppwrite، وليس Firebase Project ID |
-| `APPWRITE_API_KEY` | Yes | Secret API key مخصص لهذه Function فقط |
+| `APPWRITE_FUNCTION_API_KEY` | Automatically provided | Dynamic API key supplied by Appwrite for each Function execution; do not create or store it manually |
 | `ANITV_ADMIN_USER_IDS` | Yes for broadcast | قائمة Appwrite User IDs للمشرفين مفصولة بفواصل |
 | `ANITV_BROADCAST_TOPIC_ID` | Yes for broadcast | Topic ID الفعلي الذي أنشأته في Appwrite Messaging |
 
-لا تضع أي قيمة سرية في Git أو Flutter. لا تسجل Function الـAPI key أو FCM token أو محتوى بيانات حساس.
+لا تضع أي قيمة سرية في Git أو Flutter. Appwrite يمرر Dynamic API Key تلقائيًا عبر `APPWRITE_FUNCTION_API_KEY` و`x-appwrite-key`. لا تسجل المفتاح أو FCM token أو محتوى بيانات حساس.
 
 ## أقل صلاحيات API key
 
