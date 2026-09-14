@@ -102,10 +102,14 @@ const deleteAccount = async ({ adminClient, payload, req, res, log, error }) => 
     const favorites = await databases.listDocuments({ databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)] });
     log(`delete favorites lookup succeeded; count=${favorites.documents.length}`);
     for (const favorite of favorites.documents) {
-      if (String(favorite.data?.userId ?? '') !== userId) {
+      const favoriteOwnerId = String(favorite.data?.userId ?? '').trim();
+      log(`favorite ownership check; ownerPresent=${favoriteOwnerId ? 'true' : 'false'}; matches=${favoriteOwnerId === userId ? 'true' : 'false'}`);
+      if (favoriteOwnerId !== userId) {
+        log('favorite ownership check failed');
         return json(res, 403, { ok: false, code: 'OWNERSHIP_CHECK_FAILED', message: 'Resource ownership could not be verified.' });
       }
     }
+    log('favorite ownership checks succeeded');
     const profileImageId = String(profile?.profileImageId ?? '').trim();
     log(`delete profile image step; fileIdPresent=${profileImageId ? 'true' : 'false'}`);
     if (profileImageId) {
