@@ -56,7 +56,7 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
     documents = await rows.listRows({
       databaseId: FAVORITES_DATABASE_ID,
       tableId: FAVORITES_COLLECTION_ID,
-      queries: [Query.limit(5000)],
+      queries: [Query.limit(100)],
     });
   } catch (readError) {
     const details = errorDetails(readError);
@@ -149,11 +149,22 @@ module.exports = async ({ req, res, log, error }) => {
       return json(res, 403, { ok: false, code: 'INVALID_SCAN_SECRET' });
     }
     try {
+      log('favorite scan: checking required environment variables');
+      const requiredNames = ['APPWRITE_ENDPOINT', 'APPWRITE_PROJECT_ID', 'APPWRITE_API_KEY', 'ANITV_FAVORITE_SCAN_SECRET'];
+      const missing = requiredNames.filter((name) => !process.env[name]);
+      log(`favorite scan: environment presence checked; missing=${missing.length}`);
+      if (missing.length > 0) return json(res, 503, { ok: false, code: 'SCAN_NOT_CONFIGURED', missing });
+      log('favorite scan: initializing appwrite client');
       const client = new Client()
         .setEndpoint(required('APPWRITE_ENDPOINT'))
         .setProject(required('APPWRITE_PROJECT_ID'))
         .setKey(required('APPWRITE_API_KEY'));
-      return json(res, 200, { ok: true, type, ...(await runFavoriteScan({ rows: new TablesDB(client), messaging: new Messaging(client), payload, log, error })) });
+      log('favorite scan: appwrite client ready');
+      log('favorite scan: initializing tables api');
+      const rows = new TablesDB(client);
+      log('favorite scan: tables api ready');
+      log('favorite scan: messaging api ready');
+      return json(res, 200, { ok: true, type, ...(await runFavoriteScan({ rows, messaging: new Messaging(client), payload, log, error })) });
     } catch (scanError) {
       const details = errorDetails(scanError);
       error(`favorite scan failed; code=${details.code}; type=${details.type}; message=${details.message}`);
