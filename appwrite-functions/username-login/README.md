@@ -31,7 +31,7 @@
 3. اجعل Entrypoint هو `src/main.js`.
 4. ارفع محتويات هذا المجلد كـsource/deployment.
 5. أضف Environment Variables السابقة.
-6. فعّل HTTP execution للتطبيق، واضبط صلاحية التنفيذ للمستخدمين الضيوف (`Any`) لأن تسجيل الدخول وفحص Username عامان. مسار حذف الحساب يرفض أي طلب لا يحتوي على `x-appwrite-user-id` مطابقًا لـ`userId`، لذلك لا يمكن استدعاؤه من جلسة غير مصادق عليها.
+6. فعّل HTTP execution للتطبيق، واضبط صلاحية التنفيذ للمستخدمين الضيوف (`Any`) لأن تسجيل الدخول وفحص Username عامان. مسار حذف الحساب يطابق `x-appwrite-user-id` مع `userId` عندما يمرره Appwrite، ويعتمد دائمًا على إعادة التحقق من كلمة المرور داخل Appwrite؛ وهذا متوافق مع Flutter Functions SDK الذي قد لا يمرر Header الجلسة عند `createExecution`.
 7. تأكد أن أعمدة Profiles هي `userId`, `username`, `profileImageId`, و`updatedAt`، وأن قيمة `userId` داخل بيانات الـDocument تطابق Appwrite User `$id`.
 8. اضبط `APPWRITE_USERNAME_LOGIN_FUNCTION_ID=username-login` عند بناء Flutter إن كان معرف Function مختلفًا.
 
@@ -65,7 +65,7 @@ Request body:
 {"action":"delete_account","userId":"current-user-id","password":"..."}
 ```
 
-لا تثق Function في `userId` وحده؛ يجب أن يرسله Appwrite Runtime أيضًا في `x-appwrite-user-id`، ويجب أن تتطابق القيمتان. بعد إعادة التحقق من كلمة المرور، تتحقق Function من ملكية Profile وFavorites وتحذف صورة الملف التابعة للمستخدم والمفضلة والـProfile ثم تحذف Appwrite User عبر Server SDK. العملية قابلة لإعادة المحاولة، ولا تسجل كلمة المرور أو Tokens. حسابات Google/OAuth التي لا تملك كلمة مرور محلية تُرفض بأمان حتى يتوفر مسار إعادة تحقق OAuth.
+لا تثق Function في `userId` وحده؛ تتحقق من وجود المستخدم في Appwrite وتعيد التحقق من كلمة المرور عبر البريد المرتبط بالحساب، وتتحقق من Header الهوية إن أرسله Appwrite. بعد ذلك تتحقق Function من ملكية Profile وFavorites وتحذف صورة الملف التابعة للمستخدم والمفضلة والـProfile ثم تحذف Appwrite User عبر Server SDK. العملية قابلة لإعادة المحاولة، ولا تسجل كلمة المرور أو Tokens. حسابات Google/OAuth التي لا تملك كلمة مرور محلية تُرفض بأمان حتى يتوفر مسار إعادة تحقق OAuth.
 
 نجاح:
 

@@ -221,6 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _accountDeletionMessage(Object error) {
     if (error is AccountDeletionException && error.code == 'NO_EMAIL') return 'هذا الحساب لا يملك كلمة مرور محلية. لا يمكن تنفيذ الحذف بأمان من هذا الإصدار.';
+    if (error is AccountDeletionException && (error.code == 'INVALID_CREDENTIALS' || error.code == 'AUTHENTICATION_REQUIRED')) return 'تعذر التحقق من كلمة المرور أو هوية الحساب.';
     if (error is AppwriteException && error.code == 401) return 'تعذر التحقق من كلمة المرور.';
     return 'تعذر حذف الحساب حاليًا. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
   }

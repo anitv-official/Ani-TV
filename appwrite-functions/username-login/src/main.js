@@ -36,8 +36,11 @@ const deleteAccount = async ({ adminClient, payload, req, res, error }) => {
   if (!userId || !password) {
     return json(res, 400, { ok: false, code: 'INVALID_INPUT', message: 'User identity and password are required.' });
   }
+  // The Flutter Functions SDK may not forward the end-user session metadata
+  // on createExecution. Password verification below is the required proof of
+  // identity; when Appwrite does provide the header, still enforce the match.
   const authenticatedUserId = String(req.headers?.['x-appwrite-user-id'] ?? '').trim();
-  if (!authenticatedUserId || authenticatedUserId !== userId) {
+  if (authenticatedUserId && authenticatedUserId !== userId) {
     return json(res, 401, { ok: false, code: 'AUTHENTICATION_REQUIRED', message: 'An authenticated session is required.' });
   }
 
