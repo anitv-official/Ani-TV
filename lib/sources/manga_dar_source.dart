@@ -73,7 +73,7 @@ class MangaDarSource extends ContentSource {
   List<Map<String, dynamic>> _parseCards(String html, String base) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final pattern = RegExp(r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>', caseSensitive: false);
+    final pattern = RegExp(r'''<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in pattern.allMatches(html)) {
       final href = HtmlParse.absUrl(base, match.group(1) ?? '');
       final title = HtmlParse.stripTags(match.group(2) ?? '');
@@ -90,7 +90,7 @@ class MangaDarSource extends ContentSource {
   List<Map<String, dynamic>> _chapters(String html, String base, String slug) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final pattern = RegExp(r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>', caseSensitive: false);
+    final pattern = RegExp(r'''<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in pattern.allMatches(html)) {
       final href = HtmlParse.absUrl(base, match.group(1) ?? '');
       final text = HtmlParse.stripTags(match.group(2) ?? '');
@@ -130,7 +130,7 @@ class MangaDarSource extends ContentSource {
   }
 
   String _image(String html, String base) {
-    final raw = HtmlParse.meta(html, 'og:image') ?? HtmlParse.firstMatch(html, [RegExp(r'<img\b[^>]*(?:data-src|src)=["\']([^"\']+)', caseSensitive: false)]) ?? '';
+    final raw = HtmlParse.meta(html, 'og:image') ?? HtmlParse.firstMatch(html, [RegExp(r'''<img\b[^>]*(?:data-src|src)=["']([^"']+)''', caseSensitive: false)]) ?? '';
     return raw.isEmpty ? '' : HtmlParse.absUrl(base, raw);
   }
 
