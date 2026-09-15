@@ -56,27 +56,27 @@ class MovieBoxSource extends ContentSource {
     final pageUrl = _normalizeUrl(url);
     final html = await _getHtml(pageUrl);
     final title = _first(html, [
-          RegExp(r'<h1[^>]*>([\s\S]*?)</h1>', caseSensitive: false),
-          RegExp(r'<title[^>]*>([\s\S]*?)</title>', caseSensitive: false),
-          RegExp(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
+          RegExp(r'''<h1[^>]*>([\s\S]*?)</h1>''', caseSensitive: false),
+          RegExp(r'''<title[^>]*>([\s\S]*?)</title>''', caseSensitive: false),
+          RegExp(r'''<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)''', caseSensitive: false),
         ]) ?? _slugTitle(pageUrl);
     final cleanTitle = HtmlParse.stripTags(title);
     final description = HtmlParse.stripTags(_first(html, [
-          RegExp(r'<div[^>]+class=["\'][^"\']*description[^"\']*["\'][^>]*>([\s\S]*?)</div>', caseSensitive: false),
-          RegExp(r'<meta[^>]+(?:name|property)=["\']og:description["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
+          RegExp(r'''<div[^>]+class=["\'][^"\']*description[^"\']*["\'][^>]*>([\s\S]*?)</div>''', caseSensitive: false),
+          RegExp(r'''<meta[^>]+(?:name|property)=["\']og:description["\'][^>]+content=["\']([^"\']+)''', caseSensitive: false),
         ]) ?? '');
     final poster = _poster(html, pageUrl);
-    final genres = _all(html, RegExp(r'<[^>]+class=["\'][^"\']*pc-genre-tag[^"\']*["\'][^>]*>([\s\S]*?)</[^>]+>', caseSensitive: false))
+    final genres = _all(html, RegExp(r'''<[^>]+class=["\'][^"\']*pc-genre-tag[^"\']*["\'][^>]*>([\s\S]*?)</[^>]+>''', caseSensitive: false))
         .map(HtmlParse.stripTags)
         .where((value) => value.isNotEmpty)
         .toList();
     final episodes = _episodes(html, pageUrl);
-    final year = RegExp(r'\b(19\d{2}|20\d{2})\b').firstMatch(
-          HtmlParse.stripTags(_first(html, [RegExp(r'<main[\s\S]*?</main>', caseSensitive: false)]) ?? html),
+    final year = RegExp(r'''\b(19\d{2}|20\d{2})\b''').firstMatch(
+          HtmlParse.stripTags(_first(html, [RegExp(r'''<main[\s\S]*?</main>''', caseSensitive: false)]) ?? html),
         )?.group(1) ?? '';
     final rating = _first(html, [
-          RegExp(r'class=["\'][^"\']*rate[^"\']*["\'][^>]*>([0-9]+(?:\.[0-9]+)?)<', caseSensitive: false),
-          RegExp(r'"imdbRatingValue":"?([0-9]+(?:\.[0-9]+)?)', caseSensitive: false),
+          RegExp(r'''class=["\'][^"\']*rate[^"\']*["\'][^>]*>([0-9]+(?:\.[0-9]+)?)<''', caseSensitive: false),
+          RegExp(r'''"imdbRatingValue":"?([0-9]+(?:\.[0-9]+)?)''', caseSensitive: false),
         ]) ?? '';
     final subjectId = _subjectId(html, cleanTitle);
     return {
@@ -93,7 +93,7 @@ class MovieBoxSource extends ContentSource {
       'poster': poster,
       'backdrop': _backdrop(html, poster),
       'year': year,
-      'country': _first(html, [RegExp(r'class=["\'][^"\']*country[^"\']*["\'][^>]*>([\s\S]*?)</', caseSensitive: false)]) ?? '',
+      'country': _first(html, [RegExp(r'''class=["\'][^"\']*country[^"\']*["\'][^>]*>([\s\S]*?)</''', caseSensitive: false)]) ?? '',
       'moviebox_subject_id': subjectId,
       'seasons': _seasonNumbers(episodes),
       'episodes': episodes,
@@ -110,7 +110,7 @@ class MovieBoxSource extends ContentSource {
     final episode = int.tryParse(uri.queryParameters['ep'] ?? '') ?? 1;
     final detailPath = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
     final html = await _getHtml(_normalizeUrl(url).split('?').first);
-    final title = HtmlParse.stripTags(_first(html, [RegExp(r'<h1[^>]*>([\s\S]*?)</h1>', caseSensitive: false)]) ?? '');
+    final title = HtmlParse.stripTags(_first(html, [RegExp(r'''<h1[^>]*>([\s\S]*?)</h1>''', caseSensitive: false)]) ?? '');
     final subjectId = _subjectId(html, title);
     if (subjectId.isEmpty) return null;
 
@@ -162,16 +162,16 @@ class MovieBoxSource extends ContentSource {
   List<Map<String, dynamic>> _parseCards(String html) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final cardPattern = RegExp(r'<a\b[^>]+href=["\']([^"\']*/detail/[^"\']+)["\'][^>]*>([\s\S]*?)</a>', caseSensitive: false);
+    final cardPattern = RegExp(r'''<a\b[^>]+href=["\']([^"\']*/detail/[^"\']+)["\'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in cardPattern.allMatches(html)) {
       final url = HtmlParse.absUrl(_base, match.group(1)!);
       if (!seen.add(url)) continue;
       final fragment = match.group(2) ?? '';
       final title = _first(fragment, [
-            RegExp(r'<h2[^>]+title=["\']([^"\']+)', caseSensitive: false),
-            RegExp(r'<h2[^>]*>([\s\S]*?)</h2>', caseSensitive: false),
+            RegExp(r'''<h2[^>]+title=["\']([^"\']+)''', caseSensitive: false),
+            RegExp(r'''<h2[^>]*>([\s\S]*?)</h2>''', caseSensitive: false),
           ]) ?? _slugTitle(url);
-      final rating = _first(fragment, [RegExp(r'class=["\'][^"\']*rate[^"\']*["\'][^>]*>([^<]+)', caseSensitive: false)]) ?? '';
+      final rating = _first(fragment, [RegExp(r'''class=["\'][^"\']*rate[^"\']*["\'][^>]*>([^<]+)''', caseSensitive: false)]) ?? '';
       result.add(item(title: HtmlParse.stripTags(title), url: url, type: 'drama', rating: rating));
     }
     return result;
@@ -179,7 +179,7 @@ class MovieBoxSource extends ContentSource {
 
   List<Map<String, dynamic>> _episodes(String html, String pageUrl) {
     final result = <Map<String, dynamic>>[];
-    final seasonPattern = RegExp(r'\{"se":(\d+),"maxEp":(\d+)', caseSensitive: false);
+    final seasonPattern = RegExp(r'''\{"se":(\d+),"maxEp":(\d+)''', caseSensitive: false);
     for (final match in seasonPattern.allMatches(html)) {
       final parsedSeason = int.tryParse(match.group(1)!) ?? 1;
       // Nuxt's devalue payload may encode a string-table reference (for
@@ -205,22 +205,22 @@ class MovieBoxSource extends ContentSource {
   List<int> _seasonNumbers(List<Map<String, dynamic>> episodes) => episodes.map((e) => e['season'] as int).toSet().toList()..sort();
 
   String _subjectId(String html, String title) {
-    final values = RegExp(r'"(\d{16,20})",\d+,"').allMatches(html).map((m) => m.group(1)!).toList();
+    final values = RegExp(r'''"(\d{16,20})",\d+,"''').allMatches(html).map((m) => m.group(1)!).toList();
     return values.isEmpty ? '' : values.first;
   }
 
   String _poster(String html, String base) {
     final raw = _first(html, [
-      RegExp(r'<img[^>]+src=["\'](https?://pbcdn[^"\']+)', caseSensitive: false),
-      RegExp(r'"(https://pbcdnw?\.aoneroom\.com/image/[^" ]+)"', caseSensitive: false),
-      RegExp(r'<meta[^>]+(?:property|name)=["\']og:image["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
+      RegExp(r'''<img[^>]+src=["\'](https?://pbcdn[^"\']+)''', caseSensitive: false),
+      RegExp(r'''"(https://pbcdnw?\.aoneroom\.com/image/[^" ]+)"''', caseSensitive: false),
+      RegExp(r'''<meta[^>]+(?:property|name)=["\']og:image["\'][^>]+content=["\']([^"\']+)''', caseSensitive: false),
     ]) ?? '';
-    return HtmlParse.absUrl(base, raw).replaceAll(RegExp(r'\?x-oss-process=.*$'), '');
+    return HtmlParse.absUrl(base, raw).replaceAll(RegExp(r'''\?x-oss-process=.*$'''), '');
   }
 
   String _backdrop(String html, String fallback) => _first(html, [
-        RegExp(r'<video[^>]+poster=["\']([^"\']+)', caseSensitive: false),
-        RegExp(r'"(https://pbcdnw?\.aoneroom\.com/media/[^" ]+\.jpg)"', caseSensitive: false),
+        RegExp(r'''<video[^>]+poster=["\']([^"\']+)''', caseSensitive: false),
+        RegExp(r'''"(https://pbcdnw?\.aoneroom\.com/media/[^" ]+\.jpg)"''', caseSensitive: false),
       ]) ?? fallback;
 
   String? _first(String text, List<RegExp> patterns) {
