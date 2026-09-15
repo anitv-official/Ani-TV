@@ -55,6 +55,7 @@ class AppStateProvider extends ChangeNotifier {
   String get email => _email;
   String get birthDate => _birthDate;
   String get country => _country;
+  String? get profileImageId => _profileImageId;
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isDarkMode => _isDarkMode;

@@ -11,6 +11,7 @@ import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
 import 'drama_source.dart';
+import 'moviebox_source.dart';
 import 'source_base.dart';
 
 class SourceRegistry {
@@ -31,6 +32,7 @@ class SourceRegistry {
       MangaMelloSource(),
       HijalaSource(),
       DramaSource(),
+      MovieBoxSource(),
   ];
 
   static List<ContentSource> get animeSources =>
