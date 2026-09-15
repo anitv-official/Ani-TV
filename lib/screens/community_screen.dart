@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
@@ -11,62 +13,205 @@ import '../widgets/ui/primary_button.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
-  @override Widget build(BuildContext context) => ChangeNotifierProvider(create: (_) => CommunityProvider(context.read<AppStateProvider>())..load(), child: const _CommunityBody());
+
+  @override
+  Widget build(BuildContext context) => ChangeNotifierProvider(
+        create: (_) => CommunityProvider(context.read<AppStateProvider>())..load(),
+        child: const _CommunityBody(),
+      );
 }
 
-class _CommunityBody extends StatelessWidget {
+class _CommunityBody extends StatefulWidget {
   const _CommunityBody();
-  @override Widget build(BuildContext context) {
-    final provider = context.watch<CommunityProvider>();
-    return Scaffold(backgroundColor: AppTheme.backgroundColor, body: SafeArea(child: Column(children: [
-      AppScaffoldHeader(title: 'Community', actions: [IconButton(tooltip: 'إنشاء منشور', onPressed: () => _openCreate(context), icon: const Icon(Icons.add_circle_outline_rounded))]),
-      Expanded(child: provider.loading && provider.posts.isEmpty ? const LoadingView(message: 'جارٍ تحميل المجتمع...', size: 58) : provider.error != null && provider.posts.isEmpty ? ErrorState(message: provider.error!, onRetry: provider.load) : provider.posts.isEmpty ? const EmptyState(icon: Icons.forum_outlined, title: 'لا توجد منشورات بعد', message: 'كن أول من يشارك شيئًا مع مجتمع AniTV.') : RefreshIndicator(color: AppTheme.primaryColor, onRefresh: () => provider.load(refresh: true), child: ListView.builder(padding: const EdgeInsets.fromLTRB(14, 0, 14, 24), itemCount: provider.posts.length + 1, itemBuilder: (_, i) { if (i == provider.posts.length) { if (provider.loadingMore) return const Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator())); if (provider.hasMore) { provider.load(); return const SizedBox(height: 20); } return const SizedBox(height: 8); } return _PostCard(post: provider.posts[i]); }))),
-    ])));
+  @override State<_CommunityBody> createState() => _CommunityBodyState();
+}
+
+class _CommunityBodyState extends State<_CommunityBody> {
+  final search = TextEditingController();
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    search.dispose();
+    super.dispose();
   }
-  void _openCreate(BuildContext context) { if (!context.read<AppStateProvider>().isLoggedIn) { _message(context, 'سجّل الدخول لإنشاء منشور.'); return; } showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: context, builder: (_) => const _CreatePostSheet()); }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<CommunityProvider>();
+    final visible = provider.visiblePosts;
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Community', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 3),
+                    Text('Share what you love with AniTV fans', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+                  ]),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Create post',
+                  onPressed: () => _openCreate(context),
+                  icon: const Icon(Icons.add_rounded),
+                  style: IconButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                ),
+              ]),
+              const SizedBox(height: 14),
+              TextField(
+                controller: search,
+                onChanged: (value) {
+                  _debounce?.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 280), () {
+                    if (mounted) context.read<CommunityProvider>().setSearchQuery(value);
+                  });
+                },
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search community posts...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: search.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Clear search',
+                          onPressed: () { search.clear(); context.read<CommunityProvider>().setSearchQuery(''); setState(() {}); },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                ),
+              ),
+            ]),
+          ),
+          Expanded(
+            child: provider.loading && provider.posts.isEmpty
+                ? const _CommunitySkeletonList()
+                : provider.error != null && provider.posts.isEmpty
+                    ? ErrorState(message: 'Failed to load community. Please try again.', onRetry: provider.load)
+                    : visible.isEmpty
+                        ? _empty(provider.searchQuery.isNotEmpty)
+                        : RefreshIndicator(
+                            color: AppTheme.primaryColor,
+                            onRefresh: () => provider.load(refresh: true),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(14, 4, 14, 30),
+                              itemCount: visible.length + 1,
+                              itemBuilder: (_, i) {
+                                if (i == visible.length) {
+                                  if (provider.loadingMore) return const Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator()));
+                                  if (provider.hasMore && provider.searchQuery.isEmpty) { provider.load(); return const SizedBox(height: 20); }
+                                  return const SizedBox(height: 8);
+                                }
+                                return _PostCard(key: ValueKey(visible[i]['id']), post: visible[i]);
+                              },
+                            ),
+                          ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _empty(bool searching) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(searching ? Icons.search_off_rounded : Icons.forum_outlined, color: AppTheme.primaryColor, size: 54),
+            const SizedBox(height: 14),
+            Text(searching ? 'No posts found' : 'Your community starts here', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+            const SizedBox(height: 6),
+            Text(searching ? 'Try another word or clear your search.' : 'Be the first to share something with AniTV fans.', style: const TextStyle(color: AppTheme.textSecondaryColor), textAlign: TextAlign.center),
+          ]),
+        ),
+      );
+
+  void _openCreate(BuildContext context) {
+    if (!context.read<AppStateProvider>().isLoggedIn) { _message(context, 'Please sign in to create a post.'); return; }
+    showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: context, builder: (_) => const _CreatePostSheet());
+  }
+
   static void _message(BuildContext c, String text) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(text)));
+}
+
+class _CommunitySkeletonList extends StatelessWidget {
+  const _CommunitySkeletonList();
+  @override Widget build(BuildContext context) => ListView.builder(padding: const EdgeInsets.all(14), itemCount: 4, itemBuilder: (_, __) => Container(height: 190, margin: const EdgeInsets.only(bottom: 12), decoration: BoxDecoration(color: AppTheme.cardColor, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppTheme.borderColor))));
 }
 
 class _PostCard extends StatelessWidget {
   final Map<String, dynamic> post;
-  const _PostCard({required this.post});
-  @override Widget build(BuildContext context) {
-    final provider = context.read<CommunityProvider>(); final mine = post['userId'] == provider.account.userId; final title = (post['displayName']?.toString().trim().isNotEmpty == true ? post['displayName'] : post['username'])?.toString() ?? 'مستخدم';
-    return Card(color: AppTheme.cardColor, margin: const EdgeInsets.only(bottom: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppTheme.borderColor)), child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [CircleAvatar(radius: 20, backgroundColor: AppTheme.primaryColor.withOpacity(.16), child: Text(title.isEmpty ? '?' : title.characters.first.toUpperCase(), style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold))), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), if ((post['username'] ?? '').toString().isNotEmpty) Text('@${post['username']}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12))])), PopupMenuButton<String>(onSelected: (v) => v == 'delete' ? _delete(context) : _report(context), itemBuilder: (_) => [if (mine) const PopupMenuItem(value: 'delete', child: Text('حذف المنشور')), if (!mine) const PopupMenuItem(value: 'report', child: Text('إبلاغ'))])]),
-      if ((post['text'] ?? '').toString().trim().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(post['text'].toString(), style: const TextStyle(color: Colors.white, height: 1.45))),
-      if ((post['imageUrl'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(post['imageUrl'].toString(), width: double.infinity, height: 220, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(height: 100, child: Icon(Icons.broken_image_outlined))))),
-      const SizedBox(height: 8), Row(children: [IconButton(onPressed: () => _like(context), icon: Icon(post['likedByMe'] == true ? Icons.favorite : Icons.favorite_border, color: post['likedByMe'] == true ? AppTheme.primaryColor : AppTheme.textSecondaryColor)), Text('${post['likeCount'] ?? 0}', style: const TextStyle(color: AppTheme.textSecondaryColor)), const SizedBox(width: 12), TextButton.icon(onPressed: () => _comments(context), icon: const Icon(Icons.mode_comment_outlined, size: 19), label: Text('${post['commentCount'] ?? 0}'))])
-    ])));
+  const _PostCard({super.key, required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<CommunityProvider>();
+    final mine = post['userId'] == provider.account.userId;
+    final name = (post['displayName']?.toString().trim().isNotEmpty == true ? post['displayName'] : post['username'])?.toString() ?? 'AniTV user';
+    final text = (post['text'] ?? '').toString().trim();
+    final created = _time(post['createdAt']?.toString());
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _openDetails(context),
+        child: Padding(padding: const EdgeInsets.fromLTRB(14, 13, 14, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            _Avatar(name: name),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [Flexible(child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))), const SizedBox(width: 4), const Icon(Icons.verified_rounded, size: 15, color: AppTheme.primaryColor)]),
+              Text('@${post['username'] ?? 'user'} · $created', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
+            ])),
+            PopupMenuButton<String>(onSelected: (value) => _menu(context, value, mine), itemBuilder: (_) => [
+              const PopupMenuItem(value: 'copy', child: Text('Copy text')),
+              if (mine) const PopupMenuItem(value: 'delete', child: Text('Delete post')),
+              if (!mine) const PopupMenuItem(value: 'report', child: Text('Report post')),
+            ]),
+          ]),
+          if (text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(text, maxLines: 8, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14))),
+          if ((post['imageUrl'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: GestureDetector(onTap: () => _openImage(context, post['imageUrl'].toString()), child: ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.network(post['imageUrl'].toString(), width: double.infinity, height: 210, fit: BoxFit.cover, loadingBuilder: (_, child, progress) => progress == null ? child : const SizedBox(height: 210, child: Center(child: CircularProgressIndicator())), errorBuilder: (_, __, ___) => const SizedBox(height: 110, child: Center(child: Icon(Icons.broken_image_outlined, color: AppTheme.textMutedColor, size: 38))))))),
+          const SizedBox(height: 6),
+          Row(children: [
+            _ActionButton(icon: post['likedByMe'] == true ? Icons.favorite_rounded : Icons.favorite_border_rounded, label: '${post['likeCount'] ?? 0}', active: post['likedByMe'] == true, onPressed: () => _like(context)),
+            _ActionButton(icon: Icons.mode_comment_outlined, label: '${post['commentCount'] ?? 0}', onPressed: () => _openDetails(context)),
+            const Spacer(),
+            IconButton(tooltip: 'Copy text', onPressed: text.isEmpty ? null : () { Clipboard.setData(ClipboardData(text: text)); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post text copied.'))); }, icon: const Icon(Icons.ios_share_rounded, size: 19)),
+          ]),
+        ])),
+      ),
+    );
   }
-  Future<void> _like(BuildContext c) async { try { await c.read<CommunityProvider>().toggleLike(post); } catch (_) { ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content: Text('تعذر تحديث الإعجاب.'))); } }
-  Future<void> _delete(BuildContext c) async { final yes = await showDialog<bool>(context: c, builder: (_) => AlertDialog(title: const Text('حذف المنشور؟'), content: const Text('لا يمكن التراجع عن هذا الإجراء.'), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')), TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('حذف', style: TextStyle(color: Colors.red)))])) ?? false; if (yes) { try { await c.read<CommunityProvider>().deletePost(post['id'].toString()); } catch (_) { ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content: Text('تعذر حذف المنشور.'))); } } }
-  void _report(BuildContext c) { showDialog(context: c, builder: (_) { String reason = 'Spam'; final details = TextEditingController(); return AlertDialog(title: const Text('إبلاغ عن المنشور'), content: Column(mainAxisSize: MainAxisSize.min, children: [DropdownButtonFormField<String>(value: reason, items: ['Spam', 'Harassment', 'Inappropriate content', 'Misinformation', 'Other'].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(), onChanged: (v) => reason = v ?? reason), TextField(controller: details, decoration: const InputDecoration(labelText: 'تفاصيل اختيارية'))]), actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('إلغاء')), TextButton(onPressed: () async { try { await c.read<CommunityProvider>().report(post['id'].toString(), reason, details.text); if (c.mounted) Navigator.pop(c); } catch (_) { if (c.mounted) ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content: Text('تعذر إرسال البلاغ أو سبق إرساله.'))); } }, child: const Text('إرسال'))]); }); }
-  void _comments(BuildContext c) { showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: c, builder: (_) => _CommentsSheet(postId: post['id'].toString())); }
+
+  Future<void> _like(BuildContext context) async { try { await context.read<CommunityProvider>().toggleLike(post); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to update like.'))); } }
+  void _openDetails(BuildContext context) => showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: context, builder: (_) => _CommentsSheet(postId: post['id'].toString(), post: post));
+  void _openImage(BuildContext context, String url) => showDialog(context: context, barrierColor: Colors.black87, builder: (_) => GestureDetector(onTap: () => Navigator.pop(context), child: InteractiveViewer(child: Image.network(url, fit: BoxFit.contain))));
+  void _menu(BuildContext context, String value, bool mine) { if (value == 'copy') { Clipboard.setData(ClipboardData(text: post['text']?.toString() ?? '')); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post text copied.'))); } else if (value == 'delete' && mine) _delete(context); else if (value == 'report') _report(context); }
+  Future<void> _delete(BuildContext context) async { final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Delete post?'), content: const Text('This cannot be undone.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))])) ?? false; if (yes) { try { await context.read<CommunityProvider>().deletePost(post['id'].toString()); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to delete post.'))); } } }
+  void _report(BuildContext context) => showModalBottomSheet(backgroundColor: AppTheme.surfaceColor, isScrollControlled: true, context: context, builder: (_) => _ReportSheet(postId: post['id'].toString()));
+
+  static String _time(String? value) { if (value == null || value.isEmpty) return 'now'; final date = DateTime.tryParse(value)?.toLocal(); if (date == null) return 'now'; final diff = DateTime.now().difference(date); if (diff.inMinutes < 1) return 'now'; if (diff.inHours < 1) return '${diff.inMinutes}m'; if (diff.inDays < 1) return '${diff.inHours}h'; return '${diff.inDays}d'; }
 }
 
-class _CreatePostSheet extends StatefulWidget {
-  const _CreatePostSheet();
-  @override State<_CreatePostSheet> createState() => _CreatePostSheetState();
-}
+class _Avatar extends StatelessWidget { final String name; const _Avatar({required this.name}); @override Widget build(BuildContext context) => CircleAvatar(radius: 21, backgroundColor: AppTheme.primaryColor.withOpacity(.16), child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w800))); }
+class _ActionButton extends StatelessWidget { final IconData icon; final String label; final bool active; final VoidCallback onPressed; const _ActionButton({required this.icon, required this.label, required this.onPressed, this.active = false}); @override Widget build(BuildContext context) => TextButton.icon(onPressed: onPressed, icon: Icon(icon, size: 19, color: active ? AppTheme.primaryColor : AppTheme.textSecondaryColor), label: Text(label, style: TextStyle(color: active ? AppTheme.primaryColor : AppTheme.textSecondaryColor, fontSize: 12))); }
+
+class _CreatePostSheet extends StatefulWidget { const _CreatePostSheet(); @override State<_CreatePostSheet> createState() => _CreatePostSheetState(); }
 class _CreatePostSheetState extends State<_CreatePostSheet> {
   final text = TextEditingController(); String? path; bool sending = false;
   @override void dispose() { text.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 18, right: 18, top: 18, bottom: MediaQuery.of(context).viewInsets.bottom + 18),
-      child: Wrap(children: [
-        Row(children: [const Expanded(child: Text('إنشاء منشور', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))), IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close))]),
-        TextField(controller: text, maxLines: 5, maxLength: 1000, decoration: const InputDecoration(hintText: 'ماذا تريد أن تشارك؟')),
-        if (path != null) Padding(padding: const EdgeInsets.only(top: 10), child: Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(path!), height: 150, width: double.infinity, fit: BoxFit.cover)), Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white)))])),
-        Row(children: [TextButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.image_outlined), label: const Text('إضافة صورة')), const Spacer(), SizedBox(width: 120, child: PrimaryButton(label: sending ? 'جارٍ...' : 'نشر', onPressed: sending ? () {} : _submit))]),
-      ]),
-    );
-  }
-  Future<void> _pick() async { final result = await FilePicker.platform.pickFiles(type: FileType.image); final p = result?.files.single.path; if (p != null && mounted) setState(() => path = p); }
-  Future<void> _submit() async { if (text.text.trim().isEmpty && path == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اكتب نصًا أو أضف صورة أولًا.'))); return; } setState(() => sending = true); try { await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path); if (mounted) Navigator.pop(context); } catch (e) { if (mounted) { setState(() => sending = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); } } }
+  @override Widget build(BuildContext context) { final account = context.read<AppStateProvider>(); return Padding(padding: EdgeInsets.only(left: 18, right: 18, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 18), child: Wrap(children: [Row(children: [const Expanded(child: Text('Create a post', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold))), IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close))]), Row(children: [_Avatar(name: account.displayName.isEmpty ? account.username : account.displayName), const SizedBox(width: 10), Text('@${account.username}', style: const TextStyle(color: AppTheme.textSecondaryColor))]), const SizedBox(height: 14), TextField(controller: text, maxLines: 5, maxLength: 1000, autofocus: true, decoration: const InputDecoration(hintText: "What's on your mind?", alignLabelWithHint: true)), if (path != null) Padding(padding: const EdgeInsets.only(top: 10), child: Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.file(File(path!), height: 170, width: double.infinity, fit: BoxFit.cover)), Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white, size: 28))])), const SizedBox(height: 8), Row(children: [OutlinedButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Add image')), const Spacer(), SizedBox(width: 120, child: PrimaryButton(label: sending ? 'Posting...' : 'Post', onPressed: sending ? () {} : _submit))])]); }
+  Future<void> _pick() async { final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false); final p = result?.files.single.path; if (p != null && mounted) setState(() => path = p); }
+  Future<void> _submit() async { if (text.text.trim().isEmpty && path == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Write something or add an image first.'))); return; } setState(() => sending = true); try { await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path); if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post published successfully.'))); } } catch (_) { if (mounted) { setState(() => sending = false); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to publish post. Please try again.'))); } } }
 }
 
-class _CommentsSheet extends StatefulWidget { final String postId; const _CommentsSheet({required this.postId}); @override State<_CommentsSheet> createState() => _CommentsSheetState(); }
-class _CommentsSheetState extends State<_CommentsSheet> { final input = TextEditingController(); List<Map<String, dynamic>> items = []; bool loading = true; @override void initState() { super.initState(); _load(); } @override void dispose() { input.dispose(); super.dispose(); } Future<void> _load() async { try { items = await context.read<CommunityProvider>().comments(widget.postId); } finally { if (mounted) setState(() => loading = false); } } @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: SizedBox(height: MediaQuery.of(context).size.height * .72, child: Column(children: [const Padding(padding: EdgeInsets.all(16), child: Text('التعليقات', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))), Expanded(child: loading ? const LoadingView(size: 40) : items.isEmpty ? const EmptyState(icon: Icons.forum_outlined, title: 'لا توجد تعليقات') : ListView.builder(itemCount: items.length, itemBuilder: (_, i) { final x = items[i]; return ListTile(title: Text(x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : '@${x['username']}', style: const TextStyle(color: Colors.white)), subtitle: Text(x['text']?.toString() ?? '', style: const TextStyle(color: AppTheme.textSecondaryColor))); })), Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 12), child: Row(children: [Expanded(child: TextField(controller: input, decoration: const InputDecoration(hintText: 'اكتب تعليقًا...'))), IconButton(onPressed: () async { if (input.text.trim().isEmpty) return; await context.read<CommunityProvider>().addComment(widget.postId, input.text); input.clear(); await _load(); }, icon: const Icon(Icons.send_rounded))]))])));
+class _CommentsSheet extends StatefulWidget { final String postId; final Map<String, dynamic> post; const _CommentsSheet({required this.postId, required this.post}); @override State<_CommentsSheet> createState() => _CommentsSheetState(); }
+class _CommentsSheetState extends State<_CommentsSheet> { final input = TextEditingController(); List<Map<String, dynamic>> items = []; bool loading = true; bool sending = false; @override void initState() { super.initState(); _load(); } @override void dispose() { input.dispose(); super.dispose(); } Future<void> _load() async { try { items = await context.read<CommunityProvider>().comments(widget.postId); } catch (_) {} finally { if (mounted) setState(() => loading = false); } } @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: SizedBox(height: MediaQuery.of(context).size.height * .78, child: Column(children: [Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Row(children: [const Expanded(child: Text('Post & comments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))), Text('${items.length}', style: const TextStyle(color: AppTheme.textSecondaryColor))])), Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : ListView(children: [_PostPreview(post: widget.post), if (items.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No comments yet. Start the conversation.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor))) else ...items.map((x) => ListTile(leading: _Avatar(name: x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : x['username']?.toString() ?? 'U'), title: Text(x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : '@${x['username']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)), subtitle: Text(x['text']?.toString() ?? '', style: const TextStyle(color: AppTheme.textSecondaryColor))))])), Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 12), child: Row(children: [Expanded(child: TextField(controller: input, minLines: 1, maxLines: 3, onChanged: (_) => setState(() {}), decoration: const InputDecoration(hintText: 'Write a comment...'))), IconButton(onPressed: sending || input.text.trim().isEmpty ? null : _add, icon: sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded))]))]));
+  Future<void> _add() async { setState(() => sending = true); try { await context.read<CommunityProvider>().addComment(widget.postId, input.text); input.clear(); await _load(); } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add comment.'))); } finally { if (mounted) setState(() => sending = false); } }
 }
+class _PostPreview extends StatelessWidget { final Map<String, dynamic> post; const _PostPreview({required this.post}); @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 8), child: Text(post['text']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.4))); }
+class _ReportSheet extends StatefulWidget { final String postId; const _ReportSheet({required this.postId}); @override State<_ReportSheet> createState() => _ReportSheetState(); }
+class _ReportSheetState extends State<_ReportSheet> { String reason = 'Spam'; final details = TextEditingController(); bool sending = false; @override void dispose() { details.dispose(); super.dispose(); } @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).viewInsets.bottom + 20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Report post', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 12), ...['Spam', 'Harassment', 'Inappropriate content', 'Fake / misleading', 'Other'].map((x) => RadioListTile<String>(dense: true, value: x, groupValue: reason, onChanged: sending ? null : (v) => setState(() => reason = v!), title: Text(x, style: const TextStyle(color: Colors.white)))), if (reason == 'Other') TextField(controller: details, maxLines: 3, decoration: const InputDecoration(hintText: 'Tell us more (optional)')), const SizedBox(height: 8), SizedBox(width: double.infinity, child: ElevatedButton(onPressed: sending ? null : _send, child: Text(sending ? 'Sending...' : 'Submit report')))]); Future<void> _send() async { setState(() => sending = true); try { await context.read<CommunityProvider>().report(widget.postId, reason, details.text); if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.'))); } } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit report.'))); } finally { if (mounted) setState(() => sending = false); } } }
