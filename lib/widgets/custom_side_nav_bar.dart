@@ -14,6 +14,7 @@ class CustomSideNavBar extends StatelessWidget {
       (icon: Icons.explore_outlined, active: Icons.explore_rounded, label: 'استكشاف'),
       (icon: Icons.favorite_border_rounded, active: Icons.favorite_rounded, label: 'المفضلة'),
       (icon: Icons.person_outline_rounded, active: Icons.person_rounded, label: 'حسابي'),
+      (icon: Icons.forum_outlined, active: Icons.forum_rounded, label: 'المجتمع'),
     ];
     return Container(
       width: 88,

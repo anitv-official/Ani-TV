@@ -10,4 +10,5 @@ enum AppSection {
   account,
   settings,
   about,
+  community,
 }
