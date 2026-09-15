@@ -46,18 +46,18 @@ class CimaLightSource extends ContentSource {
     final pageUrl = HtmlParse.absUrl(_base, url);
     final html = await _getHtml(pageUrl);
     final title = _first(html, [
-          RegExp(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
+          RegExp(r'''<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)''', caseSensitive: false),
           RegExp(r'<h1[^>]*>([\s\S]*?)</h1>', caseSensitive: false),
           RegExp(r'<title[^>]*>([\s\S]*?)</title>', caseSensitive: false),
         ]) ?? 'بدون عنوان';
     final description = _first(html, [
-          RegExp(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
-          RegExp(r'<meta[^>]+property=["\']og:description["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
-          RegExp(r'<div[^>]+class=["\'][^"\']*(?:desc|description|story)[^"\']*["\'][^>]*>([\s\S]*?)</div>', caseSensitive: false),
+          RegExp(r'''<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)''', caseSensitive: false),
+          RegExp(r'''<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)''', caseSensitive: false),
+          RegExp(r'''<div[^>]+class=["'][^"']*(?:desc|description|story)[^"']*["'][^>]*>([\s\S]*?)</div>''', caseSensitive: false),
         ]) ?? '';
     final image = HtmlParse.absUrl(pageUrl, _first(html, [
-          RegExp(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', caseSensitive: false),
-          RegExp(r'<img[^>]+(?:src|data-src)=["\']([^"\']+)', caseSensitive: false),
+          RegExp(r'''<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)''', caseSensitive: false),
+          RegExp(r'''<img[^>]+(?:src|data-src)=["']([^"']+)''', caseSensitive: false),
         ]) ?? '');
     final episode = <String, dynamic>{
       'title': title,
@@ -84,8 +84,8 @@ class CimaLightSource extends ContentSource {
     final html = await _getHtml(pageUrl);
     final candidates = <String>{};
     for (final raw in [
-      ..._all(html, RegExp(r'<iframe[^>]+src=["\']([^"\']+)', caseSensitive: false)),
-      ..._all(html, RegExp(r'(?:data-(?:url|embed|src)|href)=["\']([^"\']+)', caseSensitive: false)),
+      ..._all(html, RegExp(r'''<iframe[^>]+src=["']([^"']+)''', caseSensitive: false)),
+      ..._all(html, RegExp(r'''(?:data-(?:url|embed|src)|href)=["']([^"']+)''', caseSensitive: false)),
       ...SourceUtils.extractMediaUrls(html, pageUrl),
     ]) {
       final value = HtmlParse.absUrl(pageUrl, raw);
@@ -110,14 +110,14 @@ class CimaLightSource extends ContentSource {
   static List<Map<String, dynamic>> parseCards(String html, String base) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final pattern = RegExp(r'<a[^>]+href=["\']([^"\']*watch\.php\?vid=[^"\']+)["\'][^>]*>([\s\S]*?)</a>', caseSensitive: false);
+    final pattern = RegExp(r'''<a[^>]+href=["']([^"']*watch\.php\?vid=[^"']+)["'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in pattern.allMatches(html)) {
       final url = HtmlParse.absUrl(base, match.group(1)!).split('#').first;
       if (!seen.add(url)) continue;
       final fragment = match.group(2) ?? '';
       final title = _first(fragment, [
-            RegExp(r'title=["\']([^"\']+)', caseSensitive: false),
-            RegExp(r'alt=["\']([^"\']+)', caseSensitive: false),
+            RegExp(r'''title=["']([^"']+)''', caseSensitive: false),
+            RegExp(r'''alt=["']([^"']+)''', caseSensitive: false),
           ]) ?? _first(html.substring(match.start, match.end), [RegExp(r'>\s*([^<]{3,})\s*</a>', caseSensitive: false)]) ?? 'بدون عنوان';
       final image = HtmlParse.absUrl(base, _first(fragment, [RegExp(r'''(?:src|data-src)=["']([^"']+)''', caseSensitive: false)]) ?? '');
       result.add({
