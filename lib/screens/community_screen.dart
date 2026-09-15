@@ -95,7 +95,7 @@ class _NewsDetailScreenState extends State<NewsDetailScreen> {
     const SizedBox(height: 24), const Text('التعليقات', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 10),
     Row(crossAxisAlignment: CrossAxisAlignment.end, children: [Expanded(child: TextField(controller: comment, maxLines: 3, minLines: 1, decoration: const InputDecoration(hintText: 'اكتب تعليقك'))), const SizedBox(width: 8), IconButton.filled(onPressed: sending ? null : _send, icon: const Icon(Icons.send_rounded))]),
     const SizedBox(height: 12), if (loading) const Center(child: CircularProgressIndicator()), ...comments.map((value) => _CommentTile(value: value)),
-  ]); }
+  ])); }
 }
 
 class _CommentTile extends StatelessWidget { const _CommentTile({required this.value}); final Map<String, dynamic> value; @override Widget build(BuildContext context) { final name = value['displayName']?.toString().trim().isNotEmpty == true ? value['displayName'].toString() : value['username']?.toString() ?? 'مستخدم'; return ListTile(contentPadding: EdgeInsets.zero, leading: CircleAvatar(child: Text(name.isEmpty ? '?' : name.substring(0, 1))), title: Row(children: [Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), if (value['verified'] == true) const Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.verified, size: 15, color: Colors.lightBlueAccent))]), subtitle: Text(value['text']?.toString() ?? '', style: TextStyle(color: AppTheme.textSecondaryColor, height: 1.4))); } }
