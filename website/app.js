@@ -1,5 +1,5 @@
-const REPO='lo-oord/Ani-TV';
-const fallback={tag_name:'v1.2.1',name:'AniTV 1.2.1',published_at:null,body:'سيظهر سجل التغييرات هنا عند نشر إصدار رسمي على GitHub.',assets:[]};
+const REPO='anitv-official/Ani-TV';
+const fallback={tag_name:'v1.2.2',name:'AniTV 1.2.2',published_at:null,body:'إصدار Android يتضمن تحسينات المشغل وإصلاح تشغيل CimaLight داخل التطبيق.',assets:[]};
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 async function latest(){try{const r=await fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{headers:{Accept:'application/vnd.github+json'}});if(!r.ok)throw Error();return await r.json()}catch{return fallback}}
 function apk(r){return r.assets?.find(a=>/\.apk$/i.test(a.name))?.browser_download_url||`https://github.com/${REPO}/releases/latest`}
