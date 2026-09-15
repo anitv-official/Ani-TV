@@ -8,7 +8,6 @@ import '../providers/app_state_provider.dart';
 import '../l10n/community_strings.dart';
 import '../providers/community_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ui/app_scaffold_header.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/primary_button.dart';
 
@@ -323,7 +322,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     children: [
                       _PostPreview(post: widget.post),
                       if (items.isEmpty)
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.all(24),
                           child: Text(context.communityStrings.noComments, textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor)),
                         )
