@@ -36,8 +36,13 @@ class MangaDarSource extends ContentSource {
 
   @override
   Future<Map<String, dynamic>> details(String url) async {
-    final pageUrl = _mangaUrl(url);
-    final html = await HtmlClient.getHtml(pageUrl);
+    var pageUrl = _mangaUrl(url);
+    var html = await HtmlClient.getHtml(pageUrl);
+    final canonical = _canonicalMangaUrl(html, pageUrl);
+    if (canonical.isNotEmpty && canonical != pageUrl) {
+      pageUrl = canonical;
+      html = await HtmlClient.getHtml(pageUrl);
+    }
     final slug = _slug(pageUrl);
     final chapters = _chapters(html, pageUrl, slug);
     final description = HtmlParse.stripTags(HtmlParse.meta(html, 'og:description') ?? '');
@@ -106,6 +111,17 @@ class MangaDarSource extends ContentSource {
     for (final link in HtmlParse.markdownLinks(html)) {
       addChapter(link['url'] ?? '', link['title'] ?? '');
     }
+    final chapterPattern = RegExp(
+      r'''(?:https?://(?:www\.)?mangadar\.com)?/manga/''' +
+          RegExp.escape(slug) +
+          r'''/([0-9]+(?:\.[0-9]+)?)/?''',
+      caseSensitive: false,
+    );
+    for (final match in chapterPattern.allMatches(html)) {
+      final raw = match.group(0) ?? '';
+      final number = match.group(1) ?? '';
+      addChapter(raw, 'الفصل $number');
+    }
     result.sort((a, b) => (b['number'] as num).compareTo(a['number'] as num));
     return result;
   }
@@ -131,6 +147,16 @@ class MangaDarSource extends ContentSource {
   }
 
   String _slug(String url) => RegExp(r'/manga/([^/?#]+)', caseSensitive: false).firstMatch(url)?.group(1) ?? '';
+
+  String _canonicalMangaUrl(String html, String fallback) {
+    final raw = HtmlParse.firstMatch(html, [
+      RegExp(r'''"url"\s*:\s*"(https?:\\/\\/mangadar\.com\\/manga\\/[^"\\]+)''', caseSensitive: false),
+      RegExp(r'''<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)''', caseSensitive: false),
+    ]);
+    if (raw == null || raw.isEmpty) return fallback;
+    final decoded = raw.replaceAll(r'\/', '/');
+    return _isMangaUrl(decoded) ? _mangaUrl(decoded) : fallback;
+  }
 
   bool _isMangaUrl(String url) => RegExp(r'https?://(?:www\.)?mangadar\.com/manga/[^/]+/?$', caseSensitive: false).hasMatch(url);
 
