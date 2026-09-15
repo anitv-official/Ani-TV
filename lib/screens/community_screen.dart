@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../l10n/community_strings.dart';
 import '../providers/community_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui/app_scaffold_header.dart';
@@ -49,15 +50,15 @@ class _CommunityBodyState extends State<_CommunityBody> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Expanded(
+                Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Community', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+                    Text(context.communityStrings.community, style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
                     SizedBox(height: 3),
-                    Text('Share what you love with AniTV fans', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+                    Text(context.communityStrings.subtitle, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
                   ]),
                 ),
                 IconButton.filledTonal(
-                  tooltip: 'Create post',
+                  tooltip: context.communityStrings.createPost,
                   onPressed: () => _openCreate(context),
                   icon: const Icon(Icons.add_rounded),
                   style: IconButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
@@ -74,12 +75,12 @@ class _CommunityBodyState extends State<_CommunityBody> {
                 },
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search community posts...',
+                  hintText: context.communityStrings.searchHint,
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: search.text.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'Clear search',
+                          tooltip: context.communityStrings.clearSearch,
                           onPressed: () { search.clear(); context.read<CommunityProvider>().setSearchQuery(''); setState(() {}); },
                           icon: const Icon(Icons.close_rounded),
                         ),
@@ -91,9 +92,9 @@ class _CommunityBodyState extends State<_CommunityBody> {
             child: provider.loading && provider.posts.isEmpty
                 ? const _CommunitySkeletonList()
                 : provider.error != null && provider.posts.isEmpty
-                    ? ErrorState(message: 'Failed to load community. Please try again.', onRetry: provider.load)
+                    ? ErrorState(message: '${context.communityStrings.loadError} ${context.communityStrings.retryHint}', onRetry: provider.load)
                     : visible.isEmpty
-                        ? _empty(provider.searchQuery.isNotEmpty)
+                        ? _empty(context, provider.searchQuery.isNotEmpty)
                         : RefreshIndicator(
                             color: AppTheme.primaryColor,
                             onRefresh: () => provider.load(refresh: true),
@@ -116,21 +117,21 @@ class _CommunityBodyState extends State<_CommunityBody> {
     );
   }
 
-  Widget _empty(bool searching) => Center(
+  Widget _empty(BuildContext context, bool searching) => Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(searching ? Icons.search_off_rounded : Icons.forum_outlined, color: AppTheme.primaryColor, size: 54),
             const SizedBox(height: 14),
-            Text(searching ? 'No posts found' : 'Your community starts here', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+            Text(searching ? context.communityStrings.noSearchResults : context.communityStrings.noPosts, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
             const SizedBox(height: 6),
-            Text(searching ? 'Try another word or clear your search.' : 'Be the first to share something with AniTV fans.', style: const TextStyle(color: AppTheme.textSecondaryColor), textAlign: TextAlign.center),
+            Text(searching ? context.communityStrings.searchEmptyHint : context.communityStrings.firstPost, style: const TextStyle(color: AppTheme.textSecondaryColor), textAlign: TextAlign.center),
           ]),
         ),
       );
 
   void _openCreate(BuildContext context) {
-    if (!context.read<AppStateProvider>().isLoggedIn) { _message(context, 'Please sign in to create a post.'); return; }
+    if (!context.read<AppStateProvider>().isLoggedIn) { _message(context, context.communityStrings.signInPost); return; }
     showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: context, builder: (_) => const _CreatePostSheet());
   }
 
@@ -167,9 +168,9 @@ class _PostCard extends StatelessWidget {
               Text('@${post['username'] ?? 'user'} · $created', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
             ])),
             PopupMenuButton<String>(onSelected: (value) => _menu(context, value, mine), itemBuilder: (_) => [
-              const PopupMenuItem(value: 'copy', child: Text('Copy text')),
-              if (mine) const PopupMenuItem(value: 'delete', child: Text('Delete post')),
-              if (!mine) const PopupMenuItem(value: 'report', child: Text('Report post')),
+              PopupMenuItem(value: 'copy', child: Text(context.communityStrings.copyText)),
+              if (mine) PopupMenuItem(value: 'delete', child: Text(context.communityStrings.deletePost)),
+              if (!mine) PopupMenuItem(value: 'report', child: Text(context.communityStrings.reportPost)),
             ]),
           ]),
           if (text.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(text, maxLines: 8, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, height: 1.45, fontSize: 14))),
@@ -179,18 +180,18 @@ class _PostCard extends StatelessWidget {
             _ActionButton(icon: post['likedByMe'] == true ? Icons.favorite_rounded : Icons.favorite_border_rounded, label: '${post['likeCount'] ?? 0}', active: post['likedByMe'] == true, onPressed: () => _like(context)),
             _ActionButton(icon: Icons.mode_comment_outlined, label: '${post['commentCount'] ?? 0}', onPressed: () => _openDetails(context)),
             const Spacer(),
-            IconButton(tooltip: 'Copy text', onPressed: text.isEmpty ? null : () { Clipboard.setData(ClipboardData(text: text)); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post text copied.'))); }, icon: const Icon(Icons.ios_share_rounded, size: 19)),
+            IconButton(tooltip: context.communityStrings.copyText, onPressed: text.isEmpty ? null : () { Clipboard.setData(ClipboardData(text: text)); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.copied))); }, icon: const Icon(Icons.ios_share_rounded, size: 19)),
           ]),
         ])),
       ),
     );
   }
 
-  Future<void> _like(BuildContext context) async { try { await context.read<CommunityProvider>().toggleLike(post); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to update like.'))); } }
+  Future<void> _like(BuildContext context) async { try { await context.read<CommunityProvider>().toggleLike(post); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.likeFailed))); } }
   void _openDetails(BuildContext context) => showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: context, builder: (_) => _CommentsSheet(postId: post['id'].toString(), post: post));
   void _openImage(BuildContext context, String url) => showDialog(context: context, barrierColor: Colors.black87, builder: (_) => GestureDetector(onTap: () => Navigator.pop(context), child: InteractiveViewer(child: Image.network(url, fit: BoxFit.contain))));
-  void _menu(BuildContext context, String value, bool mine) { if (value == 'copy') { Clipboard.setData(ClipboardData(text: post['text']?.toString() ?? '')); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post text copied.'))); } else if (value == 'delete' && mine) _delete(context); else if (value == 'report') _report(context); }
-  Future<void> _delete(BuildContext context) async { final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('Delete post?'), content: const Text('This cannot be undone.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))])) ?? false; if (yes) { try { await context.read<CommunityProvider>().deletePost(post['id'].toString()); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to delete post.'))); } } }
+  void _menu(BuildContext context, String value, bool mine) { if (value == 'copy') { Clipboard.setData(ClipboardData(text: post['text']?.toString() ?? '')); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.copied))); } else if (value == 'delete' && mine) _delete(context); else if (value == 'report') _report(context); }
+  Future<void> _delete(BuildContext context) async { final yes = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: Text(context.communityStrings.deleteQuestion), content: Text(context.communityStrings.cannotUndo), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.communityStrings.cancel)), TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.communityStrings.delete, style: TextStyle(color: Colors.red)))])) ?? false; if (yes) { try { await context.read<CommunityProvider>().deletePost(post['id'].toString()); } catch (_) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.deleteFailed))); } } }
   void _report(BuildContext context) => showModalBottomSheet(backgroundColor: AppTheme.surfaceColor, isScrollControlled: true, context: context, builder: (_) => _ReportSheet(postId: post['id'].toString()));
 
   static String _time(String? value) { if (value == null || value.isEmpty) return 'now'; final date = DateTime.tryParse(value)?.toLocal(); if (date == null) return 'now'; final diff = DateTime.now().difference(date); if (diff.inMinutes < 1) return 'now'; if (diff.inHours < 1) return '${diff.inMinutes}m'; if (diff.inDays < 1) return '${diff.inHours}h'; return '${diff.inDays}d'; }
@@ -219,7 +220,7 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
       padding: EdgeInsets.only(left: 18, right: 18, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 18),
       child: Wrap(children: [
         Row(children: [
-          const Expanded(child: Text('Create a post', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold))),
+          Expanded(child: Text(context.communityStrings.createPost, style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold))),
           IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close)),
         ]),
         Row(children: [
@@ -228,7 +229,7 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
           Text('@${account.username}', style: const TextStyle(color: AppTheme.textSecondaryColor)),
         ]),
         const SizedBox(height: 14),
-        TextField(controller: text, maxLines: 5, maxLength: 1000, autofocus: true, decoration: const InputDecoration(hintText: "What's on your mind?", alignLabelWithHint: true)),
+        TextField(controller: text, maxLines: 5, maxLength: 1000, autofocus: true, decoration: InputDecoration(hintText: context.communityStrings.writeSomething, alignLabelWithHint: true)),
         if (path != null) Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Stack(children: [
@@ -238,9 +239,9 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
         ),
         const SizedBox(height: 8),
         Row(children: [
-          OutlinedButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Add image')),
+          OutlinedButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.add_photo_alternate_outlined), label: Text(context.communityStrings.addImage)),
           const Spacer(),
-          SizedBox(width: 120, child: PrimaryButton(label: sending ? 'Posting...' : 'Post', onPressed: sending ? () {} : _submit)),
+          SizedBox(width: 120, child: PrimaryButton(label: sending ? context.communityStrings.publishing : context.communityStrings.publish, onPressed: sending ? () {} : _submit)),
         ]),
       ]),
     );
@@ -254,7 +255,7 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
   Future<void> _submit() async {
     if (text.text.trim().isEmpty && path == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Write something or add an image first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.writeOrImage)));
       return;
     }
     setState(() => sending = true);
@@ -262,12 +263,12 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
       await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post published successfully.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.postPublished)));
       }
     } catch (_) {
       if (mounted) {
         setState(() => sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to publish post. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.publishFailed)));
       }
     }
   }
@@ -295,7 +296,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     try {
       items = await context.read<CommunityProvider>().comments(widget.postId);
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load comments.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.commentsLoadFailed)));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -311,7 +312,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(children: [
-              const Expanded(child: Text('Post & comments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+              Expanded(child: Text(context.communityStrings.postAndComments, style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
               Text('${items.length}', style: const TextStyle(color: AppTheme.textSecondaryColor)),
             ]),
           ),
@@ -324,7 +325,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                       if (items.isEmpty)
                         const Padding(
                           padding: EdgeInsets.all(24),
-                          child: Text('No comments yet. Start the conversation.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor)),
+                          child: Text(context.communityStrings.noComments, textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor)),
                         )
                       else
                         ...items.map((x) => _commentTile(context, x)),
@@ -340,7 +341,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                   minLines: 1,
                   maxLines: 3,
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(hintText: 'Write a comment...'),
+                  decoration: InputDecoration(hintText: context.communityStrings.writeComment),
                 ),
               ),
               IconButton(
@@ -362,7 +363,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       leading: _Avatar(name: name),
       title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       subtitle: Text(x['text']?.toString() ?? '', style: const TextStyle(color: AppTheme.textSecondaryColor)),
-      trailing: mine ? PopupMenuButton<String>(onSelected: (_) => _deleteComment(x['id'].toString()), itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete comment'))]) : null,
+      trailing: mine ? PopupMenuButton<String>(onSelected: (_) => _deleteComment(x['id'].toString()), itemBuilder: (_) => [PopupMenuItem(value: 'delete', child: Text(context.communityStrings.deleteComment))]) : null,
     );
   }
 
@@ -373,7 +374,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       input.clear();
       await _load();
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add comment.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.commentFailed)));
     } finally {
       if (mounted) setState(() => sending = false);
     }
@@ -385,7 +386,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       items.removeWhere((item) => item['id'].toString() == id);
       if (mounted) setState(() {});
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to delete comment.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.commentDeleteFailed)));
     }
   }
 }
@@ -416,16 +417,17 @@ class _ReportSheetState extends State<_ReportSheet> {
 
   @override
   Widget build(BuildContext context) {
-    const reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fake / misleading', 'Other'];
+    final strings = context.communityStrings;
+    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fake / misleading', 'Other'];
     return Padding(
       padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).viewInsets.bottom + 20),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Report post', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(context.communityStrings.reportPost, style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        ...reasons.map((value) => RadioListTile<String>(dense: true, value: value, groupValue: reason, onChanged: sending ? null : (selected) { if (selected != null) setState(() => reason = selected); }, title: Text(value, style: const TextStyle(color: Colors.white)))),
-        if (reason == 'Other') TextField(controller: details, maxLines: 3, decoration: const InputDecoration(hintText: 'Tell us more (optional)')),
+        ...reasons.map((value) => RadioListTile<String>(dense: true, value: value, groupValue: reason, onChanged: sending ? null : (selected) { if (selected != null) setState(() => reason = selected); }, title: Text(communityReasonLabel(strings, value), style: const TextStyle(color: Colors.white)))),
+        if (reason == 'Other') TextField(controller: details, maxLines: 3, decoration: InputDecoration(hintText: context.communityStrings.tellMore)),
         const SizedBox(height: 8),
-        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: sending ? null : _send, child: Text(sending ? 'Sending...' : 'Submit report'))),
+        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: sending ? null : _send, child: Text(sending ? context.communityStrings.sending : context.communityStrings.submitReport))),
       ]),
     );
   }
@@ -436,10 +438,10 @@ class _ReportSheetState extends State<_ReportSheet> {
       await context.read<CommunityProvider>().report(widget.postId, reason, details.text);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.reportSubmitted)));
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit report.')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.communityStrings.reportFailed)));
     } finally {
       if (mounted) setState(() => sending = false);
     }
