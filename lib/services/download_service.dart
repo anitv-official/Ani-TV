@@ -9,6 +9,33 @@ class DownloadService {
   static const _key = 'anitv_downloads';
   static const _channel = MethodChannel('com.anitv.app/downloads');
   static Future<void> _writeQueue = Future<void>.value();
+  static final Set<String> _paused = <String>{};
+  static final Set<String> _cancelled = <String>{};
+
+  static void initialize() {
+    _channel.setMethodCallHandler((call) async {
+      final args = call.arguments is Map ? call.arguments as Map : const {};
+      final taskId = args['taskId']?.toString() ?? '';
+      if (taskId.isEmpty) return false;
+      if (call.method == 'pauseDownload') pause(taskId);
+      if (call.method == 'resumeDownload') resume(taskId);
+      if (call.method == 'cancelDownload') cancel(taskId);
+      return true;
+    });
+  }
+
+  static void pause(String taskId) => _paused.add(taskId);
+  static void resume(String taskId) => _paused.remove(taskId);
+  static void cancel(String taskId) {
+    _cancelled.add(taskId);
+    _paused.remove(taskId);
+  }
+  static bool isPaused(String taskId) => _paused.contains(taskId);
+  static bool isCancelled(String taskId) => _cancelled.contains(taskId);
+  static void _finish(String taskId) {
+    _paused.remove(taskId);
+    _cancelled.remove(taskId);
+  }
 
   static Future<List<Map<String, dynamic>>> list() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,28 +66,40 @@ class DownloadService {
     String coverUrl = '',
     String sourceId = '',
   }) async {
+    final taskId = 'manga:${_safe(mangaTitle)}/${_safe(chapterTitle)}';
     final root = await getApplicationDocumentsDirectory();
     final series = _safe(mangaTitle);
-    final folder = Directory('${root.path}/AniTV/Downloads/Manga/$series/${_safe(chapterTitle)}')
-      ..createSync(recursive: true);
+    final folder = Directory('${root.path}/AniTV/Downloads/Manga/$series/${_safe(chapterTitle)}')..createSync(recursive: true);
     var saved = 0;
-    await _notify('جارٍ تنزيل $mangaTitle', chapterTitle, 0, imageUrls.length);
-    for (var i = 0; i < imageUrls.length; i++) {
-      final response = await http.get(Uri.parse(imageUrls[i]));
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        await File('${folder.path}/${(i + 1).toString().padLeft(3, '0')}.jpg').writeAsBytes(response.bodyBytes);
-        saved++;
-        await _notify('جارٍ تنزيل $mangaTitle', chapterTitle, saved, imageUrls.length);
+    try {
+      await _notify('جارٍ تنزيل $mangaTitle', chapterTitle, 0, imageUrls.length, taskId: taskId);
+      for (var i = 0; i < imageUrls.length; i++) {
+        while (isPaused(taskId) && !isCancelled(taskId)) {
+          await _notify('التنزيل متوقف مؤقتًا', chapterTitle, saved, imageUrls.length, taskId: taskId, paused: true);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        }
+        if (isCancelled(taskId)) {
+          await folder.delete(recursive: true);
+          throw const DownloadCancelledException();
+        }
+        final response = await http.get(Uri.parse(imageUrls[i]));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          await File('${folder.path}/${(i + 1).toString().padLeft(3, '0')}.jpg').writeAsBytes(response.bodyBytes);
+          saved++;
+          await _notify('جارٍ تنزيل $mangaTitle', chapterTitle, saved, imageUrls.length, taskId: taskId);
+        }
       }
+      if (saved == 0) throw Exception('لم يتم حفظ أي صورة');
+      await _notify('تم التنزيل $mangaTitle', chapterTitle, saved, imageUrls.length, taskId: taskId, complete: true);
+      await _add({
+        'id': 'manga:${folder.path}', 'kind': 'manga', 'title': mangaTitle,
+        'chapter': chapterTitle, 'path': folder.path, 'cover_url': coverUrl,
+        'source_id': sourceId, 'timestamp': DateTime.now().toIso8601String(),
+      });
+      return folder.path;
+    } finally {
+      _finish(taskId);
     }
-    if (saved == 0) throw Exception('لم يتم حفظ أي صورة');
-    await _notify('تم التنزيل $mangaTitle', chapterTitle, saved, imageUrls.length, complete: true);
-    await _add({
-      'id': 'manga:${folder.path}', 'kind': 'manga', 'title': mangaTitle,
-      'chapter': chapterTitle, 'path': folder.path, 'cover_url': coverUrl,
-      'source_id': sourceId, 'timestamp': DateTime.now().toIso8601String(),
-    });
-    return folder.path;
   }
 
   static Future<bool> hasMangaChapter({
@@ -117,10 +156,10 @@ class DownloadService {
     }
   }
 
-  static Future<void> _notify(String title, String body, int progress, int total, {bool complete = false}) async {
+  static Future<void> _notify(String title, String body, int progress, int total, {bool complete = false, String taskId = '', bool paused = false}) async {
     try {
       await _channel.invokeMethod('downloadNotification', {
-        'title': title, 'body': body, 'progress': progress, 'total': total, 'complete': complete,
+        'title': title, 'body': body, 'progress': progress, 'total': total, 'complete': complete, 'taskId': taskId, 'paused': paused,
       });
     } catch (_) {}
   }
@@ -131,4 +170,8 @@ class DownloadService {
     if (safe.isEmpty) return 'untitled';
     return safe.substring(0, safe.length > 100 ? 100 : safe.length);
   }
+}
+
+class DownloadCancelledException implements Exception {
+  const DownloadCancelledException();
 }

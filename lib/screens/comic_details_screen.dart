@@ -223,6 +223,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           sourceId: _comicData?['source_id']?.toString() ?? '',
         );
         completed++;
+      } on DownloadCancelledException {
+        break;
       } catch (_) {
         failed++;
       }

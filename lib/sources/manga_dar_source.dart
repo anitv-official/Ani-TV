@@ -90,15 +90,21 @@ class MangaDarSource extends ContentSource {
   List<Map<String, dynamic>> _chapters(String html, String base, String slug) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
+    void addChapter(String rawUrl, String rawTitle) {
+      final href = HtmlParse.absUrl(base, rawUrl);
+      final text = HtmlParse.stripTags(rawTitle);
+      if (!_isChapterUrl(href, slug) || _number('$text $href') == null) return;
+      final chapter = _chapterUrl(href);
+      if (!seen.add(chapter)) return;
+      final number = _number('$text $chapter')!;
+      result.add({'id': chapter, 'chapter_id': chapter, 'title': text.isEmpty ? 'الفصل $number' : text, 'number': number, 'chapter_number': number, 'url': chapter, 'chapter_url': chapter});
+    }
     final pattern = RegExp(r'''<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in pattern.allMatches(html)) {
-      final href = HtmlParse.absUrl(base, match.group(1) ?? '');
-      final text = HtmlParse.stripTags(match.group(2) ?? '');
-      if (!_isChapterUrl(href, slug) || _number('$text $href') == null) continue;
-      final chapter = _chapterUrl(href);
-      if (!seen.add(chapter)) continue;
-      final number = _number('$text $chapter')!;
-      result.add({'id': chapter, 'chapter_id': chapter, 'title': text, 'number': number, 'chapter_number': number, 'url': chapter, 'chapter_url': chapter});
+      addChapter(match.group(1) ?? '', match.group(2) ?? '');
+    }
+    for (final link in HtmlParse.markdownLinks(html)) {
+      addChapter(link['url'] ?? '', link['title'] ?? '');
     }
     result.sort((a, b) => (b['number'] as num).compareTo(a['number'] as num));
     return result;
@@ -112,15 +118,34 @@ class MangaDarSource extends ContentSource {
 
   String _chapterUrl(String url) {
     if (url.startsWith('mangadar://chapter/')) return url.substring(19);
-    final match = RegExp(r'(https?://(?:www\.)?mangadar\.com/manga/[^/?#]+/[^/?#]+)', caseSensitive: false).firstMatch(url);
-    return match == null ? url : '${match.group(1)}/';
+    try {
+      final uri = Uri.parse(url);
+      final parts = uri.pathSegments;
+      final mangaIndex = parts.indexOf('manga');
+      if (mangaIndex >= 0 && parts.length > mangaIndex + 2) {
+        final normalizedPath = '/${parts.join('/')}/';
+        return uri.replace(path: normalizedPath).toString();
+      }
+    } catch (_) {}
+    return url;
   }
 
   String _slug(String url) => RegExp(r'/manga/([^/?#]+)', caseSensitive: false).firstMatch(url)?.group(1) ?? '';
 
   bool _isMangaUrl(String url) => RegExp(r'https?://(?:www\.)?mangadar\.com/manga/[^/]+/?$', caseSensitive: false).hasMatch(url);
 
-  bool _isChapterUrl(String url, String slug) => RegExp('https?://(?:www\\.)?mangadar\\.com/manga/${RegExp.escape(slug)}/[^/?#]+/?\$', caseSensitive: false).hasMatch(url);
+  bool _isChapterUrl(String url, String slug) {
+    try {
+      final uri = Uri.parse(url);
+      if (!{'http', 'https'}.contains(uri.scheme) || HtmlParse.hostOf(url) != 'mangadar.com') return false;
+      final parts = uri.pathSegments;
+      final mangaIndex = parts.indexOf('manga');
+      if (mangaIndex < 0 || mangaIndex + 1 >= parts.length || parts[mangaIndex + 1].toLowerCase() != slug.toLowerCase()) return false;
+      return parts.length > mangaIndex + 2 || uri.queryParameters.keys.any((key) => key.toLowerCase().contains('chapter'));
+    } catch (_) {
+      return false;
+    }
+  }
 
   bool _isNoise(String text) => RegExp(r'^(الفصل|chapter|صفحة|page|قراءة|مشاركة|تحميل|التالي|السابق)\b', caseSensitive: false).hasMatch(text);
 

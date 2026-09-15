@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import java.io.File
@@ -18,6 +19,7 @@ class MainActivity: FlutterActivity() {
     private val DOWNLOAD_CHANNEL = "com.anitv.app/downloads"
     private val NOTIFICATION_ID = 7241
     private lateinit var deepLinkChannel: MethodChannel
+    private lateinit var downloadChannel: MethodChannel
     private var initialLink: String? = null
     
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -44,11 +46,12 @@ class MainActivity: FlutterActivity() {
                 result.notImplemented()
             }
         }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOWNLOAD_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
+        downloadChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOWNLOAD_CHANNEL)
+        downloadChannel.setMethodCallHandler { call, result ->
+                when (call.method) {
                 "sendToAdm" -> sendToAdm(call.argument<String>("url"), call.argument<String>("title"), result)
                 "downloadNotification" -> {
-                    showDownloadNotification(call.argument<String>("title") ?: "AniTV", call.argument<String>("body") ?: "", call.argument<Int>("progress") ?: 0, call.argument<Int>("total") ?: 0, call.argument<Boolean>("complete") ?: false)
+                    showDownloadNotification(call.argument<String>("title") ?: "AniTV", call.argument<String>("body") ?: "", call.argument<Int>("progress") ?: 0, call.argument<Int>("total") ?: 0, call.argument<Boolean>("complete") ?: false, call.argument<String>("taskId") ?: "", call.argument<Boolean>("paused") ?: false)
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -60,6 +63,11 @@ class MainActivity: FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.data?.toString()?.let { deepLinkChannel.invokeMethod("onLink", it) }
+        val action = intent.getStringExtra("download_action")
+        val taskId = intent.getStringExtra("taskId")
+        if (!action.isNullOrBlank() && !taskId.isNullOrBlank()) {
+            downloadChannel.invokeMethod(action, mapOf("taskId" to taskId))
+        }
     }
 
     private fun installApk(apkPath: String, result: MethodChannel.Result) {
@@ -103,17 +111,32 @@ class MainActivity: FlutterActivity() {
         } catch (_: Exception) { result.success(false) }
     }
 
-    private fun showDownloadNotification(title: String, body: String, progress: Int, total: Int, complete: Boolean) {
+    private fun showDownloadNotification(title: String, body: String, progress: Int, total: Int, complete: Boolean, taskId: String, paused: Boolean) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(NotificationChannel("downloads", "التنزيلات", NotificationManager.IMPORTANCE_LOW))
-        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete)
+        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete).setOngoing(!complete)
         if (complete) {
             manager.cancel(NOTIFICATION_ID)
             manager.notify(NOTIFICATION_ID + 1, builder.build())
         } else {
+            if (taskId.isNotBlank()) {
+                val toggle = if (paused) "resumeDownload" else "pauseDownload"
+                val toggleLabel = if (paused) "استئناف" else "إيقاف مؤقت"
+                builder.addAction(0, toggleLabel, actionPendingIntent(toggle, taskId))
+                builder.addAction(0, "إلغاء", actionPendingIntent("cancelDownload", taskId))
+            }
             val percent = if (total > 0) ((progress * 100L) / total).toInt().coerceIn(0, 100) else 0
             builder.setProgress(if (total > 0) 100 else 0, percent, total <= 0)
             manager.notify(NOTIFICATION_ID, builder.build())
         }
+    }
+
+    private fun actionPendingIntent(action: String, taskId: String): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            putExtra("download_action", action)
+            putExtra("taskId", taskId)
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        return PendingIntent.getActivity(this, (action + taskId).hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 }

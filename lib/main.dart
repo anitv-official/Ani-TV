@@ -21,11 +21,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/toast_utils.dart';
 import 'services/fcm_service.dart';
+import 'services/download_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  DownloadService.initialize();
   WebViewPlatform.instance =
       WebViewPlatform.instance ?? AndroidWebViewPlatform();
 
