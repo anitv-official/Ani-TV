@@ -58,15 +58,18 @@ class ContentCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 7),
-            Text(
-              title ?? '',
-              maxLines: compactTitle ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
-                fontSize: 12,
-                height: 1.25,
-                fontWeight: FontWeight.w600,
+            SizedBox(
+              height: compactTitle ? 18 : 31,
+              child: Text(
+                title ?? '',
+                maxLines: compactTitle ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppTheme.textPrimaryColor,
+                  fontSize: 12,
+                  height: 1.25,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

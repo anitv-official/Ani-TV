@@ -63,6 +63,16 @@ class DownloadService {
     return folder.path;
   }
 
+  static Future<bool> hasMangaChapter({
+    required String mangaTitle,
+    required String chapterTitle,
+  }) async {
+    final root = await getApplicationDocumentsDirectory();
+    final folder = Directory('${root.path}/AniTV/Downloads/Manga/${_safe(mangaTitle)}/${_safe(chapterTitle)}');
+    if (!folder.existsSync()) return false;
+    return folder.listSync().whereType<File>().isNotEmpty;
+  }
+
   static Future<String> saveAnimeEpisode({
     required String animeTitle,
     required String episodeTitle,
@@ -117,6 +127,8 @@ class DownloadService {
 
   static String _safe(String value) {
     final cleaned = value.replaceAll(RegExp(r'[^a-zA-Z0-9\u0600-\u06FF._-]+'), '_');
-    return cleaned.substring(0, cleaned.length > 100 ? 100 : cleaned.length);
+    final safe = cleaned.replaceAll(RegExp(r'^[_ .-]+|[_ .-]+$'), '');
+    if (safe.isEmpty) return 'untitled';
+    return safe.substring(0, safe.length > 100 ? 100 : safe.length);
   }
 }

@@ -32,6 +32,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   String? _error;
   
   bool _isChapterSearching = false;
+  bool _chaptersAscending = false;
+  bool _isDownloadingAll = false;
   final TextEditingController _chapterSearchController = TextEditingController();
 
   @override
@@ -174,6 +176,63 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       ToastUtils.show('تعذر تنزيل الفصل: $e', backgroundColor: Colors.red);
       return false;
     }
+  }
+
+  Future<void> _downloadAllChapters() async {
+    if (_isDownloadingAll) return;
+    if (!context.read<AppStateProvider>().isLoggedIn) {
+      ToastUtils.show('سجّل الدخول لاستخدام التنزيلات', backgroundColor: Colors.orange);
+      return;
+    }
+    final chapters = ((_comicData?['chapters'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((chapter) => Map<String, dynamic>.from(chapter))
+        .where((chapter) => (chapter['url']?.toString() ?? '').trim().isNotEmpty)
+        .toList();
+    if (chapters.isEmpty) {
+      ToastUtils.show('لا توجد فصول متاحة للتنزيل', backgroundColor: AppTheme.primaryColor);
+      return;
+    }
+    setState(() => _isDownloadingAll = true);
+    var completed = 0;
+    var failed = 0;
+    final seen = <String>{};
+    for (final chapter in chapters) {
+      final url = chapter['url'].toString();
+      if (!seen.add(url)) continue;
+      try {
+        final mangaTitle = _comicData?['title']?.toString() ?? 'مانجا';
+        final chapterTitle = chapter['title']?.toString() ?? 'فصل';
+        if (await DownloadService.hasMangaChapter(mangaTitle: mangaTitle, chapterTitle: chapterTitle)) {
+          completed++;
+          continue;
+        }
+        final data = await ApiService.fetchChapterImages(url);
+        final images = (data['images'] as List?)
+                ?.whereType<Map>()
+                .map((image) => image['url']?.toString() ?? '')
+                .where((imageUrl) => imageUrl.isNotEmpty)
+                .toList() ??
+            const <String>[];
+        if (images.isEmpty) throw Exception('لا توجد صفحات');
+        await DownloadService.saveMangaChapter(
+          mangaTitle: mangaTitle,
+          chapterTitle: chapterTitle,
+          imageUrls: images,
+          coverUrl: _comicData?['image_url']?.toString() ?? '',
+          sourceId: _comicData?['source_id']?.toString() ?? '',
+        );
+        completed++;
+      } catch (_) {
+        failed++;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _isDownloadingAll = false);
+    ToastUtils.show(
+      failed == 0 ? 'تم تنزيل $completed فصل' : 'تم تنزيل $completed فصل وتعذر تنزيل $failed فصل',
+      backgroundColor: failed == 0 ? AppTheme.accentColor : Colors.orange,
+    );
   }
 
   Future<void> _shareComic() async {
@@ -431,7 +490,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
               ),
             ],
           )
-        else
+               else
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -452,6 +511,22 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                     ),
                  ],
                ),
+               Row(
+                 children: [
+                   IconButton(
+                     tooltip: _chaptersAscending ? 'ترتيب تنازلي' : 'ترتيب تصاعدي',
+                     onPressed: () => setState(() => _chaptersAscending = !_chaptersAscending),
+                     icon: Icon(_chaptersAscending ? Icons.south_rounded : Icons.north_rounded, color: AppTheme.textSecondaryColor),
+                   ),
+                   OutlinedButton.icon(
+                     onPressed: _isDownloadingAll ? null : _downloadAllChapters,
+                     icon: _isDownloadingAll
+                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                         : const Icon(Icons.download_for_offline_outlined, size: 18),
+                     label: Text(_isDownloadingAll ? 'جارٍ...' : 'الكل'),
+                   ),
+                 ],
+               ),
             ],
           ),
         const SizedBox(height: 12),
@@ -467,7 +542,12 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           itemCount: filteredChapters.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final chapter = filteredChapters[index];
+            final orderedChapters = [...filteredChapters]..sort((a, b) {
+              final aNumber = double.tryParse((a['number'] ?? a['chapter_number'] ?? '').toString()) ?? 0;
+              final bNumber = double.tryParse((b['number'] ?? b['chapter_number'] ?? '').toString()) ?? 0;
+              return _chaptersAscending ? aNumber.compareTo(bNumber) : bNumber.compareTo(aNumber);
+            });
+            final chapter = orderedChapters[index];
             String title = chapter['title'] ?? 'فصل';
             String displayTitle = title;
             
