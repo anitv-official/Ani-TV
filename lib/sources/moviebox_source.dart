@@ -162,6 +162,13 @@ class MovieBoxSource extends ContentSource {
   List<Map<String, dynamic>> _parseCards(String html) {
     final result = <Map<String, dynamic>>[];
     final seen = <String>{};
+    // Search cards render their cover through a client-side lazy component,
+    // so the <a> fragment itself has no <img>. The SSR payload still contains
+    // the cover URLs in the same catalogue order as the cards.
+    final catalogImages = RegExp(r'''https://pbcdnw?\.aoneroom\.com/image/[^" ]+''', caseSensitive: false)
+        .allMatches(html)
+        .map((match) => HtmlParse.decode(match.group(0)!).replaceAll(RegExp(r'''\?x-oss-process=.*$'''), ''))
+        .toList();
     final cardPattern = RegExp(r'''<a\b[^>]+href=["\']([^"\']*/detail/[^"\']+)["\'][^>]*>([\s\S]*?)</a>''', caseSensitive: false);
     for (final match in cardPattern.allMatches(html)) {
       final url = HtmlParse.absUrl(_base, match.group(1)!);
@@ -172,14 +179,18 @@ class MovieBoxSource extends ContentSource {
             RegExp(r'''<h2[^>]*>([\s\S]*?)</h2>''', caseSensitive: false),
           ]) ?? _slugTitle(url);
       final rating = _first(fragment, [RegExp(r'''class=["\'][^"\']*rate[^"\']*["\'][^>]*>([^<]+)''', caseSensitive: false)]) ?? '';
-      result.add(item(title: HtmlParse.stripTags(title), url: url, type: 'drama', rating: rating));
+      final image = _first(fragment, [
+            RegExp(r'''<img[^>]+(?:src|data-src)=["\']([^"\']+)''', caseSensitive: false),
+          ]) ?? (result.length < catalogImages.length ? catalogImages[result.length] : '');
+      result.add(item(title: HtmlParse.stripTags(title), url: url, image: image, type: 'drama', rating: rating));
     }
     return result;
   }
 
   List<Map<String, dynamic>> _episodes(String html, String pageUrl) {
     final result = <Map<String, dynamic>>[];
-    final seasonPattern = RegExp(r'''\{"se":(\d+),"maxEp":(\d+)''', caseSensitive: false);
+    final seasonPattern = RegExp(r'''\{\s*"se"\s*:\s*(?:"?)(\d+)(?:"?)\s*,\s*"maxEp"\s*:\s*(?:"?)(\d+)(?:"?)''', caseSensitive: false);
+    final added = <String>{};
     for (final match in seasonPattern.allMatches(html)) {
       final parsedSeason = int.tryParse(match.group(1)!) ?? 1;
       // Nuxt's devalue payload may encode a string-table reference (for
@@ -187,6 +198,7 @@ class MovieBoxSource extends ContentSource {
       final season = parsedSeason > 20 ? 1 : parsedSeason;
       final max = int.tryParse(match.group(2)!) ?? 0;
       for (var number = 1; number <= max; number++) {
+        if (!added.add('$season:$number')) continue;
         result.add({
           'title': 'الحلقة $number',
           'name': 'الحلقة $number',
