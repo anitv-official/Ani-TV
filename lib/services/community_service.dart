@@ -54,7 +54,9 @@ class CommunityService {
     await _auth(userId);
     final existing = await findLike(userId: userId, postId: postId);
     if (liked) { if (existing == null) await _appwrite.databases.createDocument(databaseId: AppwriteService.databaseId, collectionId: likesTableId, documentId: ID.unique(), data: {'userId': userId, 'postId': postId, 'createdAt': DateTime.now().toUtc().toIso8601String()}, permissions: _permissions(userId)); }
-    else if (existing != null) await _appwrite.databases.deleteDocument(databaseId: AppwriteService.databaseId, collectionId: likesTableId, documentId: existing.$id);
+    else if (existing != null) {
+      await _appwrite.databases.deleteDocument(databaseId: AppwriteService.databaseId, collectionId: likesTableId, documentId: existing.$id);
+    }
   }
   Future<void> updatePostCount({required String userId, required String postId, required int likeCount, required int commentCount}) async { await _auth(userId); await _appwrite.databases.updateDocument(databaseId: AppwriteService.databaseId, collectionId: postsTableId, documentId: postId, data: {'likeCount': likeCount < 0 ? 0 : likeCount, 'commentCount': commentCount < 0 ? 0 : commentCount, 'updatedAt': DateTime.now().toUtc().toIso8601String()}); }
   Future<void> report({required String userId, required String postId, required String reason, String details = ''}) async { await _auth(userId); await _appwrite.databases.createDocument(databaseId: AppwriteService.databaseId, collectionId: reportsTableId, documentId: ID.unique(), data: {'userId': userId, 'postId': postId, 'reason': reason, 'details': details, 'createdAt': DateTime.now().toUtc().toIso8601String()}, permissions: [Permission.create(Role.user(userId))]); }
