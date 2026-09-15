@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:appwrite/appwrite.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -16,6 +17,7 @@ import '../sources/source_registry.dart';
 import '../services/appwrite_service.dart';
 import '../services/fcm_service.dart';
 import '../services/app_version_service.dart';
+import '../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'sources_screen.dart';
 import 'downloads_screen.dart';
@@ -121,6 +123,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userId = context.read<AppStateProvider>().userId;
     final scope = userId == null ? 'guest' : 'user_$userId';
     await prefs.setBool('${key}_$scope', value);
+  }
+
+  Future<void> _confirmLocalAction(String title, String message, Future<void> Function() action) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          ElevatedButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('متابعة')),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await action();
+      if (mounted) ToastUtils.show('تم تنفيذ العملية', backgroundColor: AppTheme.accentColor);
+    }
+  }
+
+  Future<void> _clearLocalHistory() => _confirmLocalAction('مسح سجل المشاهدة', 'سيتم حذف سجل المشاهدة المحلي فقط، ولن تتأثر المفضلة أو بيانات الحساب.', () async {
+    final provider = context.read<AppStateProvider>();
+    await provider.clearHistory(true);
+    await provider.clearHistory(false);
+  });
+
+  Future<void> _clearLocalCache() => _confirmLocalAction('مسح الكاش', 'سيتم مسح البيانات المؤقتة وإعادة تحميلها عند الحاجة.', () async {
+    ApiService.clearCache();
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys().where((key) => key.startsWith('cache_'))) {
+      await prefs.remove(key);
+    }
+  });
+
+  Future<void> _resetPreferences() => _confirmLocalAction('إعادة ضبط الإعدادات', 'سيتم إعادة التفضيلات المحلية فقط. لن يتم حذف الحساب أو المفضلة أو التنزيلات.', () async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys().where((key) => key.startsWith('stream_cellular_') || key.startsWith('show_mature_content_') || key.startsWith('notifications_enabled_') || key.startsWith('dark_mode_'))) {
+      await prefs.remove(key);
+    }
+    if (mounted) setState(() { _streamCellular = false; _showMatureContent = false; _notificationsEnabled = true; isDarkMode = true; });
+  });
+
+  Future<void> _showDiagnostics() async {
+    final checks = <String, String>{};
+    try {
+      final result = await InternetAddress.lookup('example.com').timeout(const Duration(seconds: 4));
+      checks['الإنترنت'] = result.isNotEmpty ? '✓ يعمل' : '⚠ يحتاج إلى انتباه';
+    } catch (_) { checks['الإنترنت'] = '✕ خطأ'; }
+    try {
+      final provider = context.read<AppStateProvider>();
+      await provider.initialize();
+      checks['الجلسة'] = provider.isLoggedIn ? '✓ يعمل' : '⚠ زائر';
+      checks['المفضلة'] = provider.isLoggedIn ? '✓ ${provider.favoriteAnime.length + provider.favoriteComics.length} عنصر' : '⚠ غير متاح للزائر';
+    } catch (_) { checks['Appwrite'] = '✕ خطأ'; }
+    try {
+      checks['المصادر'] = SourceRegistry.all.isNotEmpty ? '✓ ${SourceRegistry.all.length} مصدر' : '✕ لا توجد مصادر';
+      final prefs = await SharedPreferences.getInstance();
+      checks['التخزين المحلي'] = '✓ ${prefs.getKeys().length} مفتاح';
+      checks['الإشعارات'] = _notificationsEnabled ? '✓ مفعّلة' : '⚠ معطّلة';
+    } catch (_) { checks['التخزين المحلي'] = '✕ خطأ'; }
+    if (!mounted) return;
+    final report = checks.entries.map((entry) => '${entry.key}: ${entry.value}').join('\n');
+    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('مركز تشخيص AniTV'),
+      content: SelectableText(report),
+      actions: [
+        TextButton(onPressed: () { Clipboard.setData(ClipboardData(text: report)); ToastUtils.show('تم نسخ التقرير', backgroundColor: AppTheme.accentColor); }, child: const Text('نسخ التقرير')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
+      ],
+    ));
   }
 
   void _showErrorDialog(String title, String message) {
@@ -485,6 +557,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       SettingSwitchTile(icon: Icons.signal_cellular_alt, title: 'استخدام بيانات الهاتف', subtitle: 'السماح بالتشغيل عبر الشبكة الخلوية', value: _streamCellular, onChanged: (val) { setState(() => _streamCellular = val); _savePreference('stream_cellular', val); }),
                       SettingSwitchTile(icon: Icons.visibility_outlined, title: 'عرض محتوى البالغين', subtitle: 'محتوى +18', value: _showMatureContent, onChanged: (val) { setState(() => _showMatureContent = val); _savePreference('show_mature_content', val); }),
+                    ],
+                  ),
+                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) SettingsGroup(
+                    title: 'البيانات المحلية',
+                    children: [
+                      SettingTile(icon: Icons.cleaning_services_outlined, title: 'مسح الكاش', subtitle: 'حذف البيانات المؤقتة فقط', onTap: _clearLocalCache),
+                      SettingTile(icon: Icons.history_rounded, title: 'مسح سجل المشاهدة', subtitle: 'لا يؤثر على المفضلة أو الحساب', onTap: _clearLocalHistory),
+                      SettingTile(icon: Icons.download_outlined, title: 'التنزيلات', subtitle: 'فتح صفحة التنزيلات الحالية', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()))),
+                      SettingTile(icon: Icons.hub_outlined, title: 'إدارة المصادر', subtitle: 'عرض المصادر المفعّلة حاليًا', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SourcesScreen()))),
+                    ],
+                  ),
+                  if (widget.settingsOnly) const SizedBox(height: 18),
+                  if (widget.settingsOnly) SettingsGroup(
+                    title: 'الأدوات',
+                    children: [
+                      SettingTile(icon: Icons.health_and_safety_outlined, title: 'مركز تشخيص AniTV', subtitle: 'فحص الاتصال والجلسة والمصادر والتخزين', onTap: _showDiagnostics),
+                      SettingTile(icon: Icons.restore_rounded, title: 'إعادة ضبط الإعدادات', subtitle: 'إعادة التفضيلات المحلية فقط', onTap: _resetPreferences),
                     ],
                   ),
                   const SizedBox(height: 28),

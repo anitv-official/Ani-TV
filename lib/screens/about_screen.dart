@@ -16,6 +16,7 @@ class AboutScreen extends StatefulWidget {
 class _AboutScreenState extends State<AboutScreen> {
   String _version = '—';
   String _build = '—';
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -38,6 +39,29 @@ class _AboutScreenState extends State<AboutScreen> {
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
+  }
+
+  Future<void> _checkForUpdate() async {
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    try {
+      final available = await AppVersionService.isUpdateAvailable();
+      if (!mounted) return;
+      if (available) {
+        final opened = await AppVersionService.openDownloadUrl();
+        if (mounted && !opened) _showMessage('يتوفر تحديث جديد، لكن تعذر فتح رابط التنزيل.');
+      } else {
+        _showMessage('أنت تستخدم أحدث إصدار.');
+      }
+    } catch (_) {
+      if (mounted) _showMessage('تعذر التحقق من التحديث. تحقق من اتصال الإنترنت.');
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -70,6 +94,8 @@ class _AboutScreenState extends State<AboutScreen> {
                   ),
                   const SizedBox(height: 18),
                   _infoCard(Icons.info_outline, 'إصدار التطبيق', '$_version  •  Build $_build'),
+                  const SizedBox(height: 12),
+                  _actionCard(Icons.system_update_alt_rounded, 'التحقق من وجود تحديث', _checkingUpdate ? 'جارٍ التحقق...' : 'استخدام نظام التحديث الحالي', _checkingUpdate ? null : _checkForUpdate),
                   const SizedBox(height: 12),
                   _actionCard(Icons.privacy_tip_outlined, 'سياسة الخصوصية', 'اطّلع على سياسة الخصوصية الرسمية', () => _open('https://anitv-manga-lord.vercel.app/privacy', 'تعذر فتح سياسة الخصوصية.')),
                   const SizedBox(height: 12),
