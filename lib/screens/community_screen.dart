@@ -45,12 +45,25 @@ class _PostCard extends StatelessWidget {
   void _comments(BuildContext c) { showModalBottomSheet(isScrollControlled: true, backgroundColor: AppTheme.surfaceColor, context: c, builder: (_) => _CommentsSheet(postId: post['id'].toString())); }
 }
 
-class _CreatePostSheet extends StatefulWidget { const _CreatePostSheet(); @override State<_CreatePostSheet> createState() => _CreatePostSheetState(); }
+class _CreatePostSheet extends StatefulWidget {
+  const _CreatePostSheet();
+  @override State<_CreatePostSheet> createState() => _CreatePostSheetState();
+}
 class _CreatePostSheetState extends State<_CreatePostSheet> {
   final text = TextEditingController(); String? path; bool sending = false;
   @override void dispose() { text.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.only(left: 18, right: 18, top: 18, bottom: MediaQuery.of(context).viewInsets.bottom + 18), child: Wrap(children: [Row(children: [const Expanded(child: Text('إنشاء منشور', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))), IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close))]), TextField(controller: text, maxLines: 5, maxLength: 1000, decoration: const InputDecoration(hintText: 'ماذا تريد أن تشارك؟')), if (path != null) Padding(padding: const EdgeInsets.only(top: 10), child: Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(path!), height: 150, width: double.infinity, fit: BoxFit.cover)), Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white))])), Row(children: [TextButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.image_outlined), label: const Text('إضافة صورة')), const Spacer(), SizedBox(width: 120, child: PrimaryButton(label: sending ? 'جارٍ...' : 'نشر', onPressed: sending ? () {} : _submit))]) ]));
-  Future<void> _pick() async { final result = await FilePicker.platform.pickFiles(type: FileType.image); final p = result?.files.single.path; if (p != null) setState(() => path = p); }
+  @override Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 18, right: 18, top: 18, bottom: MediaQuery.of(context).viewInsets.bottom + 18),
+      child: Wrap(children: [
+        Row(children: [const Expanded(child: Text('إنشاء منشور', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))), IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close))]),
+        TextField(controller: text, maxLines: 5, maxLength: 1000, decoration: const InputDecoration(hintText: 'ماذا تريد أن تشارك؟')),
+        if (path != null) Padding(padding: const EdgeInsets.only(top: 10), child: Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(path!), height: 150, width: double.infinity, fit: BoxFit.cover)), Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white)))])),
+        Row(children: [TextButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.image_outlined), label: const Text('إضافة صورة')), const Spacer(), SizedBox(width: 120, child: PrimaryButton(label: sending ? 'جارٍ...' : 'نشر', onPressed: sending ? () {} : _submit))]),
+      ]),
+    );
+  }
+  Future<void> _pick() async { final result = await FilePicker.platform.pickFiles(type: FileType.image); final p = result?.files.single.path; if (p != null && mounted) setState(() => path = p); }
   Future<void> _submit() async { if (text.text.trim().isEmpty && path == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اكتب نصًا أو أضف صورة أولًا.'))); return; } setState(() => sending = true); try { await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path); if (mounted) Navigator.pop(context); } catch (e) { if (mounted) { setState(() => sending = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); } } }
 }
 
