@@ -1,0 +1,7 @@
+{
+  "name": "anitv-news-engine",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node index.js" }
+}
