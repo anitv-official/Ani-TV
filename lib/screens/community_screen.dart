@@ -199,13 +199,78 @@ class _PostCard extends StatelessWidget {
 class _Avatar extends StatelessWidget { final String name; const _Avatar({required this.name}); @override Widget build(BuildContext context) => CircleAvatar(radius: 21, backgroundColor: AppTheme.primaryColor.withOpacity(.16), child: Text(name.isEmpty ? '?' : name.characters.first.toUpperCase(), style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w800))); }
 class _ActionButton extends StatelessWidget { final IconData icon; final String label; final bool active; final VoidCallback onPressed; const _ActionButton({required this.icon, required this.label, required this.onPressed, this.active = false}); @override Widget build(BuildContext context) => TextButton.icon(onPressed: onPressed, icon: Icon(icon, size: 19, color: active ? AppTheme.primaryColor : AppTheme.textSecondaryColor), label: Text(label, style: TextStyle(color: active ? AppTheme.primaryColor : AppTheme.textSecondaryColor, fontSize: 12))); }
 
-class _CreatePostSheet extends StatefulWidget { const _CreatePostSheet(); @override State<_CreatePostSheet> createState() => _CreatePostSheetState(); }
+class _CreatePostSheet extends StatefulWidget {
+  const _CreatePostSheet();
+  @override State<_CreatePostSheet> createState() => _CreatePostSheetState();
+}
+
 class _CreatePostSheetState extends State<_CreatePostSheet> {
-  final text = TextEditingController(); String? path; bool sending = false;
-  @override void dispose() { text.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) { final account = context.read<AppStateProvider>(); return Padding(padding: EdgeInsets.only(left: 18, right: 18, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 18), child: Wrap(children: [Row(children: [const Expanded(child: Text('Create a post', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold))), IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close))]), Row(children: [_Avatar(name: account.displayName.isEmpty ? account.username : account.displayName), const SizedBox(width: 10), Text('@${account.username}', style: const TextStyle(color: AppTheme.textSecondaryColor))]), const SizedBox(height: 14), TextField(controller: text, maxLines: 5, maxLength: 1000, autofocus: true, decoration: const InputDecoration(hintText: "What's on your mind?", alignLabelWithHint: true)), if (path != null) Padding(padding: const EdgeInsets.only(top: 10), child: Stack(children: [ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.file(File(path!), height: 170, width: double.infinity, fit: BoxFit.cover)), Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white, size: 28))])), const SizedBox(height: 8), Row(children: [OutlinedButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Add image')), const Spacer(), SizedBox(width: 120, child: PrimaryButton(label: sending ? 'Posting...' : 'Post', onPressed: sending ? () {} : _submit))])]); }
-  Future<void> _pick() async { final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false); final p = result?.files.single.path; if (p != null && mounted) setState(() => path = p); }
-  Future<void> _submit() async { if (text.text.trim().isEmpty && path == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Write something or add an image first.'))); return; } setState(() => sending = true); try { await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path); if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post published successfully.'))); } } catch (_) { if (mounted) { setState(() => sending = false); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to publish post. Please try again.'))); } } }
+  final text = TextEditingController();
+  String? path;
+  bool sending = false;
+
+  @override
+  void dispose() { text.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final account = context.read<AppStateProvider>();
+    return Padding(
+      padding: EdgeInsets.only(left: 18, right: 18, top: 8, bottom: MediaQuery.of(context).viewInsets.bottom + 18),
+      child: Wrap(children: [
+        Row(children: [
+          const Expanded(child: Text('Create a post', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.bold))),
+          IconButton(onPressed: sending ? null : () => Navigator.pop(context), icon: const Icon(Icons.close)),
+        ]),
+        Row(children: [
+          _Avatar(name: account.displayName.isEmpty ? account.username : account.displayName),
+          const SizedBox(width: 10),
+          Text('@${account.username}', style: const TextStyle(color: AppTheme.textSecondaryColor)),
+        ]),
+        const SizedBox(height: 14),
+        TextField(controller: text, maxLines: 5, maxLength: 1000, autofocus: true, decoration: const InputDecoration(hintText: "What's on your mind?", alignLabelWithHint: true)),
+        if (path != null) Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Stack(children: [
+            ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.file(File(path!), height: 170, width: double.infinity, fit: BoxFit.cover)),
+            Positioned(top: 4, right: 4, child: IconButton(onPressed: () => setState(() => path = null), icon: const Icon(Icons.cancel, color: Colors.white, size: 28))),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        Row(children: [
+          OutlinedButton.icon(onPressed: sending ? null : _pick, icon: const Icon(Icons.add_photo_alternate_outlined), label: const Text('Add image')),
+          const Spacer(),
+          SizedBox(width: 120, child: PrimaryButton(label: sending ? 'Posting...' : 'Post', onPressed: sending ? () {} : _submit)),
+        ]),
+      ]),
+    );
+  }
+
+  Future<void> _pick() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false);
+    final selected = result?.files.single.path;
+    if (selected != null && mounted) setState(() => path = selected);
+  }
+
+  Future<void> _submit() async {
+    if (text.text.trim().isEmpty && path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Write something or add an image first.')));
+      return;
+    }
+    setState(() => sending = true);
+    try {
+      await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post published successfully.')));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to publish post. Please try again.')));
+      }
+    }
+  }
 }
 
 class _CommentsSheet extends StatefulWidget {
