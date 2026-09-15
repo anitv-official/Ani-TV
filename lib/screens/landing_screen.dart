@@ -46,7 +46,7 @@ class _LandingScreenState extends State<LandingScreen> with SingleTickerProvider
   TextSpan _policyLink(BuildContext context) => TextSpan(
     text: 'سياسة الخصوصية والأمان',
     style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700),
-    recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse('https://anitv-manga-lord.vercel.app/privacy'), mode: LaunchMode.externalApplication),
+    recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse('https://anitv-tau.vercel.app/privacy'), mode: LaunchMode.externalApplication),
   );
 
   @override

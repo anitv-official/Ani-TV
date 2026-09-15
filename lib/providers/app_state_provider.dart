@@ -543,7 +543,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> updatePassword({required String password, required String oldPassword}) async => _appwrite.updatePassword(password: password, oldPassword: oldPassword);
-  Future<void> sendPasswordRecovery(String email) async => _appwrite.sendPasswordRecovery(email, 'https://anitv-manga-lord.vercel.app/reset-password');
+  Future<void> sendPasswordRecovery(String email) async => _appwrite.sendPasswordRecovery(email, 'https://anitv-tau.vercel.app/reset-password');
   Future<void> completePasswordRecovery({required String userId, required String secret, required String password}) async => _appwrite.completePasswordRecovery(userId: userId, secret: secret, password: password);
   Future<void> pingAppwrite() => _appwrite.ping();
 

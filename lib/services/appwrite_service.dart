@@ -30,7 +30,7 @@ class AppwriteService {
   static const String profilesTableId = '6aa58dec001acc5ce962';
   static const String favoritesTableId = '6aa58e3a003b23556872';
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
-  static const String emailVerificationUrl = 'https://anitv-manga-lord.vercel.app/verify-email';
+  static const String emailVerificationUrl = 'https://anitv-tau.vercel.app/verify-email';
   static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
   static const String usernameLoginEndpoint = 'https://anitv-username-login.nyc.appwrite.run';
   static const String _sessionSecretKey = 'anitv_appwrite_session_secret';

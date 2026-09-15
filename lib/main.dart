@@ -125,7 +125,7 @@ class _MyAppState extends State<MyApp> {
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
     final isVerificationCallback = (uri.scheme == 'anitv' && uri.host == 'verify-email') ||
-        (uri.scheme == 'https' && uri.host == 'anitv-manga-lord.vercel.app' && uri.path == '/verify-email');
+        (uri.scheme == 'https' && uri.host == 'anitv-tau.vercel.app' && uri.path == '/verify-email');
     if (isVerificationCallback && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
       final key = '$userId:$secret';
       if (_lastVerificationLink == key || _verificationInProgress) return;
@@ -157,7 +157,7 @@ class _MyAppState extends State<MyApp> {
       return;
     }
     final isRecoveryCallback = (uri.scheme == 'anitv' && uri.host == 'reset-password') ||
-        (uri.scheme == 'https' && uri.host == 'anitv-manga-lord.vercel.app' && uri.path == '/reset-password');
+        (uri.scheme == 'https' && uri.host == 'anitv-tau.vercel.app' && uri.path == '/reset-password');
     if (isRecoveryCallback && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {
       final key = '$userId:$secret';
       if (_lastRecoveryLink == key) return;

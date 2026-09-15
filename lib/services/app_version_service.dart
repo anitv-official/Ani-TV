@@ -10,7 +10,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppVersionService {
-  static String _baseUrl = 'https://api.github.com/repos/lo-oord/Ani-TV/releases/latest';
+  static String _baseUrl = 'https://anitv-tau.vercel.app/release.json';
   static const String _prefsKeyAppVersionUrl = 'app_version_url';
   static bool _baseUrlLoaded = false;
 
@@ -19,7 +19,7 @@ class AppVersionService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_prefsKeyAppVersionUrl);
-      if (saved != null && saved.isNotEmpty) {
+      if (saved != null && saved.isNotEmpty && !saved.contains('lo-oord/Ani-TV')) {
         _baseUrl = saved;
       }
     } catch (_) {}

@@ -1,0 +1,13 @@
+{
+  "tag_name": "v1.2.2",
+  "name": "AniTV 1.2.2",
+  "published_at": "2026-09-15T21:53:31Z",
+  "html_url": "https://anitv-tau.vercel.app/",
+  "body": "إصلاح تشغيل CimaLight داخل مشغل التطبيق، تحسينات Manga Dar، وتحسينات التحكم بالتنزيلات.",
+  "assets": [
+    {
+      "name": "AniTV-v1.2.2.apk",
+      "browser_download_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663964038653/xpmdwUFvISiTUaHT.apk"
+    }
+  ]
+}

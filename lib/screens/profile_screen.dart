@@ -306,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _openPrivacyPolicy() async {
-    final uri = Uri.parse('https://anitv-manga-lord.vercel.app/privacy');
+    final uri = Uri.parse('https://anitv-tau.vercel.app/privacy');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
       _showErrorDialog('الخصوصية والأمان', 'تعذر فتح سياسة الخصوصية. حاول مرة أخرى.');
     }

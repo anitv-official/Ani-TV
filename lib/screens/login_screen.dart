@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) { if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor); }
     finally { if (mounted) setState(() => _loading = false); }
   }
-  Future<void> _forgotPassword() async { try { final opened = await launchUrl(Uri.parse('https://anitv-manga-lord.vercel.app/reset-password'), mode: LaunchMode.externalApplication); if (!opened && mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } catch (_) { if (mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } }
+  Future<void> _forgotPassword() async { try { final opened = await launchUrl(Uri.parse('https://anitv-tau.vercel.app/reset-password'), mode: LaunchMode.externalApplication); if (!opened && mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } catch (_) { if (mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } }
   void _show(String message) => ToastUtils.show(message, backgroundColor: AppTheme.errorColor);
   InputDecoration _decoration(String hint, {Widget? suffix}) => InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondaryColor), filled: true, fillColor: AppTheme.surfaceColor, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), suffixIcon: suffix, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5)));
 
