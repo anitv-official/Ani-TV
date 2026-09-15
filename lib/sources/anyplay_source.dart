@@ -77,7 +77,7 @@ class AnyPlaySource extends ContentSource {
     final results = await Future.wait(feeds.map((feed) async {
       try {
         final isTv = feed['isTv'] == true;
-        final data = await _getJson(feed['path'] as String);
+        final data = await _getJson(feed['path'] as String, {'page': '$page'});
         final rows = data['results'];
         if (rows is! List) return <Map<String, dynamic>>[];
         return rows.whereType<Map>().map((raw) {
@@ -171,7 +171,6 @@ class AnyPlaySource extends ContentSource {
     final season = parsed['season'];
     final episode = parsed['episode'];
     final links = <Map<String, dynamic>>[];
-    String? resolvedDirect;
     for (final server in _servers) {
       final serverId = server['id'];
       if (serverId == null || serverId.isEmpty) continue;
@@ -179,11 +178,18 @@ class AnyPlaySource extends ContentSource {
           ? '$_embed/movie/$serverId/$idValue'
           : '$_embed/tv/$serverId/$idValue/$season/$episode';
       links.add({'quality': server['name'] ?? 'AnyPlay', 'server': server['name'] ?? '', 'url': embed});
-      if (resolvedDirect == null && links.length <= 3) {
-        resolvedDirect = await _resolveDirectMedia(embed);
-      }
     }
     if (links.isEmpty) return null;
+    final directResults = await Future.wait(
+      links.take(3).map((link) => _resolveDirectMedia(link['url'].toString())),
+    );
+    String? resolvedDirect;
+    for (final value in directResults) {
+      if (value != null && value.isNotEmpty) {
+        resolvedDirect = value;
+        break;
+      }
+    }
     return {
       'source_id': id,
       'stream_url': resolvedDirect ?? links.first['url'],
@@ -205,14 +211,24 @@ class AnyPlaySource extends ContentSource {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36',
       }).timeout(const Duration(seconds: 8));
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
-      final html = response.body.replaceAll(r'\/', '/').replaceAll(r'\u0026', '&');
+      final html = response.body
+          .replaceAll(r'\/', '/')
+          .replaceAll(r'\u0026', '&')
+          .replaceAll(r'\u003a', ':')
+          .replaceAll(r'\u002f', '/');
       final candidates = <String>{};
+      for (final match in RegExp(r'''(?:https?:)?//[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false).allMatches(html)) {
+        final value = match.group(0)!;
+        candidates.add(value.startsWith('//') ? 'https:$value' : value);
+      }
+      for (final match in RegExp(r'''(?:file|src|source|url|stream|playlist)\s*[:=]\s*["']([^"']+)["']''', caseSensitive: false).allMatches(html)) {
+        final value = match.group(1)!;
+        candidates.add(value.startsWith('//') ? 'https:$value' : value);
+      }
       for (final match in RegExp(r'''https?://[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false).allMatches(html)) {
         candidates.add(match.group(0)!);
       }
-      for (final match in RegExp(r'''(?:file|src|source|url)\s*[:=]\s*["']([^"']+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^"']*)?)["']''', caseSensitive: false).allMatches(html)) {
-        candidates.add(match.group(1)!);
-      }
+      candidates.addAll(extractPlayableMediaUrls(html));
       return candidates.firstWhere(_isPlayableMedia, orElse: () => '');
     } catch (_) {
       return null;
@@ -223,6 +239,44 @@ class AnyPlaySource extends ContentSource {
     final lower = value.toLowerCase();
     return (lower.startsWith('https://') || lower.startsWith('http://')) &&
         RegExp(r'\.(?:m3u8|mp4|mpd)(?:[?#].*)?$', caseSensitive: false).hasMatch(lower);
+  }
+
+  static List<String> extractPlayableMediaUrls(String body) {
+    final output = <String>{};
+    final media = RegExp(r'''(?:https?:)?//[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false);
+    for (final match in media.allMatches(body)) {
+      final value = match.group(0)!;
+      output.add(value.startsWith('//') ? 'https:$value' : value);
+    }
+    final fields = RegExp(r'''(?:file|src|source|url|stream|playlist)\s*[:=]\s*["']([^"']+)["']''', caseSensitive: false);
+    for (final match in fields.allMatches(body)) {
+      final value = match.group(1)!;
+      if (RegExp(r'^(?:https?:)?//.+\.(?:m3u8|mp4|mpd)(?:[?#].*)?$', caseSensitive: false).hasMatch(value)) {
+        output.add(value.startsWith('//') ? 'https:$value' : value);
+      }
+    }
+    for (final script in RegExp(r'<script[^>]*>([\s\S]*?)</script>', caseSensitive: false)
+        .allMatches(body)
+        .map((match) => match.group(1)?.trim() ?? '')) {
+      try {
+        _collectMediaValues(jsonDecode(script), output);
+      } catch (_) {}
+    }
+    return output.toList();
+  }
+
+  static void _collectMediaValues(dynamic value, Set<String> output) {
+    if (value is String && RegExp(r'^(?:https?:)?//.+\.(?:m3u8|mp4|mpd)(?:[?#].*)?$', caseSensitive: false).hasMatch(value)) {
+      output.add(value.startsWith('//') ? 'https:$value' : value);
+    } else if (value is Map) {
+      for (final child in value.values) {
+        _collectMediaValues(child, output);
+      }
+    } else if (value is List) {
+      for (final child in value) {
+        _collectMediaValues(child, output);
+      }
+    }
   }
 
   Map<String, dynamic> _contentItem({required String title, required String url, required Map<String, dynamic> raw, required bool isTv}) {
