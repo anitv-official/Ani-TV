@@ -13,6 +13,7 @@ import 'olympus_source.dart';
 import 'risto_anime_source.dart';
 import 'drama_source.dart';
 import 'moviehdplay_source.dart';
+import 'cimalight_source.dart';
 import 'source_base.dart';
 
 class SourceRegistry {
@@ -35,6 +36,7 @@ class SourceRegistry {
       HijalaSource(),
       DramaSource(),
       MovieHdPlaySource(),
+      CimaLightSource(),
   ];
 
   static List<ContentSource> get animeSources =>
