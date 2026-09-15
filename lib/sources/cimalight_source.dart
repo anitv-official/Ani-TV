@@ -119,7 +119,7 @@ class CimaLightSource extends ContentSource {
             RegExp(r'title=["\']([^"\']+)', caseSensitive: false),
             RegExp(r'alt=["\']([^"\']+)', caseSensitive: false),
           ]) ?? _first(html.substring(match.start, match.end), [RegExp(r'>\s*([^<]{3,})\s*</a>', caseSensitive: false)]) ?? 'بدون عنوان';
-      final image = HtmlParse.absUrl(base, _first(fragment, [RegExp(r'(?:src|data-src)=["\']([^"\']+)', caseSensitive: false)]) ?? '');
+      final image = HtmlParse.absUrl(base, _first(fragment, [RegExp(r'''(?:src|data-src)=["']([^"']+)''', caseSensitive: false)]) ?? '');
       result.add({
         'title': HtmlParse.stripTags(title),
         'url': url,
