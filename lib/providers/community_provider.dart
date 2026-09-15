@@ -10,7 +10,27 @@ class CommunityProvider extends ChangeNotifier {
   final posts = <Map<String, dynamic>>[];
   bool loading = false, loadingMore = false, hasMore = true;
   String? error;
+  String _searchQuery = '';
   Future<void>? _request;
+
+  String get searchQuery => _searchQuery;
+  List<Map<String, dynamic>> get visiblePosts {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return List.unmodifiable(posts);
+    return posts.where((post) {
+      final haystack = [post['text'], post['username'], post['displayName']]
+          .map((value) => value?.toString().toLowerCase() ?? '')
+          .join(' ');
+      return haystack.contains(query);
+    }).toList(growable: false);
+  }
+
+  void setSearchQuery(String value) {
+    final next = value.trimLeft();
+    if (_searchQuery == next) return;
+    _searchQuery = next;
+    notifyListeners();
+  }
 
   Future<void> load({bool refresh = false}) async {
     if (_request != null) return _request!;
