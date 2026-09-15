@@ -208,10 +208,175 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   Future<void> _submit() async { if (text.text.trim().isEmpty && path == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Write something or add an image first.'))); return; } setState(() => sending = true); try { await context.read<CommunityProvider>().createPost(text: text.text, imagePath: path); if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post published successfully.'))); } } catch (_) { if (mounted) { setState(() => sending = false); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to publish post. Please try again.'))); } } }
 }
 
-class _CommentsSheet extends StatefulWidget { final String postId; final Map<String, dynamic> post; const _CommentsSheet({required this.postId, required this.post}); @override State<_CommentsSheet> createState() => _CommentsSheetState(); }
-class _CommentsSheetState extends State<_CommentsSheet> { final input = TextEditingController(); List<Map<String, dynamic>> items = []; bool loading = true; bool sending = false; @override void initState() { super.initState(); _load(); } @override void dispose() { input.dispose(); super.dispose(); } Future<void> _load() async { try { items = await context.read<CommunityProvider>().comments(widget.postId); } catch (_) {} finally { if (mounted) setState(() => loading = false); } } @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: SizedBox(height: MediaQuery.of(context).size.height * .78, child: Column(children: [Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 12), child: Row(children: [const Expanded(child: Text('Post & comments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))), Text('${items.length}', style: const TextStyle(color: AppTheme.textSecondaryColor))])), Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : ListView(children: [_PostPreview(post: widget.post), if (items.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No comments yet. Start the conversation.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor))) else ...items.map((x) => ListTile(leading: _Avatar(name: x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : x['username']?.toString() ?? 'U'), title: Text(x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : '@${x['username']}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)), subtitle: Text(x['text']?.toString() ?? '', style: const TextStyle(color: AppTheme.textSecondaryColor))))])), Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 12), child: Row(children: [Expanded(child: TextField(controller: input, minLines: 1, maxLines: 3, onChanged: (_) => setState(() {}), decoration: const InputDecoration(hintText: 'Write a comment...'))), IconButton(onPressed: sending || input.text.trim().isEmpty ? null : _add, icon: sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded))]))]));
-  Future<void> _add() async { setState(() => sending = true); try { await context.read<CommunityProvider>().addComment(widget.postId, input.text); input.clear(); await _load(); } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add comment.'))); } finally { if (mounted) setState(() => sending = false); } }
+class _CommentsSheet extends StatefulWidget {
+  final String postId;
+  final Map<String, dynamic> post;
+  const _CommentsSheet({required this.postId, required this.post});
+  @override State<_CommentsSheet> createState() => _CommentsSheetState();
 }
-class _PostPreview extends StatelessWidget { final Map<String, dynamic> post; const _PostPreview({required this.post}); @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 8), child: Text(post['text']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.4))); }
-class _ReportSheet extends StatefulWidget { final String postId; const _ReportSheet({required this.postId}); @override State<_ReportSheet> createState() => _ReportSheetState(); }
-class _ReportSheetState extends State<_ReportSheet> { String reason = 'Spam'; final details = TextEditingController(); bool sending = false; @override void dispose() { details.dispose(); super.dispose(); } @override Widget build(BuildContext context) => Padding(padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).viewInsets.bottom + 20), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Report post', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 12), ...['Spam', 'Harassment', 'Inappropriate content', 'Fake / misleading', 'Other'].map((x) => RadioListTile<String>(dense: true, value: x, groupValue: reason, onChanged: sending ? null : (v) => setState(() => reason = v!), title: Text(x, style: const TextStyle(color: Colors.white)))), if (reason == 'Other') TextField(controller: details, maxLines: 3, decoration: const InputDecoration(hintText: 'Tell us more (optional)')), const SizedBox(height: 8), SizedBox(width: double.infinity, child: ElevatedButton(onPressed: sending ? null : _send, child: Text(sending ? 'Sending...' : 'Submit report')))]); Future<void> _send() async { setState(() => sending = true); try { await context.read<CommunityProvider>().report(widget.postId, reason, details.text); if (mounted) { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.'))); } } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit report.'))); } finally { if (mounted) setState(() => sending = false); } } }
+
+class _CommentsSheetState extends State<_CommentsSheet> {
+  final input = TextEditingController();
+  List<Map<String, dynamic>> items = [];
+  bool loading = true;
+  bool sending = false;
+
+  @override
+  void initState() { super.initState(); _load(); }
+  @override
+  void dispose() { input.dispose(); super.dispose(); }
+
+  Future<void> _load() async {
+    try {
+      items = await context.read<CommunityProvider>().comments(widget.postId);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to load comments.')));
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * .78,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Row(children: [
+              const Expanded(child: Text('Post & comments', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+              Text('${items.length}', style: const TextStyle(color: AppTheme.textSecondaryColor)),
+            ]),
+          ),
+          Expanded(
+            child: loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    children: [
+                      _PostPreview(post: widget.post),
+                      if (items.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('No comments yet. Start the conversation.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor)),
+                        )
+                      else
+                        ...items.map((x) => _commentTile(context, x)),
+                    ],
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: input,
+                  minLines: 1,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(hintText: 'Write a comment...'),
+                ),
+              ),
+              IconButton(
+                onPressed: sending || input.text.trim().isEmpty ? null : _add,
+                icon: sending ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send_rounded),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _commentTile(BuildContext context, Map<String, dynamic> x) {
+    final account = context.read<CommunityProvider>().account;
+    final name = x['displayName']?.toString().isNotEmpty == true ? x['displayName'].toString() : x['username']?.toString() ?? 'U';
+    final mine = x['userId']?.toString() == account.userId;
+    return ListTile(
+      leading: _Avatar(name: name),
+      title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      subtitle: Text(x['text']?.toString() ?? '', style: const TextStyle(color: AppTheme.textSecondaryColor)),
+      trailing: mine ? PopupMenuButton<String>(onSelected: (_) => _deleteComment(x['id'].toString()), itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete comment'))]) : null,
+    );
+  }
+
+  Future<void> _add() async {
+    setState(() => sending = true);
+    try {
+      await context.read<CommunityProvider>().addComment(widget.postId, input.text);
+      input.clear();
+      await _load();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to add comment.')));
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  Future<void> _deleteComment(String id) async {
+    try {
+      await context.read<CommunityProvider>().deleteComment(id);
+      items.removeWhere((item) => item['id'].toString() == id);
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to delete comment.')));
+    }
+  }
+}
+
+class _PostPreview extends StatelessWidget {
+  final Map<String, dynamic> post;
+  const _PostPreview({required this.post});
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+        child: Text(post['text']?.toString() ?? '', style: const TextStyle(color: Colors.white, height: 1.4)),
+      );
+}
+
+class _ReportSheet extends StatefulWidget {
+  final String postId;
+  const _ReportSheet({required this.postId});
+  @override State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  String reason = 'Spam';
+  final details = TextEditingController();
+  bool sending = false;
+
+  @override
+  void dispose() { details.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    const reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fake / misleading', 'Other'];
+    return Padding(
+      padding: EdgeInsets.fromLTRB(18, 12, 18, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Report post', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 12),
+        ...reasons.map((value) => RadioListTile<String>(dense: true, value: value, groupValue: reason, onChanged: sending ? null : (selected) { if (selected != null) setState(() => reason = selected); }, title: Text(value, style: const TextStyle(color: Colors.white)))),
+        if (reason == 'Other') TextField(controller: details, maxLines: 3, decoration: const InputDecoration(hintText: 'Tell us more (optional)')),
+        const SizedBox(height: 8),
+        SizedBox(width: double.infinity, child: ElevatedButton(onPressed: sending ? null : _send, child: Text(sending ? 'Sending...' : 'Submit report'))),
+      ]),
+    );
+  }
+
+  Future<void> _send() async {
+    setState(() => sending = true);
+    try {
+      await context.read<CommunityProvider>().report(widget.postId, reason, details.text);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+      }
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to submit report.')));
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+}
