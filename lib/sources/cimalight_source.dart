@@ -86,10 +86,11 @@ class CimaLightSource extends ContentSource {
     for (final raw in [
       ..._all(html, RegExp(r'''<iframe[^>]+src=["']([^"']+)''', caseSensitive: false)),
       ..._all(html, RegExp(r'''(?:data-(?:url|embed|src)|href)=["']([^"']+)''', caseSensitive: false)),
+      ..._all(html, RegExp(r'''<meta[^>]+itemprop=["']contentURL["'][^>]+content=["']([^"']+)''', caseSensitive: false)),
       ...SourceUtils.extractMediaUrls(html, pageUrl),
     ]) {
       final value = HtmlParse.absUrl(pageUrl, raw);
-      if (value.isEmpty || _isNoise(value) || value == pageUrl) continue;
+      if (value.isEmpty || _isNoise(value) || value == pageUrl || value.contains('elif.news')) continue;
       candidates.add(value);
     }
     if (candidates.isEmpty) return null;
@@ -151,7 +152,7 @@ class CimaLightSource extends ContentSource {
   }
 
   List<String> _all(String text, RegExp pattern) => pattern.allMatches(text).map((m) => HtmlParse.decode(m.group(1) ?? '')).where((v) => v.isNotEmpty).toList();
-  bool _isDirect(String value) => RegExp(r'\.(?:mp4|m3u8|mov|webm|mkv)(?:[?#].*)?$', caseSensitive: false).hasMatch(value);
-  bool _isNoise(String value) => value.contains('facebook.com') || value.contains('twitter.com') || value.contains('pinterest.com') || value.contains('doubleclick.net') || value.contains('youtube.com') || value.contains('google.com');
+  bool _isDirect(String value) => RegExp(r'\.(?:mp4|m3u8|mov|webm|mkv)(?:[?#].*)?$', caseSensitive: false).hasMatch(value) || value.contains('/videos.php?');
+  bool _isNoise(String value) => value.contains('facebook.com') || value.contains('twitter.com') || value.contains('pinterest.com') || value.contains('doubleclick.net') || value.contains('youtube.com') || value.contains('google.com') || value.contains('elif.news');
   String _quality(String value) => RegExp(r'(2160|1440|1080|720|480|360)p?', caseSensitive: false).firstMatch(value)?.group(1) ?? 'مباشر';
 }

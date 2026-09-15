@@ -90,7 +90,8 @@ class SourceRegistry {
     final playable = links.any((link) {
       final value = link['url']?.toString() ?? '';
       final isEmbeddedPlayer = (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
-          (source.id == 'anime3rb' && value.contains('anime3rb.com/embed/'));
+          (source.id == 'anime3rb' && value.contains('anime3rb.com/embed/')) ||
+          (source.id == 'cimalight' && value.contains('/videos.php?'));
       final sourceHost = Uri.tryParse(url)?.host.toLowerCase() ?? '';
       final linkHost = Uri.tryParse(value)?.host.toLowerCase() ?? '';
       // A CDN subdomain such as s.drslayer.com is a valid media host. The
