@@ -119,32 +119,46 @@ class DownloadService {
     String coverUrl = '',
     String sourceId = '',
   }) async {
+    final taskId = 'anime:${_safe(animeTitle)}/${_safe(episodeTitle)}';
     final root = await getApplicationDocumentsDirectory();
     final series = _safe(animeTitle);
     final folder = Directory('${root.path}/AniTV/Downloads/Anime/$series')..createSync(recursive: true);
     final file = File('${folder.path}/${_safe(episodeTitle)}.mp4');
     final request = http.Request('GET', Uri.parse(url));
     final client = http.Client();
-    final response = await client.send(request);
-    if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('تعذر تنزيل الحلقة');
-    final sink = file.openWrite();
-    var received = 0;
-    final total = response.contentLength ?? 0;
-    await _notify('بدء التنزيل', animeTitle, 0, total);
-    await for (final chunk in response.stream) {
-      sink.add(chunk);
-      received += chunk.length;
-      await _notify('جارٍ تنزيل $animeTitle', episodeTitle, received, total);
+    try {
+      final response = await client.send(request);
+      if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('تعذر تنزيل الحلقة');
+      final sink = file.openWrite();
+      var received = 0;
+      final total = response.contentLength ?? 0;
+      await _notify('بدء التنزيل', animeTitle, 0, total, taskId: taskId);
+      await for (final chunk in response.stream) {
+        while (isPaused(taskId) && !isCancelled(taskId)) {
+          await _notify('التنزيل متوقف مؤقتًا', episodeTitle, received, total, taskId: taskId, paused: true);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        }
+        if (isCancelled(taskId)) {
+          await sink.close();
+          await file.delete().catchError((_) {});
+          throw const DownloadCancelledException();
+        }
+        sink.add(chunk);
+        received += chunk.length;
+        await _notify('جارٍ تنزيل $animeTitle', episodeTitle, received, total, taskId: taskId);
+      }
+      await sink.close();
+      await _notify('تم التنزيل $animeTitle', episodeTitle, received, total, taskId: taskId, complete: true);
+      await _add({
+        'id': 'anime:${file.path}', 'kind': 'anime', 'title': animeTitle,
+        'episode': episodeTitle, 'path': file.path, 'cover_url': coverUrl,
+        'source_id': sourceId, 'timestamp': DateTime.now().toIso8601String(),
+      });
+      return file.path;
+    } finally {
+      client.close();
+      _finish(taskId);
     }
-    await sink.close();
-    client.close();
-    await _notify('تم التنزيل $animeTitle', episodeTitle, received, total, complete: true);
-    await _add({
-      'id': 'anime:${file.path}', 'kind': 'anime', 'title': animeTitle,
-      'episode': episodeTitle, 'path': file.path, 'cover_url': coverUrl,
-      'source_id': sourceId, 'timestamp': DateTime.now().toIso8601String(),
-    });
-    return file.path;
   }
 
   static Future<bool> sendToAdm(String url, {String? title}) async {
