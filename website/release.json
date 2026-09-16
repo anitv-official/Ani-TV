@@ -1,13 +1,13 @@
 {
-  "tag_name": "v1.2.2",
-  "name": "AniTV 1.2.2",
-  "published_at": "2026-09-15T21:53:31Z",
-  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.2",
-  "body": "إصدار Android يتضمن إصلاح تشغيل CimaLight داخل مشغل التطبيق، تحسينات Manga Dar، وتحسينات التحكم بالتنزيلات.",
+  "tag_name": "v1.2.3",
+  "name": "AniTV 1.2.3",
+  "published_at": "2026-09-16T09:38:00Z",
+  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.3",
+  "body": "إصلاح تشغيل حلقات AnyPlay باستخدام API التشغيل الحالي، وتحسين التوافق مع مشغلات الفيديو الخارجية.",
   "assets": [
     {
-      "name": "AniTV-v1.2.2.apk",
-      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.2/AniTV-v1.2.2.apk"
+      "name": "AniTV-v1.2.3.apk",
+      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.3/AniTV-v1.2.3.apk"
     }
   ]
 }
