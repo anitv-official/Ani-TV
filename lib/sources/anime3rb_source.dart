@@ -235,7 +235,7 @@ class Anime3rbSource extends ContentSource {
     return lower.contains('vid3rb') || lower.contains('3rbcdn') || lower.contains('vidmoly') || lower.contains('streamtape') || lower.contains('filemoon') || lower.contains('uqload') || lower.contains('/embed/') || lower.contains('/server');
   }
 
-  bool _isBlocked(String body) {
+  static bool _isBlocked(String body) {
     final lower = body.toLowerCase();
     return lower.contains('just a moment') || lower.contains('cf-mitigated') || (lower.contains('challenge-platform') && body.length < 20000);
   }
