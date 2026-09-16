@@ -12,6 +12,7 @@ import 'source_base.dart';
 class AnyPlaySource extends ContentSource {
   static const String _site = 'https://www.anyplay.stream';
   static const String _embed = 'https://anyplay.stream/embed';
+  static const String _streamApi = 'https://api.anyplay.stream';
   static const Duration _timeout = Duration(seconds: 20);
   static final http.Client _client = http.Client();
 
@@ -177,31 +178,69 @@ class AnyPlaySource extends ContentSource {
       final embed = type == 'movie'
           ? '$_embed/movie/$serverId/$idValue'
           : '$_embed/tv/$serverId/$idValue/$season/$episode';
-      links.add({'quality': server['name'] ?? 'AnyPlay', 'server': server['name'] ?? '', 'url': embed});
+      links.add({
+        'quality': server['name'] ?? 'AnyPlay',
+        'server': server['name'] ?? '',
+        'server_id': serverId,
+        'url': embed,
+      });
     }
     if (links.isEmpty) return null;
-    final directResults = await Future.wait(
-      links.take(3).map((link) => _resolveDirectMedia(link['url'].toString())),
-    );
-    String? resolvedDirect;
-    for (final value in directResults) {
-      if (value != null && value.isNotEmpty) {
-        resolvedDirect = value;
-        break;
-      }
-    }
+    // The embed page no longer contains the media URL. It now fetches the
+    // actual player from api.anyplay.stream, so resolve every server through
+    // that API before handing the URL to the app WebView.
+    final resolvedLinks = await Future.wait(links.map((link) async {
+      final player = await _resolvePlayerUrl(
+        type: type,
+        serverId: link['server_id']?.toString() ?? '',
+        contentId: idValue,
+        season: season,
+        episode: episode,
+      );
+      return {...link, 'url': player ?? link['url']};
+    }));
+    final resolvedDirect = resolvedLinks.firstWhere(
+      (link) => _isPlayablePlayerUrl(link['url']?.toString() ?? ''),
+      orElse: () => <String, dynamic>{},
+    )['url']?.toString();
     return {
       'source_id': id,
       'stream_url': resolvedDirect ?? links.first['url'],
-      'direct_stream_urls': resolvedDirect == null
-          ? links
-          : [
-              {'quality': 'AnyPlay • مباشر', 'server': 'AnyPlay', 'url': resolvedDirect},
-              ...links,
-            ],
+      'direct_stream_urls': resolvedLinks,
       'headers': {'Referer': '$_site/'},
       'download_links': const <String, dynamic>{},
     };
+  }
+
+  Future<String?> _resolvePlayerUrl({
+    required String type,
+    required String serverId,
+    required String contentId,
+    String? season,
+    String? episode,
+  }) async {
+    if (serverId.isEmpty) return null;
+    final path = type == 'movie'
+        ? '/movie/$serverId/$contentId'
+        : '/tv/$serverId/$contentId/$season/$episode';
+    try {
+      final response = await _client.get(Uri.parse('$_streamApi$path'), headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36',
+      }).timeout(_timeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      final data = jsonDecode(response.body);
+      if (data is! Map) return null;
+      final player = data['url']?.toString().trim() ?? '';
+      return _isPlayablePlayerUrl(player) ? player : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static bool _isPlayablePlayerUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty;
   }
 
   Future<String?> _resolveDirectMedia(String embedUrl) async {
