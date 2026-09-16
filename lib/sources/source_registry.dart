@@ -29,14 +29,14 @@ class SourceRegistry {
     Anime4UpSource(),
     OlympusSource(),
     AzorafySource(),
-      MangaSwatSource(),
-      MangaSlayerSource(),
-      MangaMelloSource(),
-      MangaDarSource(),
-      HijalaSource(),
-      DramaSource(),
-      MovieHdPlaySource(),
-      CimaLightSource(),
+    MangaSwatSource(),
+    MangaSlayerSource(),
+    MangaMelloSource(),
+    MangaDarSource(),
+    HijalaSource(),
+    DramaSource(),
+    MovieHdPlaySource(),
+    CimaLightSource(),
   ];
 
   static List<ContentSource> get animeSources =>
@@ -86,20 +86,35 @@ class SourceRegistry {
     if (source == null) return null;
     final result = await source.streams(url);
     if (result == null) return null;
-    final links = (result['direct_stream_urls'] as List?)?.whereType<Map>().toList() ?? [];
+
+    final links = (result['direct_stream_urls'] as List?)
+            ?.whereType<Map>()
+            .where((link) => _isDirectMediaUrl(link['url']?.toString() ?? ''))
+            .toList() ??
+        [];
+
+    // Anime3rb is intentionally player-only: never pass an embed page to the
+    // app's WebView fallback. If no real media URL was extracted, fail cleanly
+    // so the user sees the source-unavailable state instead of a broken player.
+    if (source.id == 'anime3rb' && links.isEmpty) return null;
+
     final playable = links.any((link) {
       final value = link['url']?.toString() ?? '';
-      final isEmbeddedPlayer = (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
-          (source.id == 'anime3rb' && value.contains('anime3rb.com/embed/')) ||
+      final isEmbeddedPlayer =
+          (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
           (source.id == 'cimalight' && value.contains('/videos.php?'));
       final sourceHost = Uri.tryParse(url)?.host.toLowerCase() ?? '';
       final linkHost = Uri.tryParse(value)?.host.toLowerCase() ?? '';
-      // A CDN subdomain such as s.drslayer.com is a valid media host. The
-      // previous contains() check incorrectly rejected it because it contains
-      // the source host string drslayer.com.
-      return value.isNotEmpty && value != url && (isEmbeddedPlayer || linkHost != sourceHost);
+      return value.isNotEmpty && value != url &&
+          (_isDirectMediaUrl(value) || isEmbeddedPlayer || linkHost != sourceHost);
     });
     return playable ? result : null;
+  }
+
+  static bool _isDirectMediaUrl(String value) {
+    final lower = value.toLowerCase();
+    return RegExp(r'\.(?:mp4|m3u8|mov|webm)(?:[?#].*)?$').hasMatch(lower) ||
+        lower.contains('pixeldrain.com/api/file');
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {
@@ -139,11 +154,7 @@ class SourceRegistry {
     return 1;
   }
 
-
   static bool _matchesQuery(Map<String, dynamic> item, String query) {
-    // AnyPlay performs the authoritative search server-side. Its catalog may
-    // return an English/original title for an Arabic query, so applying the
-    // generic local title filter here would incorrectly hide valid results.
     if ('${item['source_id'] ?? ''}'.toLowerCase() == 'anyplay') return true;
     final normalizedQuery = query.toLowerCase().trim();
     final haystack = '${item['title'] ?? ''} ${item['url'] ?? ''}'.toLowerCase();
