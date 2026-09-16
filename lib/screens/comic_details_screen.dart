@@ -173,7 +173,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       ToastUtils.show('تم حفظ الفصل داخل: $folder', backgroundColor: Colors.green);
       return true;
     } catch (e) {
-      ToastUtils.show('تعذر تنزيل الفصل: $e', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تنزيل الفصل: $e', backgroundColor: Color(0xFF1976D2));
       return false;
     }
   }
@@ -622,7 +622,7 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                ToastUtils.show('تمت الإضافة إلى المفضلة', backgroundColor: AppTheme.primaryColor);
             }
          } catch (e) {
-            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Colors.red);
+            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Color(0xFF1976D2));
          }
       },
     );

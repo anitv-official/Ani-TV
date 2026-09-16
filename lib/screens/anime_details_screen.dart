@@ -228,9 +228,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     try {
       final anime = await _animeDetailsFuture;
       final sent = await DownloadService.sendToAdm(url, title: '${anime['title'] ?? 'أنمي'} - ${episode['title'] ?? 'حلقة'}');
-      if (mounted) ToastUtils.show(sent ? 'تم إرسال الرابط إلى ADM' : 'لم يتم العثور على تطبيق ADM. ثبّته أولًا ثم أعد المحاولة.', backgroundColor: sent ? AppTheme.accentColor : Colors.red);
+      if (mounted) ToastUtils.show(sent ? 'تم إرسال الرابط إلى ADM' : 'لم يتم العثور على تطبيق ADM. ثبّته أولًا ثم أعد المحاولة.', backgroundColor: sent ? AppTheme.accentColor : Color(0xFF1976D2));
     } catch (error) {
-      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Colors.red);
+      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Color(0xFF1976D2));
     }
   }
 
@@ -253,7 +253,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (mounted) ToastUtils.show('تم حفظ الحلقة في التنزيلات', backgroundColor: AppTheme.accentColor);
       return true;
     } catch (error) {
-      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Colors.red);
+      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Color(0xFF1976D2));
       return false;
     }
   }
@@ -524,7 +524,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Color(0xFF1976D2));
     }
   }
 
@@ -670,7 +670,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       }
     } catch (e) {
       if (context.mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('تعذر تحميل روابط التنزيل', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل روابط التنزيل', backgroundColor: Color(0xFF1976D2));
     }
   }
 
@@ -720,7 +720,7 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
             }
             setState((){});
          } catch (e) {
-            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Colors.red);
+            ToastUtils.show('تعذر تحديث المفضلة', backgroundColor: Color(0xFF1976D2));
          }
       },
     );

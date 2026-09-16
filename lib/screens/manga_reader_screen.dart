@@ -561,7 +561,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error, color: Colors.red, size: 40),
+              Icon(Icons.error, color: Color(0xFF1976D2), size: 40),
               SizedBox(height: 16),
               Text('تعذر التحميل'),
             ],

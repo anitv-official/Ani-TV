@@ -745,7 +745,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading
-      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Color(0xFF1976D2));
     }
   }
 
@@ -818,7 +818,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       Navigator.pop(context); // Ensure loading is closed
-      ToastUtils.show('تعذر تحميل تفاصيل الحلقة', backgroundColor: Colors.red);
+      ToastUtils.show('تعذر تحميل تفاصيل الحلقة', backgroundColor: Color(0xFF1976D2));
       // Fallback
       if (mounted) {
          Navigator.push(

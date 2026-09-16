@@ -21,7 +21,7 @@ class ToastUtils {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                color == Colors.red || color.value == Colors.red.value
+                color == Color(0xFF1976D2) || color.value == Color(0xFF1976D2).value
                     ? Icons.error_outline
                     : color == Colors.green || color.value == Colors.green.value
                         ? Icons.check_circle_outline

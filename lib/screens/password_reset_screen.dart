@@ -41,7 +41,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       ToastUtils.show('تم تغيير كلمة المرور بنجاح', backgroundColor: Colors.green);
       Navigator.of(context).pop();
     } catch (error) {
-      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Colors.red);
+      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: Color(0xFF1976D2));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

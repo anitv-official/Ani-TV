@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFFE50914);
-  static const Color primarySoft = Color(0xFFB81D24);
-  static const Color accentColor = Color(0xFFE50914);
+  static const Color primaryColor = Color(0xFF1976D2);
+  static const Color primarySoft = Color(0xFF0D47A1);
+  static const Color accentColor = Color(0xFF1976D2);
   static const Color backgroundColor = Color(0xFF0B0B0D);
   static const Color cardColor = Color(0xFF141418);
   static const Color surfaceColor = Color(0xFF1A1A20);
   static const Color elevatedColor = Color(0xFF22222A);
-  static const Color errorColor = Color(0xFFCF3B3B);
+  static const Color errorColor = Color(0xFF1565C0);
   static const Color successColor = Color(0xFF3D9A5F);
   static const Color warningColor = Color(0xFFC9A227);
   static const Color textPrimaryColor = Color(0xFFF5F5F7);
@@ -40,7 +40,7 @@ class AppTheme {
   static LinearGradient get primaryGradient => const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE50914), Color(0xFFB81D24)],
+        colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
       );
 
   static LinearGradient get darkGradient => LinearGradient(

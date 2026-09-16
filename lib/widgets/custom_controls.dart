@@ -852,8 +852,8 @@ class _MaterialControlsState extends State<MaterialControls>
                 _startHideTimer();
               },
               colors: ChewieProgressColors(
-                playedColor: Colors.red,
-                handleColor: Colors.red,
+                playedColor: Color(0xFF1976D2),
+                handleColor: Color(0xFF1976D2),
                 bufferedColor: Colors.white,
                 backgroundColor: Colors.white24,
               ),
@@ -1011,7 +1011,7 @@ class _MaterialControlsState extends State<MaterialControls>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.red : Colors.grey[600]!,
+                  color: isSelected ? Color(0xFF1976D2) : Colors.grey[600]!,
                   width: 2,
                 ),
               ),
@@ -1022,7 +1022,7 @@ class _MaterialControlsState extends State<MaterialControls>
                         height: 10,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.red,
+                          color: Color(0xFF1976D2),
                         ),
                       ),
                     )
@@ -1056,7 +1056,7 @@ class _MaterialControlsState extends State<MaterialControls>
             if (isSelected)
               Icon(
                 Icons.check,
-                color: Colors.red,
+                color: Color(0xFF1976D2),
                 size: 20,
               ),
           ],
@@ -1183,7 +1183,7 @@ class _MaterialControlsState extends State<MaterialControls>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Colors.red : Colors.grey[600]!,
+                  color: isSelected ? Color(0xFF1976D2) : Colors.grey[600]!,
                   width: 2,
                 ),
               ),
@@ -1194,7 +1194,7 @@ class _MaterialControlsState extends State<MaterialControls>
                         height: 10,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.red,
+                          color: Color(0xFF1976D2),
                         ),
                       ),
                     )
@@ -1228,7 +1228,7 @@ class _MaterialControlsState extends State<MaterialControls>
             if (isSelected)
               Icon(
                 Icons.check,
-                color: Colors.red,
+                color: Color(0xFF1976D2),
                 size: 20,
               ),
           ],
@@ -1621,10 +1621,10 @@ class _MaterialVideoProgressBarState extends State<MaterialVideoProgressBar> {
         trackShape: _CustomTrackShape(),
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0), // Smaller thumb
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-        activeTrackColor: Colors.red,
+        activeTrackColor: Color(0xFF1976D2),
         inactiveTrackColor: Colors.white.withOpacity(0.2), // More subtle inactive track
-        thumbColor: Colors.red,
-        overlayColor: Colors.red.withAlpha(50),
+        thumbColor: Color(0xFF1976D2),
+        overlayColor: Color(0xFF1976D2).withAlpha(50),
       ),
       child: GestureDetector(
         onTapDown: (details) {

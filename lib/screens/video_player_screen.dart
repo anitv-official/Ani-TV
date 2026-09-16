@@ -382,13 +382,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
           placeholder: Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1976D2)),
               strokeWidth: 2,
             ),
           ),
           materialProgressColors: ChewieProgressColors(
-            playedColor: Colors.red,
-            handleColor: Colors.red,
+            playedColor: Color(0xFF1976D2),
+            handleColor: Color(0xFF1976D2),
             backgroundColor: Colors.grey.shade800,
             bufferedColor: Colors.grey.shade600,
           ),
@@ -807,7 +807,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       child: Center(
                         child: CustomLoadingWidget(
                             message: _isChangingResolution ? "Switching Quality..." : "جارٍ التحميل...",
-                            color: Colors.red,
+                            color: Color(0xFF1976D2),
                         ),
                       ),
                     ),
@@ -829,7 +829,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         child: Center(
           child: CustomLoadingWidget(
             message: 'Initializing...',
-            color: Colors.red,
+            color: Color(0xFF1976D2),
           ),
         ),
       );
@@ -890,16 +890,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Color(0xFF1976D2).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.red.withOpacity(0.3),
+                  color: Color(0xFF1976D2).withOpacity(0.3),
                   width: 1,
                 ),
               ),
               child: Icon(
                 Icons.error_outline,
-                color: Colors.red,
+                color: Color(0xFF1976D2),
                 size: 48,
               ),
             ),
@@ -927,7 +927,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 _initializePlayer();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Color(0xFF1976D2),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
