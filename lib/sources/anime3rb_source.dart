@@ -91,35 +91,54 @@ class Anime3rbSource extends ContentSource {
     final direct = <Map<String, String>>[];
     final seenDirect = <String>{};
     String? referer;
-    void addDirect(String raw, String sourcePage, [String quality = 'مباشر']) {
+    Future<void> addDirect(String raw, String sourcePage, [String quality = 'مباشر']) async {
       final value = _absolute(sourcePage, _normalize(raw));
       if (!_isDirectMediaUrl(value) || !seenDirect.add(value)) return;
+      if (!await _isPlayableMedia(value, sourcePage)) {
+        seenDirect.remove(value);
+        return;
+      }
       direct.add({'quality': quality, 'url': value});
       referer ??= sourcePage;
     }
 
     for (final candidate in candidates) {
       if (_isDirectMediaUrl(candidate)) {
-        addDirect(candidate, episodeUrl);
+        await addDirect(candidate, episodeUrl);
         continue;
       }
       final response = await _getPage(candidate, referer: episodeUrl);
       if (response == null || _isBlocked(response.body)) continue;
       for (final media in extractDirectMediaUrls(response.body, candidate)) {
-        addDirect(media, candidate, 'Anime3rb • مباشر');
+        await addDirect(media, candidate, 'Anime3rb • مباشر');
       }
     }
 
     if (direct.isEmpty) {
-      throw Exception('Anime3rb: لم يتم العثور على رابط HLS أو MP4 مباشر');
+      throw Exception('Anime3rb: لم يتم العثور على رابط HLS أو MP4 صالح للتشغيل');
     }
+    final playbackReferer = referer ?? episodeUrl;
     return {
       'source_id': id,
       'stream_url': direct.first['url'],
       'direct_stream_urls': direct.map((e) => {'quality': e['quality'], 'url': e['url']}).toList(),
-      'headers': {'Referer': referer ?? episodeUrl, 'User-Agent': HtmlClient.userAgent},
+      'headers': {
+        'Referer': playbackReferer,
+        'Origin': _originOf(playbackReferer),
+        'User-Agent': HtmlClient.userAgent,
+        'Accept': '*/*',
+      },
       'download_links': {'مباشر': direct.map((e) => {'host': e['quality'], 'url': e['url']}).toList()},
     };
+  }
+
+  static Future<bool> _isPlayableMedia(String url, String referer) async {
+    if (!_isDirectMediaUrl(url)) return false;
+    if (!url.toLowerCase().contains('.m3u8')) return true;
+    final response = await _getPage(url, referer: referer);
+    if (response == null || _isBlocked(response.body)) return false;
+    final body = response.body.trimLeft();
+    return body.contains('#EXTM3U');
   }
 
   static Future<_Anime3rbResponse?> _getPage(String url, {required String referer}) async {
@@ -127,6 +146,7 @@ class Anime3rbSource extends ContentSource {
       final response = await http.get(Uri.parse(url), headers: {
         'User-Agent': HtmlClient.userAgent,
         'Referer': referer,
+        'Origin': _originOf(referer),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
       }).timeout(const Duration(seconds: 15));
@@ -134,6 +154,15 @@ class Anime3rbSource extends ContentSource {
       return _Anime3rbResponse(utf8.decode(response.bodyBytes, allowMalformed: true), response.statusCode);
     } catch (_) {
       return null;
+    }
+  }
+
+  static String _originOf(String url) {
+    try {
+      final uri = Uri.parse(url);
+      return '${uri.scheme}://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+    } catch (_) {
+      return _base;
     }
   }
 
