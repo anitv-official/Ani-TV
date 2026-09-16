@@ -51,14 +51,14 @@ class Anime3rbSource extends ContentSource {
           'بدون عنوان',
     );
     final image = HtmlParse.meta(html, 'og:image') ??
-        HtmlParse.firstMatch(html, [RegExp(r'<img[^>]+(?:data-src|src)=["\']([^"\']+)', caseSensitive: false)]) ??
+        HtmlParse.firstMatch(html, [RegExp(r'''<img[^>]+(?:data-src|src)=["']([^"']+)''', caseSensitive: false)]) ??
         '';
     final description = HtmlParse.stripTags(
       HtmlParse.meta(html, 'og:description') ??
           HtmlParse.firstMatch(html, [RegExp(r'(?:story|description|synopsis)[^>]*>([\s\S]*?)</(?:div|p|span)>', caseSensitive: false)]) ??
           '',
     );
-    final genres = HtmlParse.all(html, RegExp(r'href=["\'][^"\']*(?:genre|category)[^"\']*["\'][^>]*>([^<]+)<', caseSensitive: false));
+    final genres = HtmlParse.all(html, RegExp(r'''href=["'][^"']*(?:genre|category)[^"']*["'][^>]*>([^<]+)<''', caseSensitive: false));
     final episodes = _parseEpisodes(html, url);
     return {
       ...item(title: title, url: url, image: image, type: 'anime', genres: genres.toSet().toList(), description: description),
