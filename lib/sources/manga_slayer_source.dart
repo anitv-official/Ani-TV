@@ -44,8 +44,6 @@ class MangaSlayerSource extends ContentSource {
       if (items.isNotEmpty) return items;
     } catch (_) {}
 
-    // The latest endpoint has returned 500 before. Search fallback uses the
-    // complete request schema, not an abbreviated body the API rejects.
     final seen = <String>{};
     final fallback = <Map<String, dynamic>>[];
     for (final term in const ['a', 'm', 'e']) {
@@ -112,7 +110,7 @@ class MangaSlayerSource extends ContentSource {
     final response = await _sourcePost(config, _ajaxUrl(config), _resolveMap(extractor['fields'], {'manga': mangaId}));
     final html = _htmlFromResponse(response);
     final classNames = _selectorClasses(extractor['root_selector']?.toString() ?? 'li.wp-manga-chapter');
-    final pattern = RegExp(r'<li[^>]*class=["\'][^"\']*["\'][^>]*>([\s\S]*?)</li>', caseSensitive: false);
+    final pattern = RegExp(r'''<li[^>]*class=["'][^"']*["'][^>]*>([\s\S]*?)</li>''', caseSensitive: false);
     final blocks = <String>[];
     for (final match in pattern.allMatches(html)) {
       final full = match.group(0) ?? '';
