@@ -534,7 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SettingSwitchTile(
                         icon: Icons.dark_mode_outlined,
                         title: 'الوضع الداكن',
-                        subtitle: 'واجهة داكنة مع لمسة حمراء',
+                        subtitle: 'واجهة داكنة مع لمسة زرقاء',
                         value: isDarkMode,
                         onChanged: (val) async {
                           setState(() => isDarkMode = val);
@@ -615,8 +615,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.borderColor),
+        gradient: AppTheme.glassGradient,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primaryColor.withOpacity(.18)),
+        boxShadow: AppTheme.subtleShadow,
       ),
       child: Row(
         children: [

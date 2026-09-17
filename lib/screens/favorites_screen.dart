@@ -113,6 +113,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!widget.embedded) AppFixedHeader(title: 'المفضلة', showBack: widget.showBackButton),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(children: [
+                const Icon(Icons.favorite_rounded, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 8),
+                Text('مجموعتك المختارة', style: Theme.of(context).textTheme.titleMedium),
+              ]),
+            ),
             if (_isSearching)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
