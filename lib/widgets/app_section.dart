@@ -3,6 +3,7 @@ enum AppSection {
   anime,
   manga,
   drama,
+  novels,
   favorites,
   downloads,
   sources,
