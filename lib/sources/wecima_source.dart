@@ -12,6 +12,7 @@ class CimaCloudSource extends ContentSource {
   static const _api = 'https://1654865.xyz/v1.3/api';
   static const _userAgent = 'okhttp/4.10.0';
   final http.Client _client = http.Client();
+  final Map<String, Map<String, dynamic>> _catalogCache = {};
   String _cookie = '';
   final String _deviceId = 'anitv-${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}';
   final String _cloudflareId =
@@ -35,7 +36,9 @@ class CimaCloudSource extends ContentSource {
         }
       }
     }
-    return _unique(items);
+    final result = _unique(items);
+    for (final entry in result) _catalogCache[entry['url'].toString()] = entry;
+    return result;
   }
 
   @override Future<List<Map<String, dynamic>>> search(String query) async {
@@ -49,19 +52,30 @@ class CimaCloudSource extends ContentSource {
     final data = _decode(response);
     final raw = data['results'] ?? data['data'] ?? data['items'];
     if (raw is! List) return const [];
-    return _unique(raw.whereType<Map>().where(_isCatalogItem).map(_catalogItem).toList());
+    final result = _unique(raw.whereType<Map>().where(_isCatalogItem).map(_catalogItem).toList());
+    for (final entry in result) _catalogCache[entry['url'].toString()] = entry;
+    return result;
   }
 
   @override Future<Map<String, dynamic>> details(String url) async {
     final parsed = _parseUrl(url);
-    final response = await _get(Uri.parse('$_api/${parsed.type}/${parsed.id}'));
-    final raw = _unwrap(response);
-    if (raw is! Map) throw Exception('لم يتم العثور على تفاصيل المحتوى');
-    final result = _normalizeDetails(raw, parsed.type, parsed.id);
+    Map<String, dynamic> result;
+    try {
+      final response = await _get(Uri.parse('$_api/${parsed.type}/${parsed.id}'));
+      final raw = _unwrap(response);
+      if (raw is! Map) throw Exception('لم يتم العثور على تفاصيل المحتوى');
+      result = _normalizeDetails(raw, parsed.type, parsed.id);
+    } catch (_) {
+      final cached = _catalogCache[url];
+      if (cached == null) rethrow;
+      result = {...cached, 'episodes': <Map<String, dynamic>>[]};
+    }
     if (parsed.type == 'series') {
       try {
         final episodes = await _get(Uri.parse('$_api/series/${parsed.id}/episodes'));
-        result['episodes'] = _normalizeEpisodes(_unwrap(episodes));
+        result['episodes'] = _normalizeEpisodes(
+          episodes['seasons'] ?? _unwrap(episodes),
+        );
       } catch (_) {
         result['episodes'] = <Map<String, dynamic>>[];
       }
