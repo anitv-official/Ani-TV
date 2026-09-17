@@ -452,6 +452,11 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       final query = _searchQuery.toLowerCase();
       return title.contains(query);
     }).toList();
+    final orderedChapters = [...filteredChapters]..sort((a, b) {
+      final aNumber = double.tryParse((a['number'] ?? a['chapter_number'] ?? '').toString()) ?? 0;
+      final bNumber = double.tryParse((b['number'] ?? b['chapter_number'] ?? '').toString()) ?? 0;
+      return _chaptersAscending ? aNumber.compareTo(bNumber) : bNumber.compareTo(aNumber);
+    });
 
     return Column(
       children: [
@@ -544,11 +549,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           itemCount: filteredChapters.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
-            final orderedChapters = [...filteredChapters]..sort((a, b) {
-              final aNumber = double.tryParse((a['number'] ?? a['chapter_number'] ?? '').toString()) ?? 0;
-              final bNumber = double.tryParse((b['number'] ?? b['chapter_number'] ?? '').toString()) ?? 0;
-              return _chaptersAscending ? aNumber.compareTo(bNumber) : bNumber.compareTo(aNumber);
-            });
             final chapter = orderedChapters[index];
             String title = chapter['title'] ?? 'فصل';
             String displayTitle = title;
@@ -565,7 +565,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                       url: chapter['url'],
                       comicImageUrl: comic['image_url'],
                       title: title,
-                      chapterId: '$index',
+                      chapterId: '${chapter['chapter_id'] ?? chapter['id'] ?? index}',
                     ),
                   ),
                 );

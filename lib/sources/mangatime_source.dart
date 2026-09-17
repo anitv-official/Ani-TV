@@ -94,7 +94,7 @@ class MangaTimeSource extends ContentSource {
     final seen = <String>{};
     const pageSize = 100;
     const pagesPerBatch = 5;
-    for (var page = 1; page <= 50; page += pagesPerBatch) {
+    for (var page = 1;; page += pagesPerBatch) {
       final responses = await Future.wait(
         List.generate(pagesPerBatch, (index) async {
           try {
@@ -109,14 +109,21 @@ class MangaTimeSource extends ContentSource {
         }),
       );
       var reachedEnd = false;
+      var newItemsInBatch = 0;
       for (final batch in responses) {
         if (batch.isEmpty || batch.length < pageSize) reachedEnd = true;
         for (final raw in batch) {
           final id = _string(raw['id']);
-          if (id.isNotEmpty && seen.add(id)) all.add(raw);
+          if (id.isNotEmpty && seen.add(id)) {
+            all.add(raw);
+            newItemsInBatch++;
+          }
         }
       }
-      if (reachedEnd) break;
+      // Stop only at a short/empty page or when the server repeats a page.
+      // There is intentionally no numerical page cap: series with 10,000+
+      // chapters must remain traversable.
+      if (reachedEnd || newItemsInBatch == 0) break;
     }
     final result = all.map((raw) {
       final id = _string(raw['id']);

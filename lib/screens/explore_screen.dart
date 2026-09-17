@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
@@ -75,11 +74,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     try {
       final isAnime = _currentTabIndex == 0;
       final page = isAnime ? ++_animePage : ++_comicPage;
-      final items = widget.sourceId != null
-          ? await _fetchSourcePage(widget.sourceId!, page)
-          : isAnime
-              ? await ApiService.fetchLatestAnime(page: page)
-              : await ApiService.fetchLatestComics(page: page);
+      final items = await _fetchPage(isAnime: isAnime, page: page);
       if (!mounted) return;
       setState(() {
         final target = isAnime ? latestAnime : latestComics;
@@ -94,7 +89,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<void> _loadData() async {
     try {
       if (widget.sourceId != null) {
-        final items = await _fetchSourcePage(widget.sourceId!, 1);
+        final items = await _fetchPage(isAnime: widget.initialIsAnime, page: 1);
         if (!mounted) return;
         setState(() {
           latestAnime = widget.initialIsAnime ? items : [];
@@ -106,8 +101,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         return;
       }
       final loaded = await Future.wait([
-        _fetchAllLatestAnime(),
-        _fetchAllLatestComics(),
+        _fetchPage(isAnime: true, page: 1),
+        _fetchPage(isAnime: false, page: 1),
       ]);
       final latestAnimeData = loaded[0];
       final latestComicsData = loaded[1];
@@ -115,8 +110,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         setState(() {
           latestAnime = latestAnimeData;
           latestComics = latestComicsData;
-          _animePage = 2;
-          _comicPage = 2;
+          _animePage = 1;
+          _comicPage = 1;
           isLoadingContent = false;
         });
       }
@@ -132,38 +127,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return SourceRegistry.latestFromSource(sourceId, page: page);
   }
 
-  Future<List<dynamic>> _fetchAllLatestAnime() async {
-    List<dynamic> all = [];
-    Set<String> seen = {};
-    for (int page = 1; page <= 2; page++) {
-      final items = await ApiService.fetchLatestAnime(page: page);
-      if (items.isEmpty) break;
-      for (final item in items) {
-        final key = item['url'] ?? item['title'] ?? 'unknown_${all.length}';
-        if (!seen.contains(key)) {
-          seen.add(key);
-          all.add(item);
-        }
-      }
+  Future<List<dynamic>> _fetchPage({required bool isAnime, required int page}) {
+    if (widget.sourceId != null) {
+      return _fetchSourcePage(widget.sourceId!, page);
     }
-    return all;
-  }
-
-  Future<List<dynamic>> _fetchAllLatestComics() async {
-    List<dynamic> all = [];
-    Set<String> seen = {};
-    for (int page = 1; page <= 2; page++) {
-      final items = await ApiService.fetchLatestComics(page: page);
-      if (items.isEmpty) break;
-      for (final item in items) {
-        final key = item['url'] ?? item['title'] ?? 'unknown_${all.length}';
-        if (!seen.contains(key)) {
-          seen.add(key);
-          all.add(item);
-        }
-      }
-    }
-    return all;
+    // Anime list is intentionally Anime Slayer only. Manga combines every
+    // registered manga API through the internal registry.
+    return isAnime
+        ? SourceRegistry.latestFromSource('anime_slayer', page: page)
+        : SourceRegistry.latestManga(page: page);
   }
 
   void _showErrorDialog(String title, String message) {
