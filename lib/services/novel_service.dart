@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class NovelService {
-  static const _base = 'https://anitv-manga-lord.vercel.app/api/novels';
+  static const _base = 'https://anitv-novel-bridge-manga-lord.vercel.app/api/novels';
   static final _client = http.Client();
 
   static Future<List<Map<String, dynamic>>> latest({int page = 1, String query = ''}) async {
