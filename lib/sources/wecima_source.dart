@@ -14,6 +14,9 @@ class CimaCloudSource extends ContentSource {
   final http.Client _client = http.Client();
   String _cookie = '';
   final String _deviceId = 'anitv-${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}';
+  final String _cloudflareId =
+      ('anitv${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}'.padRight(31, '0'))
+          .substring(0, 31);
 
   @override String get id => 'cima_cloud';
   @override String get name => 'Cima Cloud';
@@ -148,7 +151,7 @@ class CimaCloudSource extends ContentSource {
     'Accept': 'application/json',
     'User-Agent': _userAgent,
     'firebase_id': _deviceId,
-    'cloudflare-id': _deviceId,
+    'cloudflare-id': _cloudflareId,
     if (_cookie.isNotEmpty) 'Cookie': _cookie,
   };
 
