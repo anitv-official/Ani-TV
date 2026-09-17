@@ -1,4 +1,4 @@
-const BASES = ['https://wecima.cx', 'https://wec.im', 'https://wecimamax.com'];
+const BASES = ['https://wecimamax.com', 'https://wec.im', 'https://wecima.cx'];
 const headers = { 'User-Agent': 'AniTV-WecimaBridge/1.1 (licensed integration)', Accept: 'text/html,application/xhtml+xml' };
 const cache = new Map();
 function decode(v = '') { return v.replace(/&(?:amp|lt|gt|quot|#039|nbsp|#\d+);/g, m => ({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#039;':"'",'&nbsp;':' '}[m] || String.fromCodePoint(Number(m.match(/#(\d+)/)?.[1] || 0)))); }
