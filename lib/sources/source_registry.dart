@@ -26,7 +26,7 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    WecimaSource(),
+    CimaCloudSource(),
   ];
 
   static List<ContentSource> get _animeApis =>

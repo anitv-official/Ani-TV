@@ -651,7 +651,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       targetScreen = AnimeDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
-    } else if (category == 'wecima' || item['source_id'] == 'wecima') {
+    } else if (category == 'wecima' || category == 'movie' || item['source_id'] == 'wecima' || item['source_id'] == 'cima_cloud') {
       targetScreen = WecimaDetailsScreen(url: item['url']);
     }
 
