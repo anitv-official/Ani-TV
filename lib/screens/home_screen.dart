@@ -15,7 +15,7 @@ import 'profile_screen.dart';
 import 'about_screen.dart';
 import 'community_screen.dart';
 import 'novel_explore_screen.dart';
-import 'wecima_explore_screen.dart';
+import 'fasel_explore_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -108,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case AppSection.drama:
         return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
       case AppSection.movies:
-        return const WecimaExploreScreen(embedded: true);
+        return const FaselExploreScreen(embedded: true);
       case AppSection.novels:
         return const NovelExploreScreen(embedded: true);
       case AppSection.favorites:

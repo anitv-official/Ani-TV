@@ -4,7 +4,7 @@ import 'drama_source.dart';
 import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
-import 'wecima_source.dart';
+import 'faselhd_source.dart';
 import 'source_base.dart';
 
 /// Internal API catalog.
@@ -26,7 +26,7 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    CimaCloudSource(),
+    FaselHdSource(),
   ];
 
   static List<ContentSource> get _animeApis =>

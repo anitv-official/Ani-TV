@@ -4,7 +4,7 @@ import 'source_base.dart';
 
 /// FaselHD source. The API domain is refreshed from the public config file
 /// used by the Android client, with a known working fallback.
-class CimaCloudSource extends ContentSource {
+class FaselHdSource extends ContentSource {
   static const _configUrl = 'https://abcdefegh.watchit.tn/api_urls.json';
   static const _fallbackApi = 'https://kahitdgku.com/faselhd15/public/api/';
   static const _userAgent = 'okhttp/4.10.0';
@@ -155,6 +155,3 @@ class CimaCloudSource extends ContentSource {
   String _text(dynamic value, [String fallback = '']) => value == null || value.toString().trim().isEmpty || value.toString() == 'false' ? fallback : SourceUtils.cleanTitle(value.toString());
   bool _safePlayable(String value) { final u = Uri.tryParse(value); if (u == null || (u.scheme != 'http' && u.scheme != 'https')) return false; final s = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(s) || RegExp(r'(vidtube|vidto|uqload|streamtape|filemoon|streamwish|voe|dood|mp4upload|mixdrop|yourupload)').hasMatch(s); }
 }
-
-/// Compatibility alias retained for old imports.
-class WecimaSource extends CimaCloudSource {}
