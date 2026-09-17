@@ -269,6 +269,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     if (_isSearching) {
       return AppBar(
         backgroundColor: AppTheme.backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 0,
         title: Padding(
@@ -285,7 +287,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return AppBar(
       backgroundColor: AppTheme.backgroundColor,
       elevation: 0,
-      title: const Text('السجل'),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('السجل', style: TextStyle(fontWeight: FontWeight.w800)),
+          Text('تابع ما بدأت به', style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
       actions: [
         IconButton(
           tooltip: 'بحث',
@@ -311,14 +320,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         _buildHistoryToggle(),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
             _showAnimeHistory ? 'آخر ما تمت مشاهدته' : 'آخر ما تمت قراءته',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
         ),
         const SizedBox(height: 12),
@@ -391,9 +400,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       margin: const EdgeInsets.only(bottom: 10),
       height: 84,
       decoration: BoxDecoration(
+        gradient: AppTheme.glassGradient,
         color: AppTheme.surfaceColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.borderColor),
+        boxShadow: AppTheme.subtleShadow,
       ),
       child: InkWell(
         onTap: () {
