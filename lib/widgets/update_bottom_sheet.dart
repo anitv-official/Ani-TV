@@ -18,10 +18,9 @@ class UpdateBottomSheet extends StatefulWidget {
     String? latestVersion,
     String? changelog,
   }) {
-    return showModalBottomSheet(
+    return showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierDismissible: true,
       builder: (context) => UpdateBottomSheet(
         latestVersion: latestVersion,
         changelog: changelog,
@@ -107,16 +106,14 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width > 600;
 
-    return Container(
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
       decoration: BoxDecoration(
         color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(
-            color: AppTheme.primaryColor.withOpacity(0.3),
-            width: 1,
-          ),
-        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primaryColor.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.5),
@@ -128,19 +125,6 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              margin: EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[700],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
           // Header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -164,7 +148,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isDownloading ? 'جارٍ تنزيل التحديث' : 'تحديث متاح',
+                        _isDownloading ? 'جارٍ تنزيل التحديث' : 'يتوافر تحديث جديد للتطبيق',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -196,6 +180,17 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!_isDownloading) ...[
+                  const Text(
+                    'يتوافر تحديث جديد للتطبيق، برجاء التثبيت حرصًا منا على الاستقرار والثبات.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppTheme.textPrimaryColor,
+                      fontSize: 16,
+                      height: 1.6,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   if (widget.changelog != null && widget.changelog!.isNotEmpty) ...[
                     Text(
                       'ما الجديد:',
@@ -313,6 +308,7 @@ class _UpdateBottomSheetState extends State<UpdateBottomSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
