@@ -6,7 +6,6 @@ import 'home_screen.dart';
 import 'landing_screen.dart';
 import 'auth_choice_screen.dart';
 import '../theme/app_theme.dart';
-import '../services/api_service.dart';
 import '../providers/app_state_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -37,11 +36,6 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
-
-    // Initialize AppStateProvider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AppStateProvider>(context, listen: false).initialize();
-    });
 
     // Check auth status after animation
     _controller.addStatusListener((status) {
@@ -78,37 +72,9 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    try {
-      // Preload content for HomeScreen
-      final anime = await ApiService.fetchLatestAnime();
-      final comics = await ApiService.fetchLatestComics();
-      final topAnime = await ApiService.fetchTopAnime();
-
-      // Process data for HomeScreen
-      final featuredAnime = topAnime
-          .take(4)
-          .map((item) => {
-                ...item,
-                'type': 'anime',
-              })
-          .toList();
-
-      final featuredComics = comics
-          .take(4)
-          .map((item) => {
-                ...item,
-                'type': 'comic',
-              })
-          .toList();
-
-      final featuredContent = [...featuredAnime, ...featuredComics]..shuffle();
-
-      // Store preloaded data for navigation
-      _navigateWithPreloadedData(anime, comics, featuredContent);
-    } catch (e) {
-      // If loading fails, navigate without preloaded data
-      _navigateWithPreloadedData(null, null, null);
-    }
+    // Let HomeContent load its API sections lazily after the shell appears.
+    // The old splash waited for three sequential content requests here.
+    _navigateWithPreloadedData(null, null, null);
   }
 
   void _navigateWithPreloadedData(List<dynamic>? anime, List<dynamic>? comics,

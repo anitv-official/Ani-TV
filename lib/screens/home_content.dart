@@ -203,7 +203,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Widget _buildContentGrid() {
-    final items = [...latestAnime, ...latestDrama, ...latestComics];
+    // Keep the home layout light; the horizontal sections still expose the
+    // complete API pages while the expensive grid renders only the first set.
+    final items = [...latestAnime, ...latestDrama, ...latestComics].take(24).toList();
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 48),

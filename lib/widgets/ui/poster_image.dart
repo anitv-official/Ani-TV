@@ -24,6 +24,11 @@ class PosterImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(AppTheme.radiusSmall);
     final imageUrl = (url ?? '').trim();
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final targetWidth = ((width ?? 180) * devicePixelRatio).round().clamp(160, 720).toInt();
+    final targetHeight = height == null
+        ? null
+        : (height! * devicePixelRatio).round().clamp(160, 960).toInt();
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
@@ -36,6 +41,10 @@ class PosterImage extends StatelessWidget {
                 fit: fit,
                 width: width ?? double.infinity,
                 height: height,
+                memCacheWidth: targetWidth,
+                memCacheHeight: targetHeight,
+                maxWidthDiskCache: targetWidth,
+                maxHeightDiskCache: targetHeight,
                 placeholder: (_, __) => Container(color: AppTheme.elevatedColor),
                 errorWidget: (_, __, ___) => _fallback(),
               ),
