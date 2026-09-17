@@ -22,9 +22,14 @@ class AppFixedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.backgroundColor,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      color: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor.withOpacity(.94),
+          border: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
+          boxShadow: AppTheme.subtleShadow,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -39,8 +44,8 @@ class AppFixedHeader extends StatelessWidget {
                   ),
                 Image.asset(
                   'assets/images/anitv_logo_transparent.png',
-                  width: 104,
-                  height: 38,
+                  width: 112,
+                  height: 40,
                   fit: BoxFit.contain,
                 ),
                 const Spacer(),
@@ -48,7 +53,7 @@ class AppFixedHeader extends StatelessWidget {
                 const AppDrawerButton(),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             SearchLaunchField(
               onTap: () => Navigator.push(
                 context,

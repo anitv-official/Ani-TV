@@ -23,25 +23,32 @@ class AppNavigationDrawer extends StatelessWidget {
     return Drawer(
       width: (width * .82).clamp(280.0, 360.0).toDouble(),
       backgroundColor: AppTheme.backgroundColor,
+      surfaceTintColor: Colors.transparent,
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(14),
           children: [
             InkWell(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(22),
               onTap: () => _select(context, AppSection.account),
               child: _ProfileHeader(state: state),
             ),
-            const SizedBox(height: 14),
-            const Divider(color: AppTheme.borderColor),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
+              child: Text('اكتشف', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppTheme.primaryColor, letterSpacing: .8)),
+            ),
             _item(context, Icons.home_rounded, 'الأحدث', () => _select(context, AppSection.latest), selected: currentSection == AppSection.latest),
             _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime), selected: currentSection == AppSection.anime),
             _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
             _item(context, Icons.live_tv_rounded, 'لائحة الدراما', () => _select(context, AppSection.drama), selected: currentSection == AppSection.drama),
             _item(context, Icons.local_movies_rounded, 'لائحة الأفلام', () => _select(context, AppSection.movies), selected: currentSection == AppSection.movies),
             _item(context, Icons.forum_outlined, 'المجتمع', () => _select(context, AppSection.community), selected: currentSection == AppSection.community),
-            const SizedBox(height: 10),
-            const Divider(color: AppTheme.borderColor),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
+              child: Text('مكتبتك', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppTheme.primaryColor, letterSpacing: .8)),
+            ),
             _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites), selected: currentSection == AppSection.favorites),
             _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _select(context, AppSection.downloads), selected: currentSection == AppSection.downloads),
             _item(context, Icons.hub_outlined, 'المصادر', () => _select(context, AppSection.sources), selected: currentSection == AppSection.sources),
@@ -79,7 +86,13 @@ class _ProfileHeader extends StatelessWidget {
     final username = state.username.trim();
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppTheme.borderColor)),
+      decoration: BoxDecoration(
+        gradient: AppTheme.glassGradient,
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.primaryColor.withOpacity(.18)),
+        boxShadow: AppTheme.subtleShadow,
+      ),
       child: Row(children: [
         _Avatar(future: state.profileImageBytes),
         const SizedBox(width: 14),
