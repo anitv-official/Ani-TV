@@ -28,10 +28,6 @@ class FaselHdSource extends ContentSource {
 
   @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
     await _refreshBase();
-    final response = await _get('media/homecontent/0');
-    final raw = response['latest'] ?? response['data'] ?? response['movies'];
-    final items = _items(raw);
-    if (items.isNotEmpty) return items;
     final movies = await _get('movies/latestadded/0?page=$page');
     final series = await _get('series/latestadded/0?page=$page');
     return [..._items(movies['data']), ..._items(series['data'])];
@@ -60,8 +56,17 @@ class FaselHdSource extends ContentSource {
   }
 
   @override Future<Map<String, dynamic>?> streams(String url) async {
+    await _refreshBase();
+    final parsed = _parse(url);
     final cached = _cache[url];
-    final videos = cached?['videos'];
+    dynamic videos = cached?['videos'];
+    if (videos is! List || videos.isEmpty) {
+      final path = parsed.type == 'episode'
+          ? 'series/episode/${parsed.id}/0'
+          : 'media/detail/${parsed.id}/0';
+      final fresh = await _get(path);
+      videos = fresh['videos'] ?? fresh['episode_stream'] ?? fresh['data'];
+    }
     final sourceVideos = videos is List ? videos : const [];
     final links = <Map<String, dynamic>>[];
     for (final v in sourceVideos.whereType<Map>()) {
@@ -71,8 +76,9 @@ class FaselHdSource extends ContentSource {
       links.add({'url': link, 'label': label, 'name': label, 'type': 'embed', 'referer': _text(v['header'])});
     }
     if (links.isEmpty) {
-      final parsed = _parse(url);
-      final raw = await _get('stream/show/${parsed.id}/0');
+      final raw = await _get(parsed.type == 'episode'
+          ? 'series/episode/${parsed.id}/0'
+          : 'stream/show/${parsed.id}/0');
       _collectVideos(raw, links);
     }
     final unique = <String, Map<String, dynamic>>{};
@@ -127,7 +133,7 @@ class FaselHdSource extends ContentSource {
     if (raw is Map) {
       final link = _text(raw['link'] ?? raw['url'] ?? raw['file']);
       if (link.isNotEmpty && _safePlayable(link)) output.add({'url': link, 'label': _text(raw['server'], 'FaselHD'), 'name': _text(raw['server'], 'FaselHD'), 'type': 'embed', 'referer': _text(raw['header'])});
-      for (final key in ['videos', 'data', 'streams', 'servers']) _collectVideos(raw[key], output);
+      for (final key in ['videos', 'episode_stream', 'data', 'streams', 'servers']) _collectVideos(raw[key], output);
     }
   }
 
@@ -153,5 +159,5 @@ class FaselHdSource extends ContentSource {
     return _text(raw['subtitle']);
   }
   String _text(dynamic value, [String fallback = '']) => value == null || value.toString().trim().isEmpty || value.toString() == 'false' ? fallback : SourceUtils.cleanTitle(value.toString());
-  bool _safePlayable(String value) { final u = Uri.tryParse(value); if (u == null || (u.scheme != 'http' && u.scheme != 'https')) return false; final s = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(s) || RegExp(r'(vidtube|vidto|uqload|streamtape|filemoon|streamwish|voe|dood|mp4upload|mixdrop|yourupload)').hasMatch(s); }
+  bool _safePlayable(String value) { final u = Uri.tryParse(value); if (u == null || (u.scheme != 'http' && u.scheme != 'https')) return false; final s = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(s) || RegExp(r'(vidtube|vidto|uqload|streamtape|filemoon|streamwish|voe|dood|mp4upload|mixdrop|yourupload|updown\.icu)').hasMatch(s); }
 }

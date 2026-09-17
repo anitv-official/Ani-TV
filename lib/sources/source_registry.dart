@@ -141,6 +141,7 @@ class SourceRegistry {
       'web2.topcinemaa.com',
       'vidtube.one',
       'down.vidtube.one',
+      'updown.icu',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     return media || embeddedPlayer || source.kind != 'movie';
   }
