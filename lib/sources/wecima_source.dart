@@ -12,6 +12,8 @@ class CimaCloudSource extends ContentSource {
   static const _api = 'https://1654865.xyz/v1.3/api';
   static const _userAgent = 'okhttp/4.10.0';
   final http.Client _client = http.Client();
+  String _cookie = '';
+  final String _deviceId = 'anitv-${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}';
 
   @override String get id => 'cima_cloud';
   @override String get name => 'Cima Cloud';
@@ -36,7 +38,7 @@ class CimaCloudSource extends ContentSource {
   @override Future<List<Map<String, dynamic>>> search(String query) async {
     final uri = Uri.parse('$_api/search');
     final response = await _client.post(uri,
-      headers: const {'Accept': 'application/json', 'User-Agent': _userAgent},
+      headers: _headers,
       body: {'title': query.trim(), 'type': '0', 'sort': '1', 'page': '1'},
     ).timeout(const Duration(seconds: 35));
     final data = _decode(response);
@@ -109,9 +111,18 @@ class CimaCloudSource extends ContentSource {
   };
 
   List<Map<String, dynamic>> _normalizeEpisodes(dynamic raw) {
-    if (raw is Map) raw = raw['episodes'] ?? raw['data'] ?? raw['items'];
+    if (raw is Map) raw = raw['episodes'] ?? raw['data'] ?? raw['items'] ?? raw['seasons'];
     if (raw is! List) return <Map<String, dynamic>>[];
-    return raw.whereType<Map>().map((ep) {
+    final flattened = <Map>[];
+    for (final entry in raw.whereType<Map>()) {
+      final nested = entry['episodes'];
+      if (nested is List) {
+        flattened.addAll(nested.whereType<Map>());
+      } else {
+        flattened.add(entry);
+      }
+    }
+    return flattened.map((ep) {
       final id = _text(ep['id'] ?? ep['episode_id']);
       final number = ep['episode_number'] ?? ep['number'] ?? ep['episode'] ?? '';
       return {'title': _text(ep['name'] ?? ep['title'], number.toString().isEmpty ? 'حلقة' : 'الحلقة $number'), 'url': '$_api/episode/$id/servers', 'episode_id': id, 'number': number};
@@ -127,8 +138,24 @@ class CimaCloudSource extends ContentSource {
   }
 
   Future<Map<String, dynamic>> _get(Uri uri) async {
-    final response = await _client.get(uri, headers: const {'Accept': 'application/json', 'User-Agent': _userAgent}).timeout(const Duration(seconds: 35));
+    final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 35));
+    final setCookie = response.headers['set-cookie'];
+    if (setCookie != null) _rememberCookie(setCookie);
     return _decode(response);
+  }
+
+  Map<String, String> get _headers => {
+    'Accept': 'application/json',
+    'User-Agent': _userAgent,
+    'firebase_id': _deviceId,
+    'cloudflare-id': _deviceId,
+    if (_cookie.isNotEmpty) 'Cookie': _cookie,
+  };
+
+  void _rememberCookie(String value) {
+    final match = RegExp(r'(?i)([a-z0-9_]+)=([^;]+)').firstMatch(value);
+    if (match == null) return;
+    if (match.group(1) == 'ci_session') _cookie = '${match.group(1)}=${match.group(2)}';
   }
 
   Map<String, dynamic> _decode(http.Response response) {
