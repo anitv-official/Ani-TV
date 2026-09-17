@@ -70,7 +70,7 @@ class FaselHdSource extends ContentSource {
     final sourceVideos = videos is List ? videos : const [];
     final links = <Map<String, dynamic>>[];
     for (final v in sourceVideos.whereType<Map>()) {
-      final link = _text(v['link'] ?? v['url'] ?? v['file']);
+      final link = _playerUrl(_text(v['link'] ?? v['url'] ?? v['file']));
       if (link.isEmpty || !_safePlayable(link)) continue;
       final label = _text(v['server'] ?? v['name'] ?? v['video_name'], 'FaselHD');
       links.add({'url': link, 'label': label, 'name': label, 'type': 'embed', 'referer': _text(v['header'])});
@@ -132,7 +132,8 @@ class FaselHdSource extends ContentSource {
     if (raw is List) for (final x in raw) _collectVideos(x, output);
     if (raw is Map) {
       final link = _text(raw['link'] ?? raw['url'] ?? raw['file']);
-      if (link.isNotEmpty && _safePlayable(link)) output.add({'url': link, 'label': _text(raw['server'], 'FaselHD'), 'name': _text(raw['server'], 'FaselHD'), 'type': 'embed', 'referer': _text(raw['header'])});
+      final player = _playerUrl(_text(raw['link'] ?? raw['url'] ?? raw['file']));
+      if (player.isNotEmpty && _safePlayable(player)) output.add({'url': player, 'label': _text(raw['server'], 'FaselHD'), 'name': _text(raw['server'], 'FaselHD'), 'type': 'embed', 'referer': _text(raw['header'])});
       for (final key in ['videos', 'episode_stream', 'data', 'streams', 'servers']) _collectVideos(raw[key], output);
     }
   }
@@ -157,6 +158,11 @@ class FaselHdSource extends ContentSource {
     final value = _text(raw['overview'] ?? raw['description']);
     if (value.isNotEmpty) return value;
     return _text(raw['subtitle']);
+  }
+  String _playerUrl(String value) {
+    final match = RegExp(r'^https?://down\.vidtube\.one/([^/?#]+)\.html', caseSensitive: false).firstMatch(value);
+    if (match != null) return 'https://vidtube.one/embed-${match.group(1)}.html';
+    return value;
   }
   String _text(dynamic value, [String fallback = '']) => value == null || value.toString().trim().isEmpty || value.toString() == 'false' ? fallback : SourceUtils.cleanTitle(value.toString());
   bool _safePlayable(String value) { final u = Uri.tryParse(value); if (u == null || (u.scheme != 'http' && u.scheme != 'https')) return false; final s = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(s) || RegExp(r'(vidtube|vidto|uqload|streamtape|filemoon|streamwish|voe|dood|mp4upload|mixdrop|yourupload|updown\.icu)').hasMatch(s); }
