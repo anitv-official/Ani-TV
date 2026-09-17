@@ -162,6 +162,10 @@ class FaselHdSource extends ContentSource {
   String _playerUrl(String value) {
     final match = RegExp(r'^https?://down\.vidtube\.one/([^/?#]+)\.html', caseSensitive: false).firstMatch(value);
     if (match != null) return 'https://vidtube.one/embed-${match.group(1)}.html';
+    final uq = RegExp(r'^https?://(?:www\.)?uqload\.(?:cx|io|net|vc)/([^/?#]+)\.html', caseSensitive: false).firstMatch(value);
+    if (uq != null && !value.toLowerCase().contains('/embed-')) return 'https://uqload.${Uri.parse(value).host.split('.').last}/embed-${uq.group(1)}.html';
+    final wish = RegExp(r'^https?://(?:www\.)?streamwish\.(?:fun|to)/([^/?#]+)', caseSensitive: false).firstMatch(value);
+    if (wish != null && !value.toLowerCase().contains('/e/')) return 'https://streamwish.fun/e/${wish.group(1)}';
     return value;
   }
   String _text(dynamic value, [String fallback = '']) => value == null || value.toString().trim().isEmpty || value.toString() == 'false' ? fallback : SourceUtils.cleanTitle(value.toString());
