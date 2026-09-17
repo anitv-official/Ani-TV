@@ -1,14 +1,15 @@
 {
-  "tag_name": "v1.2.5",
-  "name": "AniTV 1.2.5",
-  "published_at": "2026-09-17T00:37:30Z",
-  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.5",
-  "body": "إصلاح إعلانات وتحويلات AnyPlay، وإصلاح تشغيل حلقات Anime3rb، وتحسينات الاستقرار.",
-  "deployment_id": "anitv-v1.2.5",
+  "tag_name": "v1.2.6",
+  "name": "AniTV 1.2.6",
+  "version": "1.2.6",
+  "published_at": "2026-09-17T02:49:50Z",
+  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.6",
+  "body": "إصلاح تشغيل AnyPlay وتجاوز VidNest، تحسين fallback لمصدر Anime3rb، جلب الفصول كاملة وتنظيف وصف MangaTime، وإزالة المصادر المطلوبة.",
+  "deployment_id": "anitv-v1.2.6",
   "assets": [
     {
-      "name": "AniTV-v1.2.5.apk",
-      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.5/AniTV-v1.2.5.apk"
+      "name": "app-release.apk",
+      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.6/app-release.apk"
     }
   ]
 }
