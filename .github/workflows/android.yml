@@ -1,17 +1,27 @@
-name: Android Build
+name: Android Build and Verify
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - 'refactor/**'
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.24.5'
+
 jobs:
-  build:
+  verify:
+    name: Analyze and test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,11 +32,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -37,9 +48,35 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run Flutter tests
-        run: flutter test
+        run: flutter test --reporter expanded
 
-      - name: Configure release signing
+  build:
+    name: Build Android APK
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Fetch dependencies
+        run: flutter pub get
+
+      - name: Configure release signing on protected builds
+        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -60,17 +97,25 @@ jobs:
           } > android/key.properties
           chmod 600 android/key.properties
 
-      - name: Build Android APK
+      - name: Build signed release APK on main
+        if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
         run: >-
           flutter build apk --release
           --dart-define=ANITV_FCM_PROVIDER_ID=6aa7e29d002c93304bf6
           --dart-define=ANITV_FCM_TOPIC_ID=6aa7e2fa002c5c5a4d8b
 
-      - name: Upload APK
+      - name: Build debug APK on feature branches
+        if: ${{ github.ref != 'refs/heads/main' && github.event_name != 'workflow_dispatch' }}
+        run: >-
+          flutter build apk --debug
+          --dart-define=ANITV_FCM_PROVIDER_ID=6aa7e29d002c93304bf6
+          --dart-define=ANITV_FCM_TOPIC_ID=6aa7e2fa002c5c5a4d8b
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: anitv-android-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: anitv-android-${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}
+          path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
 
       - name: Remove release signing material
