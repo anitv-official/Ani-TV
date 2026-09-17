@@ -55,8 +55,9 @@ class MangaTimeSource extends ContentSource {
     final raw = _asMap(await _call('content.getSeriesBySlug', {'slug': slug}));
     if (raw.isEmpty) throw Exception('MangaTime: series not found');
     final item = _series(raw);
-    item['url'] = _seriesUrl(_string(raw['id']), slug);
-    item['chapters'] = await _chapters(_string(raw['id']));
+    final seriesId = _string(raw['id'] ?? raw['_id'] ?? raw['seriesId']);
+    item['url'] = _seriesUrl(seriesId, slug);
+    item['chapters'] = await _chapters(seriesId);
     item['total_chapters'] = (item['chapters'] as List).length;
     return item;
   }
@@ -90,44 +91,16 @@ class MangaTimeSource extends ContentSource {
 
   Future<List<Map<String, dynamic>>> _chapters(String seriesId) async {
     if (seriesId.isEmpty) return const [];
-    final all = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    const pageSize = 100;
-    const pagesPerBatch = 5;
-    for (var page = 1;; page += pagesPerBatch) {
-      final responses = await Future.wait(
-        List.generate(pagesPerBatch, (index) async {
-          try {
-            return _list(await _call('content.getChapters', {
-              'seriesId': seriesId,
-              'page': page + index,
-              'limit': pageSize,
-            }));
-          } catch (_) {
-            return const <Map<String, dynamic>>[];
-          }
-        }),
-      );
-      var reachedEnd = false;
-      var newItemsInBatch = 0;
-      for (final batch in responses) {
-        if (batch.isEmpty || batch.length < pageSize) reachedEnd = true;
-        for (final raw in batch) {
-          final id = _string(raw['id']);
-          if (id.isNotEmpty && seen.add(id)) {
-            all.add(raw);
-            newItemsInBatch++;
-          }
-        }
-      }
-      // Stop only at a short/empty page or when the server repeats a page.
-      // There is intentionally no numerical page cap: series with 10,000+
-      // chapters must remain traversable.
-      if (reachedEnd || newItemsInBatch == 0) break;
-    }
+    // MangaTime's current contract ignores page/offset for this procedure.
+    // `limit: -1` is the documented internal flag used by its web client and
+    // returns the complete chapter list (not just the first 100 chapters).
+    final all = _list(await _call('content.getChapters', {
+      'seriesId': seriesId,
+      'limit': -1,
+    }));
     final result = all.map((raw) {
-      final id = _string(raw['id']);
-      final number = raw['number'] ?? _number(raw['title']);
+      final id = _chapterId(raw);
+      final number = raw['number'] ?? raw['chapterNumber'] ?? _number(raw['title']);
       return {
         'id': id,
         'chapter_id': id,
@@ -216,7 +189,7 @@ class MangaTimeSource extends ContentSource {
     final unwrapped = _unwrap(value);
     if (unwrapped is List) return unwrapped.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
     if (unwrapped is Map) {
-      for (final key in const ['results', 'items', 'chapters', 'data']) {
+      for (final key in const ['results', 'items', 'chapters', 'docs', 'records', 'rows', 'data']) {
         final found = _list(unwrapped[key]);
         if (found.isNotEmpty) return found;
       }
@@ -225,6 +198,8 @@ class MangaTimeSource extends ContentSource {
   }
 
   static Map<String, dynamic> _asMap(dynamic value) => value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+  static String _chapterId(Map<String, dynamic> raw) =>
+      _string(raw['id'] ?? raw['_id'] ?? raw['chapterId'] ?? raw['chapter_id']);
 
   static String _string(dynamic value, [String fallback = '']) => value == null ? fallback : value.toString().trim().isEmpty ? fallback : value.toString().trim();
 
