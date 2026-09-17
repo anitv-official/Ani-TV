@@ -247,43 +247,6 @@ class AnyPlaySource extends ContentSource {
     return host != 'vidnest.fun' && !host.endsWith('.vidnest.fun');
   }
 
-  Future<String?> _resolveDirectMedia(String embedUrl) async {
-    try {
-      final response = await _client.get(Uri.parse(embedUrl), headers: {
-        'Accept': 'text/html,application/xhtml+xml',
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36',
-      }).timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300) return null;
-      final html = response.body
-          .replaceAll(r'\/', '/')
-          .replaceAll(r'\u0026', '&')
-          .replaceAll(r'\u003a', ':')
-          .replaceAll(r'\u002f', '/');
-      final candidates = <String>{};
-      for (final match in RegExp(r'''(?:https?:)?//[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false).allMatches(html)) {
-        final value = match.group(0)!;
-        candidates.add(value.startsWith('//') ? 'https:$value' : value);
-      }
-      for (final match in RegExp(r'''(?:file|src|source|url|stream|playlist)\s*[:=]\s*["']([^"']+)["']''', caseSensitive: false).allMatches(html)) {
-        final value = match.group(1)!;
-        candidates.add(value.startsWith('//') ? 'https:$value' : value);
-      }
-      for (final match in RegExp(r'''https?://[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false).allMatches(html)) {
-        candidates.add(match.group(0)!);
-      }
-      candidates.addAll(extractPlayableMediaUrls(html));
-      return candidates.firstWhere(_isPlayableMedia, orElse: () => '');
-    } catch (_) {
-      return null;
-    }
-  }
-
-  bool _isPlayableMedia(String value) {
-    final lower = value.toLowerCase();
-    return (lower.startsWith('https://') || lower.startsWith('http://')) &&
-        RegExp(r'\.(?:m3u8|mp4|mpd)(?:[?#].*)?$', caseSensitive: false).hasMatch(lower);
-  }
-
   static List<String> extractPlayableMediaUrls(String body) {
     final output = <String>{};
     final media = RegExp(r'''(?:https?:)?//[^\s"'<>\\]+(?:\.m3u8|\.mp4|\.mpd)(?:\?[^\s"'<>\\]*)?''', caseSensitive: false);

@@ -178,7 +178,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       checks['المفضلة'] = provider.isLoggedIn ? '✓ ${provider.favoriteAnime.length + provider.favoriteComics.length} عنصر' : '⚠ غير متاح للزائر';
     } catch (_) { checks['Appwrite'] = '✕ خطأ'; }
     try {
-      checks['المصادر'] = SourceRegistry.all.isNotEmpty ? '✓ ${SourceRegistry.all.length} مصدر' : '✕ لا توجد مصادر';
+      final apiCount = SourceRegistry.animeSources.length + SourceRegistry.mangaSources.length + SourceRegistry.dramaSources.length;
+      checks['واجهات API'] = apiCount > 0 ? '✓ $apiCount واجهة داخلية' : '✕ لا توجد واجهات';
       final prefs = await SharedPreferences.getInstance();
       checks['التخزين المحلي'] = '✓ ${prefs.getKeys().length} مفتاح';
       checks['الإشعارات'] = _notificationsEnabled ? '✓ مفعّلة' : '⚠ معطّلة';

@@ -129,8 +129,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<List<dynamic>> _fetchSourcePage(String sourceId, int page) async {
-    final source = SourceRegistry.all.firstWhere((item) => item.id == sourceId);
-    return source.latest(page: page);
+    return SourceRegistry.latestFromSource(sourceId, page: page);
   }
 
   Future<List<dynamic>> _fetchAllLatestAnime() async {

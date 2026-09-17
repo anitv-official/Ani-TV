@@ -3,8 +3,8 @@ import 'package:anitv/sources/drama_source.dart';
 import 'package:anitv/sources/source_registry.dart';
 
 void main() {
-  test('Drama source is isolated and registered', () {
-    final source = SourceRegistry.all.whereType<DramaSource>().single;
+  test('Drama API is isolated and registered internally', () {
+    final source = SourceRegistry.dramaSources.whereType<DramaSource>().single;
     expect(source.id, 'drama_slayer');
     expect(source.kind, 'drama');
     expect(source.handles('https://drslayer.com/drama/public/drama-details?drama_id=7'), isTrue);
