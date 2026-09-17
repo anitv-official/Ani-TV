@@ -4,6 +4,7 @@
   "published_at": "2026-09-17T00:37:30Z",
   "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.5",
   "body": "إصلاح إعلانات وتحويلات AnyPlay، وإصلاح تشغيل حلقات Anime3rb، وتحسينات الاستقرار.",
+  "deployment_id": "anitv-v1.2.5",
   "assets": [
     {
       "name": "AniTV-v1.2.5.apk",
