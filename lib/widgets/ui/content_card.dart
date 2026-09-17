@@ -41,9 +41,24 @@ class ContentCard extends StatelessWidget {
                       border: Border.all(color: AppTheme.borderColor),
                       boxShadow: AppTheme.subtleShadow,
                     ),
-                    child: PosterImage(
-                      url: imageUrl,
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          PosterImage(url: imageUrl, borderRadius: BorderRadius.zero),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Color(0x99080B12)],
+                                stops: [0.52, 1],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   if (badge != null && badge!.trim().isNotEmpty)

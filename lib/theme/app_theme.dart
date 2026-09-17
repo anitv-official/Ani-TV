@@ -2,27 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF1976D2);
-  static const Color primarySoft = Color(0xFF0D47A1);
-  static const Color accentColor = Color(0xFF1976D2);
-  static const Color backgroundColor = Color(0xFF0B0B0D);
-  static const Color cardColor = Color(0xFF141418);
-  static const Color surfaceColor = Color(0xFF1A1A20);
-  static const Color elevatedColor = Color(0xFF22222A);
-  static const Color errorColor = Color(0xFF1565C0);
+  // AniTV 2.0 palette: blue is the accent, not the whole canvas.
+  static const Color primaryColor = Color(0xFF42A5F5);
+  static const Color primarySoft = Color(0xFF1976D2);
+  static const Color accentColor = Color(0xFF64B5F6);
+  static const Color backgroundColor = Color(0xFF080B12);
+  static const Color cardColor = Color(0xFF101722);
+  static const Color surfaceColor = Color(0xFF141E2C);
+  static const Color elevatedColor = Color(0xFF1D2A3B);
+  static const Color errorColor = Color(0xFFE85D75);
   static const Color successColor = Color(0xFF3D9A5F);
   static const Color warningColor = Color(0xFFC9A227);
   static const Color textPrimaryColor = Color(0xFFF5F5F7);
-  static const Color textSecondaryColor = Color(0xFFA8A8B3);
-  static const Color textMutedColor = Color(0xFF6E6E78);
+  static const Color textSecondaryColor = Color(0xFFB7C4D6);
+  static const Color textMutedColor = Color(0xFF718096);
   static const Color borderColor = Color(0x22FFFFFF);
   static const Color highlightColor = primaryColor;
   static const Color glassColor = Color(0x14FFFFFF);
 
-  static const double radiusSmall = 10;
-  static const double radiusMedium = 14;
-  static const double radiusLarge = 18;
-  static const double radiusXLarge = 24;
+  static const double radiusSmall = 12;
+  static const double radiusMedium = 16;
+  static const double radiusLarge = 22;
+  static const double radiusXLarge = 28;
   static const double spaceXs = 6;
   static const double spaceSm = 10;
   static const double spaceMd = 16;
@@ -40,13 +41,13 @@ class AppTheme {
   static LinearGradient get primaryGradient => const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF1976D2), Color(0xFF0D47A1)],
+        colors: [Color(0xFF64B5F6), Color(0xFF1565C0)],
       );
 
   static LinearGradient get darkGradient => LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.transparent, Colors.black.withOpacity(.88)],
+        colors: [Colors.transparent, Color(0xF2080B12)],
       );
 
   static LinearGradient get glassGradient => LinearGradient(

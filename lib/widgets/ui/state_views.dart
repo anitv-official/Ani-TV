@@ -40,27 +40,28 @@ class EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
+                gradient: AppTheme.glassGradient,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.borderColor),
+                border: Border.all(color: AppTheme.primaryColor.withOpacity(.24)),
+                boxShadow: AppTheme.subtleShadow,
               ),
-              child: Icon(icon, size: 32, color: AppTheme.textSecondaryColor),
+              child: Icon(icon, size: 34, color: AppTheme.primaryColor),
             ),
             const SizedBox(height: 18),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             if (message != null) ...[
               const SizedBox(height: 8),
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13, height: 1.45),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondaryColor),
               ),
             ],
             if (onAction != null) ...[
