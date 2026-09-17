@@ -169,8 +169,16 @@ class Anime3rbSource extends ContentSource {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
       }).timeout(const Duration(seconds: 15));
-      if (response.statusCode < 200 || response.statusCode >= 300) return null;
-      return _Anime3rbResponse(utf8.decode(response.bodyBytes, allowMalformed: true), response.statusCode);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return _Anime3rbResponse(utf8.decode(response.bodyBytes, allowMalformed: true), response.statusCode);
+      }
+      final uri = Uri.parse(url);
+      final readerUrl = 'https://r.jina.ai/http://${uri.host}${uri.hasPort ? ':${uri.port}' : ''}${uri.path}${uri.hasQuery ? '?${uri.query}' : ''}';
+      final reader = await http.get(Uri.parse(readerUrl), headers: {'User-Agent': HtmlClient.userAgent}).timeout(const Duration(seconds: 20));
+      if (reader.statusCode >= 200 && reader.statusCode < 300 && reader.body.trim().length > 200) {
+        return _Anime3rbResponse(utf8.decode(reader.bodyBytes, allowMalformed: true), reader.statusCode);
+      }
+      return null;
     } catch (_) {
       return null;
     }
@@ -202,6 +210,9 @@ class Anime3rbSource extends ContentSource {
     for (final match in RegExp(r'''https?://[^\s"'<>]+(?:vid3rb|3rbcdn|vidmoly|streamtape|filemoon|uqload|/embed/)[^\s"'<>]*''', caseSensitive: false).allMatches(normalized)) {
       add(match.group(0)!);
     }
+    for (final match in RegExp(r'''\[[^\]]*\]\((https?://[^)\s]+)\)''', caseSensitive: false).allMatches(normalized)) {
+      add(match.group(1)!);
+    }
     return urls.toList();
   }
 
@@ -220,6 +231,9 @@ class Anime3rbSource extends ContentSource {
     }
     for (final match in RegExp(r'''https?://[^\s"'<>]+\.(?:mp4|mov|webm)(?:\?[^\s"'<>]*)?''', caseSensitive: false).allMatches(normalized)) {
       add(match.group(0)!);
+    }
+    for (final match in RegExp(r'''\[[^\]]*\]\(((?:https?:)?//[^)\s]+\.(?:m3u8|mp4|mov|webm)(?:\?[^)\s]*)?)\)''', caseSensitive: false).allMatches(normalized)) {
+      add(match.group(1)!);
     }
     return urls.toList();
   }

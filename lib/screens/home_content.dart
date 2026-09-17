@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../widgets/ui/app_search_bar.dart';
@@ -32,6 +33,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   List<dynamic> featuredContent = [];
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
+  List<dynamic> latestDrama = [];
   bool isLoading = true;
   bool _hasError = false;
   int _currentCarouselIndex = 0;
@@ -82,17 +84,20 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       final animePage = _animePage + 1;
       final comicPage = _comicPage + 1;
       final loaded = await Future.wait([
-        ApiService.fetchLatestAnime(page: animePage),
-        ApiService.fetchLatestComics(page: comicPage),
+        SourceRegistry.latestFromSource('anyplay', page: animePage),
+        SourceRegistry.latestFromSource('drama_slayer', page: animePage),
+        SourceRegistry.latestFromSource('mangatime', page: comicPage),
       ]);
       if (!mounted) return;
       final anime = loaded[0] as List<dynamic>;
-      final comics = loaded[1] as List<dynamic>;
+      final drama = loaded[1] as List<dynamic>;
+      final comics = loaded[2] as List<dynamic>;
       setState(() {
         if (anime.isNotEmpty) {
           latestAnime = [...latestAnime, ..._uniqueItems(anime, latestAnime)];
           _animePage = animePage;
         }
+        if (drama.isNotEmpty) latestDrama = [...latestDrama, ..._uniqueItems(drama, latestDrama)];
         if (comics.isNotEmpty) {
           latestComics = [...latestComics, ..._uniqueItems(comics, latestComics)];
           _comicPage = comicPage;
@@ -115,32 +120,22 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     });
     try {
       final loaded = await Future.wait([
-        ApiService.fetchLatestAnime(),
-        ApiService.fetchLatestComics(),
+        SourceRegistry.latestFromSource('anyplay'),
+        SourceRegistry.latestFromSource('drama_slayer'),
+        SourceRegistry.latestFromSource('mangatime'),
       ]);
-      final anime = loaded[0] as List<dynamic>;
-      final comics = loaded[1] as List<dynamic>;
-      final topAnime = anime;
+      final movies = loaded[0] as List<dynamic>;
+      final drama = loaded[1] as List<dynamic>;
+      final comics = loaded[2] as List<dynamic>;
 
       if (mounted) {
         setState(() {
-          final featuredAnime = topAnime
-              .take(4)
-              .map((item) => {
-                    ...item,
-                    'type': item['type'] ?? 'anime',
-                  })
-              .toList();
-          final featuredComics = comics
-              .take(4)
-              .map((item) => {
-                    ...item,
-                    'type': 'comic',
-                  })
-              .toList();
-          // Preserve SourceRegistry priority so Anime Slayer content stays first.
-          featuredContent = [...featuredAnime, ...featuredComics];
-          latestAnime = anime;
+          final featuredMovies = movies.take(3).map((item) => {...item, 'type': 'drama'}).toList();
+          final featuredDrama = drama.take(3).map((item) => {...item, 'type': 'drama'}).toList();
+          final featuredComics = comics.take(3).map((item) => {...item, 'type': 'comic'}).toList();
+          featuredContent = [...featuredMovies, ...featuredDrama, ...featuredComics];
+          latestAnime = movies;
+          latestDrama = drama;
           latestComics = comics;
           _animePage = 1;
           _comicPage = 1;
@@ -200,9 +195,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   }
 
   Widget _buildContentGrid() {
-    final items = latestAnime
-        .where((item) => item['type'] != 'drama' && item['category'] != 'drama')
-        .toList();
+    final items = [...latestAnime, ...latestDrama, ...latestComics];
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 48),
@@ -220,8 +213,12 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       children: [
         if (featuredContent.isNotEmpty) _buildFeatured(),
         if (latestAnime.isNotEmpty) ...[
-          _buildSectionHeader('أحدث الأنمي', 'اكتشف الإضافات الجديدة'),
+          _buildSectionHeader('أحدث الأفلام', 'اختيارات جديدة من AnyPlay'),
           _buildHorizontal(latestAnime, isAnime: true),
+        ],
+        if (latestDrama.isNotEmpty) ...[
+          _buildSectionHeader('أحدث الدراما', 'مسلسلات وأعمال جديدة'),
+          _buildHorizontal(latestDrama, isAnime: true),
         ],
         if (latestComics.isNotEmpty) ...[
           _buildSectionHeader('أحدث المانجا', 'قصص جديدة بانتظارك'),

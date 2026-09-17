@@ -56,6 +56,7 @@ class MangaTimeSource extends ContentSource {
     final item = _series(raw);
     item['url'] = _seriesUrl(_string(raw['id']), slug);
     item['chapters'] = await _chapters(_string(raw['id']));
+    item['total_chapters'] = (item['chapters'] as List).length;
     return item;
   }
 
@@ -88,8 +89,19 @@ class MangaTimeSource extends ContentSource {
 
   Future<List<Map<String, dynamic>>> _chapters(String seriesId) async {
     if (seriesId.isEmpty) return const [];
-    final response = await _call('content.getChapters', {'seriesId': seriesId, 'limit': -1});
-    final result = _list(response).map((raw) {
+    final all = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (var page = 1; page <= 50; page++) {
+      final response = await _call('content.getChapters', {'seriesId': seriesId, 'page': page, 'limit': 100});
+      final batch = _list(response);
+      if (batch.isEmpty) break;
+      for (final raw in batch) {
+        final id = _string(raw['id']);
+        if (id.isNotEmpty && seen.add(id)) all.add(raw);
+      }
+      if (batch.length < 100) break;
+    }
+    final result = all.map((raw) {
       final id = _string(raw['id']);
       final number = raw['number'] ?? _number(raw['title']);
       return {
@@ -123,7 +135,7 @@ class MangaTimeSource extends ContentSource {
       image: _imageUrl(raw['coverUrl'] ?? raw['cover']),
       type: _string(raw['type'], 'manga'),
       genres: _strings(genres),
-      description: _string(raw['description']),
+      description: _cleanText(raw['description']),
       rating: _string(raw['rating'] ?? stats['rating']),
     );
     item.addAll({
@@ -191,6 +203,20 @@ class MangaTimeSource extends ContentSource {
   static Map<String, dynamic> _asMap(dynamic value) => value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 
   static String _string(dynamic value, [String fallback = '']) => value == null ? fallback : value.toString().trim().isEmpty ? fallback : value.toString().trim();
+
+  static String _cleanText(dynamic value) {
+    var text = _string(value);
+    text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'<[^>]+>'), ' ');
+    text = text
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return text;
+  }
 
   static List<String> _strings(dynamic value, {String? mapKey}) {
     if (value is String) return value.trim().isEmpty ? const [] : [value.trim()];

@@ -189,7 +189,7 @@ class AnyPlaySource extends ContentSource {
     // The embed page no longer contains the media URL. It now fetches the
     // actual player from api.anyplay.stream, so resolve every server through
     // that API before handing the URL to the app WebView.
-    final resolvedLinks = await Future.wait(links.map((link) async {
+    final resolvedLinks = (await Future.wait(links.map((link) async {
       final player = await _resolvePlayerUrl(
         type: type,
         serverId: link['server_id']?.toString() ?? '',
@@ -197,15 +197,17 @@ class AnyPlaySource extends ContentSource {
         season: season,
         episode: episode,
       );
-      return {...link, 'url': player ?? link['url']};
-    }));
+      if (player == null) return <String, dynamic>{};
+      return {...link, 'url': player};
+    }))).where((link) => link.isNotEmpty).toList();
+    if (resolvedLinks.isEmpty) return null;
     final resolvedDirect = resolvedLinks.firstWhere(
       (link) => _isPlayablePlayerUrl(link['url']?.toString() ?? ''),
       orElse: () => <String, dynamic>{},
     )['url']?.toString();
     return {
       'source_id': id,
-      'stream_url': resolvedDirect ?? links.first['url'],
+      'stream_url': resolvedDirect ?? resolvedLinks.first['url'],
       'direct_stream_urls': resolvedLinks,
       'headers': {'Referer': '$_site/'},
       'download_links': const <String, dynamic>{},
@@ -240,7 +242,9 @@ class AnyPlaySource extends ContentSource {
 
   static bool _isPlayablePlayerUrl(String value) {
     final uri = Uri.tryParse(value);
-    return uri != null && (uri.scheme == 'https' || uri.scheme == 'http') && uri.host.isNotEmpty;
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http') || uri.host.isEmpty) return false;
+    final host = uri.host.toLowerCase().replaceFirst('www.', '');
+    return host != 'vidnest.fun' && !host.endsWith('.vidnest.fun');
   }
 
   Future<String?> _resolveDirectMedia(String embedUrl) async {

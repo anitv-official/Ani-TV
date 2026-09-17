@@ -1,19 +1,14 @@
 import 'anime3rb_source.dart';
 import 'anyplay_source.dart';
 import 'animefy_source.dart';
-import 'anime4up_source.dart';
 import 'anime_slayer_source.dart';
 import 'azorafy_source.dart';
 import 'manga_swat_source.dart';
-import 'manga_slayer_source.dart';
-import 'manga_mello_source.dart';
-import 'manga_dar_source.dart';
 import 'mangatime_source.dart';
 import 'hijala_source.dart';
 import 'olympus_source.dart';
 import 'risto_anime_source.dart';
 import 'drama_source.dart';
-import 'moviehdplay_source.dart';
 import 'cimalight_source.dart';
 import 'source_base.dart';
 
@@ -27,17 +22,12 @@ class SourceRegistry {
     RistoAnimeSource(),
     AnimefySource(),
     Anime3rbSource(),
-    Anime4UpSource(),
     OlympusSource(),
     AzorafySource(),
     MangaSwatSource(),
-    MangaSlayerSource(),
-    MangaMelloSource(),
-    MangaDarSource(),
     MangaTimeSource(),
     HijalaSource(),
     DramaSource(),
-    MovieHdPlaySource(),
     CimaLightSource(),
   ];
 
@@ -77,6 +67,11 @@ class SourceRegistry {
     return _cached('manga:$page', () => _merge(mangaSources.map((s) => s.latest(page: page))));
   }
 
+  static Future<List<Map<String, dynamic>>> latestFromSource(String sourceId, {int page = 1}) async {
+    final source = all.firstWhere((entry) => entry.id == sourceId);
+    return source.latest(page: page);
+  }
+
   static Future<Map<String, dynamic>?> details(String url) async {
     final source = sourceFor(url);
     if (source == null) return null;
@@ -111,7 +106,8 @@ class SourceRegistry {
       final value = link['url']?.toString() ?? '';
       final isEmbeddedPlayer =
           (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
-          (source.id == 'cimalight' && value.contains('/videos.php?'));
+          (source.id == 'cimalight' && value.contains('/videos.php?')) ||
+          (source.id == 'anime3rb' && value.contains('anime3rb.com/episode/'));
       final sourceHost = Uri.tryParse(url)?.host.toLowerCase() ?? '';
       final linkHost = Uri.tryParse(value)?.host.toLowerCase() ?? '';
       return value.isNotEmpty && value != url &&

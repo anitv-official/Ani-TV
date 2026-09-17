@@ -526,7 +526,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       'vidlink.pro',
       'player.vidzee.wtf',
       'vidrock.net',
-      'vidnest.fun',
     };
     return allowed.contains(normalized);
   }
