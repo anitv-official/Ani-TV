@@ -44,6 +44,8 @@ class CimaCloudSource extends ContentSource {
       headers: _headers,
       body: {'title': query.trim(), 'type': '0', 'sort': '1', 'page': '1'},
     ).timeout(const Duration(seconds: 35));
+    final setCookie = response.headers['set-cookie'];
+    if (setCookie != null) _rememberCookie(setCookie);
     final data = _decode(response);
     final raw = data['results'] ?? data['data'] ?? data['items'];
     if (raw is! List) return const [];
