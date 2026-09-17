@@ -91,7 +91,19 @@ class SourceRegistry {
 
     final links = (result['direct_stream_urls'] as List?)
             ?.whereType<Map>()
-            .where((link) => _isDirectMediaUrl(link['url']?.toString() ?? ''))
+            .where((link) {
+              final value = link['url']?.toString() ?? '';
+              final uri = Uri.tryParse(value);
+              // AnyPlay's current API intentionally returns third-party
+              // player pages (e.g. Videasy/Vidlink/VidSrc), not media files.
+              // Keep only valid HTTP player URLs for this source; other
+              // sources retain the existing direct-media-only behavior.
+              final isAnyPlayPlayer = source.id == 'anyplay' &&
+                  uri != null &&
+                  (uri.scheme == 'http' || uri.scheme == 'https') &&
+                  uri.host.isNotEmpty;
+              return _isDirectMediaUrl(value) || isAnyPlayPlayer;
+            })
             .toList() ??
         [];
 
