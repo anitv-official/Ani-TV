@@ -485,14 +485,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       }
     } else {
       _isDirectVideo = false;
-      // Do not open arbitrary provider pages in a WebView. Those pages are
-      // navigation surfaces, not media streams, and may show login prompts,
-      // social links, ads, or redirect the user outside AniTV.
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isInitialized = true;
-        });
+      if (_isAllowedEmbeddedPlayer(_currentUrl)) {
+        _initializeWebView();
+      } else if (mounted) {
+        setState(() { _isLoading = false; _isInitialized = true; });
       }
     }
   }
@@ -513,6 +509,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return false;
   }
 
+  bool _isAllowedEmbeddedPlayer(String url) {
+    final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
+    return const {
+      'streamtape.cc', 'luluvdo.com', 'uqload.net', 'streamwish.to',
+      'streamwish.fun', 'topcinemaa.com',
+    }.contains(host);
+  }
+
   static const String _browserUserAgent =
       'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
@@ -526,9 +530,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..setUserAgent(_browserUserAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) {
-            return NavigationDecision.navigate;
-          },
+          onNavigationRequest: (NavigationRequest request) =>
+              _isAllowedEmbeddedPlayer(request.url)
+                  ? NavigationDecision.navigate
+                  : NavigationDecision.prevent,
           onPageFinished: (String url) {
             if (!mounted) return;
             setState(() {

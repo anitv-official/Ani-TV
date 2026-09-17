@@ -128,7 +128,15 @@ class SourceRegistry {
     final lower = value.toLowerCase();
     final media = RegExp(r'\.(?:mp4|m3u8|mov|webm|mpd)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
-    return media || source.kind != 'movie';
+    final embeddedPlayer = const {
+      'streamtape.cc',
+      'luluvdo.com',
+      'uqload.net',
+      'streamwish.to',
+      'streamwish.fun',
+      'topcinemaa.com',
+    }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
+    return media || embeddedPlayer || source.kind != 'movie';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

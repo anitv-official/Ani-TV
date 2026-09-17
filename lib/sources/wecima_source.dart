@@ -20,7 +20,7 @@ class WecimaSource extends ContentSource {
   @override Future<Map<String, dynamic>> details(String url) async => Map<String, dynamic>.from(await _get(Uri.parse(_api).replace(queryParameters: {'action': 'details', 'url': url})))..['source_id'] = id;
   @override Future<Map<String, dynamic>?> streams(String url) async {
     final data = await _get(Uri.parse(_api).replace(queryParameters: {'action': 'servers', 'url': url}));
-    final servers = (data['servers'] as List? ?? const []).whereType<Map>().map((server) => {'url': _text(server['url'], ''), 'label': _text(server['name'], 'سيرفر'), 'name': _text(server['name'], 'سيرفر')}).where((x) => x['url'].toString().isNotEmpty).toList();
+    final servers = (data['servers'] as List? ?? const []).whereType<Map>().map((server) => {'url': _text(server['url'], ''), 'label': _text(server['name'], 'سيرفر'), 'name': _text(server['name'], 'سيرفر'), 'type': _text(server['type'], 'player')}).where((x) => x['url'].toString().isNotEmpty).toList();
     if (servers.isEmpty) return null;
     return {'stream_url': servers.first['url'], 'direct_stream_urls': servers, 'servers': servers, 'title': 'مصادر Wecima'};
   }
