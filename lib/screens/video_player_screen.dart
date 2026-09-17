@@ -514,7 +514,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     return const {
       'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
       'streamwish.fun', 'topcinemaa.com', 'topcinemaa.cc', 'topcinemaa.co',
-      'web2.topcinemaa.com',
+      'web2.topcinemaa.com', 'vidtube.one', 'down.vidtube.one',
     }.contains(host);
   }
 
