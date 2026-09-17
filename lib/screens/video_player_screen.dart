@@ -46,6 +46,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Timer? _qualityChangeTimer;
   bool _isChangingResolution = false;
 
+  bool get _isAnyPlaySession {
+    final referer = widget.headers['Referer']?.toLowerCase() ?? '';
+    return _isAnyPlayEmbed || referer.contains('anyplay.stream');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -510,6 +515,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   bool get _isAnyPlayEmbed => _currentUrl.toLowerCase().contains('anyplay.stream/embed/');
 
+  bool _isAllowedAnyPlayPlayerHost(String host) {
+    final normalized = host.toLowerCase().replaceFirst('www.', '');
+    const allowed = {
+      'player.videasy.net',
+      '111movies.com',
+      'multiembed.mov',
+      'vidsrc.cc',
+      'vidsrc.me',
+      'vidlink.pro',
+      'player.vidzee.wtf',
+      'vidrock.net',
+      'vidnest.fun',
+    };
+    return allowed.contains(normalized);
+  }
+
   bool _isBlockedAdUrl(String value) {
     final lower = value.toLowerCase();
     if (!lower.startsWith('http://') && !lower.startsWith('https://')) return true;
@@ -532,6 +553,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       '/popunder',
       'popunder',
       'redirect?url=',
+      'adsterra',
+      'monetag',
+      'bet365',
+      'casino',
     ];
     return adMarkers.any(lower.contains);
   }
@@ -599,13 +624,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onNavigationRequest: (NavigationRequest request) {
-            if (_isAnyPlayEmbed) {
+            if (_isAnyPlaySession) {
               if (_isBlockedAdUrl(request.url)) return NavigationDecision.prevent;
-              // Never let an ad or a clicked external link replace the
-              // AnyPlay page. Child frames (the actual player) are allowed.
+              // The resolved AnyPlay player is external, but every other
+              // top-level navigation is an ad/redirect and must be blocked.
               if (request.isMainFrame) {
                 final host = Uri.tryParse(request.url)?.host.toLowerCase().replaceFirst('www.', '') ?? '';
-                if (host.isNotEmpty && host != 'anyplay.stream' && !host.endsWith('.anyplay.stream')) {
+                final isAnyPlayHost = host == 'anyplay.stream' || host.endsWith('.anyplay.stream');
+                final isAllowedPlayer = _isAllowedAnyPlayPlayerHost(host);
+                if (host.isNotEmpty && !isAnyPlayHost && !isAllowedPlayer) {
                   return NavigationDecision.prevent;
                 }
               }
@@ -614,7 +641,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           },
           onPageFinished: (String url) {
             if (!mounted) return;
-            if (_isAnyPlayEmbed) {
+            if (_isAnyPlaySession) {
               _webViewController?.runJavaScript(_anyPlayAdShieldScript);
             }
             setState(() {

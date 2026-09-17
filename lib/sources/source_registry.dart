@@ -107,11 +107,6 @@ class SourceRegistry {
             .toList() ??
         [];
 
-    // Anime3rb is intentionally player-only: never pass an embed page to the
-    // app's WebView fallback. If no real media URL was extracted, fail cleanly
-    // so the user sees the source-unavailable state instead of a broken player.
-    if (source.id == 'anime3rb' && links.isEmpty) return null;
-
     final playable = links.any((link) {
       final value = link['url']?.toString() ?? '';
       final isEmbeddedPlayer =

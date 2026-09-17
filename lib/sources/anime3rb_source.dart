@@ -89,6 +89,8 @@ class Anime3rbSource extends ContentSource {
     for (final value in extractServerUrls(page.body, episodeUrl)) addCandidate(value);
 
     final direct = <Map<String, String>>[];
+    final players = <Map<String, String>>[];
+    final seenPlayers = <String>{};
     final seenDirect = <String>{};
     String? referer;
     Future<void> addDirect(String raw, String sourcePage, [String quality = 'مباشر']) async {
@@ -102,26 +104,43 @@ class Anime3rbSource extends ContentSource {
       referer ??= sourcePage;
     }
 
+    void addPlayer(String raw, [String quality = 'Anime3rb • مشغل']) {
+      final value = _absolute(episodeUrl, _normalize(raw));
+      final uri = Uri.tryParse(value);
+      if (value.isEmpty || uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return;
+      final host = HtmlParse.hostOf(value);
+      if (host.isEmpty || host == 'facebook.com' || host == 'twitter.com' || !seenPlayers.add(value)) return;
+      players.add({'quality': quality, 'url': value});
+    }
+
     for (final candidate in candidates) {
       if (_isDirectMediaUrl(candidate)) {
         await addDirect(candidate, episodeUrl);
         continue;
       }
       final response = await _getPage(candidate, referer: episodeUrl);
-      if (response == null || _isBlocked(response.body)) continue;
+      if (response == null || _isBlocked(response.body)) {
+        // A server may expose the playable iframe but reject server-side
+        // scraping. Keep the iframe as a WebView fallback instead of failing
+        // the episode completely.
+        addPlayer(candidate);
+        continue;
+      }
       for (final media in extractDirectMediaUrls(response.body, candidate)) {
         await addDirect(media, candidate, 'Anime3rb • مباشر');
       }
+      if (extractDirectMediaUrls(response.body, candidate).isEmpty) addPlayer(candidate);
     }
 
-    if (direct.isEmpty) {
+    if (direct.isEmpty && players.isEmpty) {
       throw Exception('Anime3rb: لم يتم العثور على رابط HLS أو MP4 صالح للتشغيل');
     }
+    final playback = direct.isNotEmpty ? direct : players;
     final playbackReferer = referer ?? episodeUrl;
     return {
       'source_id': id,
-      'stream_url': direct.first['url'],
-      'direct_stream_urls': direct.map((e) => {'quality': e['quality'], 'url': e['url']}).toList(),
+      'stream_url': playback.first['url'],
+      'direct_stream_urls': playback.map((e) => {'quality': e['quality'], 'url': e['url']}).toList(),
       'headers': {
         'Referer': playbackReferer,
         'Origin': _originOf(playbackReferer),
