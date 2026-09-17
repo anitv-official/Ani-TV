@@ -8,7 +8,7 @@ class WecimaSource extends ContentSource {
   @override String get id => 'wecima';
   @override String get name => 'Wecima';
   @override String get kind => 'movie';
-  @override List<String> get hosts => const ['wecima.cx', 'wecima.show', 'wecima.watch'];
+  @override List<String> get hosts => const ['wecima.cx', 'wecima.show', 'wecima.watch', 'wec.im', 'wecimamax.com'];
 
   @override Future<List<Map<String, dynamic>>> latest({int page = 1}) => _catalog('latest', page: page);
   @override Future<List<Map<String, dynamic>>> search(String query) => _catalog('search', query: query);
