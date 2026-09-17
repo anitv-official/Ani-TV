@@ -14,18 +14,18 @@ class FaselExploreScreen extends StatefulWidget {
 }
 class _FaselExploreScreenState extends State<FaselExploreScreen> {
   final _scroll = ScrollController(); final _search = TextEditingController(); final _items = <Map<String, dynamic>>[];
-  int _page = 1; bool _loading = true, _more = false; String _query = '';
+  int _page = 1; bool _loading = true, _loadingMore = false, _more = true; String _query = '';
   @override void initState() { super.initState(); _scroll.addListener(_onScroll); _load(reset: true); }
   @override void dispose() { _scroll.dispose(); _search.dispose(); super.dispose(); }
-  void _onScroll() { if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 500) _load(); }
+  void _onScroll() { if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 500 && !_loading && !_loadingMore && _more) _load(); }
   Future<void> _load({bool reset = false}) async {
-    if (_more || (!reset && _loading)) return;
-    if (reset) { _page = 1; setState(() => _loading = true); } else { setState(() => _more = true); }
+    if (_loadingMore || (!reset && !_more)) return;
+    if (reset) { _page = 1; setState(() { _loading = true; _loadingMore = false; _more = true; }); } else { setState(() => _loadingMore = true); }
     try {
       final rows = _query.isEmpty ? await ApiService.fetchLatestMovies(page: _page) : await ApiService.searchMovies(_query);
       if (!mounted) return;
-      setState(() { if (reset) _items.clear(); final keys = _items.map((x) => x['url']).toSet(); _items.addAll(rows.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).where((x) => keys.add(x['url']))); _page++; _loading = false; _more = _query.isEmpty && rows.isNotEmpty; });
-    } catch (_) { if (mounted) setState(() { _loading = false; _more = false; }); }
+      setState(() { if (reset) _items.clear(); final keys = _items.map((x) => x['url']).toSet(); _items.addAll(rows.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).where((x) => keys.add(x['url']))); _page++; _loading = false; _loadingMore = false; _more = _query.isEmpty && rows.isNotEmpty; });
+    } catch (_) { if (mounted) setState(() { _loading = false; _loadingMore = false; _more = false; }); }
   }
   @override Widget build(BuildContext context) => Scaffold(backgroundColor: AppTheme.backgroundColor, body: SafeArea(child: Column(children: [
     if (!widget.embedded) const AppFixedHeader(title: 'الأفلام والمسلسلات', showBack: true),
