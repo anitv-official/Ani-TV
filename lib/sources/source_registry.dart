@@ -195,13 +195,12 @@ class _RegistryCache {
 }
 
 /// Explicit API group names for non-UI callers and diagnostics.
-enum InternalApiGroup { anime, manga, drama, movies }
+enum InternalApiGroup { anime, manga, drama }
 
 extension InternalApiGroupLabel on InternalApiGroup {
   String get key => switch (this) {
         InternalApiGroup.anime => 'api_anime',
         InternalApiGroup.manga => 'api_manga',
         InternalApiGroup.drama => 'api_drama',
-        InternalApiGroup.movies => 'api_movies',
       };
 }

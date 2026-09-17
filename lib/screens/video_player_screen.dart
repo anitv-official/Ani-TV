@@ -46,8 +46,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   Timer? _qualityChangeTimer;
   bool _isChangingResolution = false;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -510,11 +508,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   static const String _browserUserAgent =
       'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36';
 
-
-
-
-
-  })();''';
 
   void _initializeWebView() {
     setState(() => _isLoading = true);
