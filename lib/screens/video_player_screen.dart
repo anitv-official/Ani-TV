@@ -533,12 +533,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ..setUserAgent(_browserUserAgent)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onNavigationRequest: (NavigationRequest request) =>
-              _isAllowedEmbeddedPlayer(request.url)
-                  ? NavigationDecision.navigate
-                  : NavigationDecision.prevent,
+          onNavigationRequest: (NavigationRequest request) {
+            final uri = Uri.tryParse(request.url);
+            final scheme = uri?.scheme.toLowerCase();
+            final currentHost = Uri.tryParse(_currentUrl)?.host.toLowerCase().replaceFirst('www.', '');
+            final host = uri?.host.toLowerCase().replaceFirst('www.', '');
+            if (scheme == 'about' || scheme == 'blob' || scheme == 'data') {
+              return NavigationDecision.navigate;
+            }
+            if (host == currentHost || _isAllowedEmbeddedPlayer(request.url)) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
           onPageFinished: (String url) {
             if (!mounted) return;
+            _blockEmbeddedAds();
             setState(() {
               _isLoading = false;
               _isInitialized = true;
@@ -581,6 +591,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         _isInitialized = true;
       });
     });
+  }
+
+  void _blockEmbeddedAds() {
+    final controller = _webViewController;
+    if (controller == null) return;
+    controller.runJavaScript(r'''(() => {
+      try {
+        window.open = () => null;
+        document.addEventListener('click', (event) => {
+          const a = event.target.closest && event.target.closest('a');
+          if (a && a.target === '_blank') { event.preventDefault(); event.stopPropagation(); }
+        }, true);
+        const selectors = ['.ad','.ads','.adsbygoogle','#ads','#ad','.popup','.popunder','.overlay-ad','[id*="popup"]','[class*="popup"]'];
+        const hide = () => selectors.forEach((selector) => document.querySelectorAll(selector).forEach((node) => node.remove()));
+        hide();
+        new MutationObserver(hide).observe(document.documentElement, {childList:true, subtree:true});
+      } catch (_) {}
+    })()''');
   }
 
   Future<void> _loadLastPosition() async {
