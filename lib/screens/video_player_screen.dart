@@ -834,7 +834,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       child: Center(
                         child: CustomLoadingWidget(
                             message: _isChangingResolution ? "Switching Quality..." : "جارٍ التحميل...",
-                            color: Color(0xFF1976D2),
+                            color: AppTheme.primaryColor,
                         ),
                       ),
                     ),
@@ -856,7 +856,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         child: Center(
           child: CustomLoadingWidget(
             message: 'Initializing...',
-            color: Color(0xFF1976D2),
+            color: AppTheme.primaryColor,
           ),
         ),
       );

@@ -761,7 +761,10 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       child: Column(
         children: [
           Container(
-            color: Colors.black.withOpacity(0.7),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.72),
+              border: const Border(bottom: BorderSide(color: AppTheme.borderColor)),
+            ),
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -793,7 +796,10 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
           Spacer(),
           // Navigasi chapter di bagian bawah
           Container(
-            color: Colors.black.withOpacity(0.7),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.72),
+              border: const Border(top: BorderSide(color: AppTheme.borderColor)),
+            ),
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
