@@ -512,8 +512,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isAllowedEmbeddedPlayer(String url) {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
     return const {
-      'streamtape.cc', 'luluvdo.com', 'uqload.net', 'streamwish.to',
-      'streamwish.fun', 'topcinemaa.com',
+      'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
+      'streamwish.fun', 'topcinemaa.com', 'topcinemaa.cc', 'topcinemaa.co',
+      'web2.topcinemaa.com',
     }.contains(host);
   }
 

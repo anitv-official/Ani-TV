@@ -132,9 +132,13 @@ class SourceRegistry {
       'streamtape.cc',
       'luluvdo.com',
       'uqload.net',
+      'uqload.vc',
       'streamwish.to',
       'streamwish.fun',
       'topcinemaa.com',
+      'topcinemaa.cc',
+      'topcinemaa.co',
+      'web2.topcinemaa.com',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     return media || embeddedPlayer || source.kind != 'movie';
   }
