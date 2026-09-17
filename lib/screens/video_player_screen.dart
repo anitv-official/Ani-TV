@@ -548,6 +548,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             if (!mounted) return;
             setState(() {
               _isLoading = false;
+              _isInitialized = true;
               _isChangingResolution = false;
             });
           },
@@ -569,6 +570,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     };
     controller.loadRequest(Uri.parse(_currentUrl), headers: headers);
     _webViewController = controller;
+    // Some embedded providers never fire onPageFinished after a blocked ad
+    // or a failed subresource. Do not leave the player behind an endless
+    // loading overlay; show the WebView after a bounded startup window.
+    Future.delayed(const Duration(seconds: 12), () {
+      if (!mounted || !_isLoading || _isDirectVideo) return;
+      setState(() {
+        _isLoading = false;
+        _isInitialized = true;
+      });
+    });
   }
 
   Future<void> _loadLastPosition() async {
@@ -796,6 +807,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ),
         ],
       );
+    }
+
+    if (!_isDirectVideo && _webViewController != null) {
+      return WebViewWidget(controller: _webViewController!);
     }
 
     return Center(
