@@ -42,7 +42,7 @@ class AppNavigationDrawer extends StatelessWidget {
             _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime), selected: currentSection == AppSection.anime),
             _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
             _item(context, Icons.live_tv_rounded, 'لائحة الدراما', () => _select(context, AppSection.drama), selected: currentSection == AppSection.drama),
-            _item(context, Icons.local_movies_rounded, 'لائحة الأفلام', () => _select(context, AppSection.movies), selected: currentSection == AppSection.movies),
+            _item(context, Icons.auto_stories_rounded, 'لائحة الروايات', () => _select(context, AppSection.novels), selected: currentSection == AppSection.novels),
             _item(context, Icons.forum_outlined, 'المجتمع', () => _select(context, AppSection.community), selected: currentSection == AppSection.community),
             const SizedBox(height: 14),
             Padding(
@@ -51,7 +51,6 @@ class AppNavigationDrawer extends StatelessWidget {
             ),
             _item(context, Icons.favorite_rounded, 'المفضلات', () => _select(context, AppSection.favorites), selected: currentSection == AppSection.favorites),
             _item(context, Icons.download_for_offline_rounded, 'التنزيلات', () => _select(context, AppSection.downloads), selected: currentSection == AppSection.downloads),
-            _item(context, Icons.hub_outlined, 'المصادر', () => _select(context, AppSection.sources), selected: currentSection == AppSection.sources),
             _item(context, Icons.settings_outlined, 'الإعدادات', () => _select(context, AppSection.settings), selected: currentSection == AppSection.settings),
             _item(context, Icons.info_outline_rounded, 'حول AniTV', () => _select(context, AppSection.about), selected: currentSection == AppSection.about),
           ],

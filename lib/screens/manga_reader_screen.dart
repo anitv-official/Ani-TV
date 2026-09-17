@@ -61,8 +61,6 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   String _chapterId = '';
   bool _loading = false;
   String? _error;
-  bool _isPreloading = false;
-  int _preloadedCount = 0;
   bool _autoTransitionScheduled = false;
 
   // Navigasi chapter
@@ -116,8 +114,6 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       _chapterTitle = widget.title ?? '';
       _chapterId = widget.chapterId ?? '';
       _loadLastPage();
-      // Preload semua gambar setelah halaman diinisialisasi
-      _preloadImages();
       // Save to history for direct navigation
       if (widget.title != null && widget.chapterId != null) {
         _saveToHistoryDirect();
@@ -158,8 +154,6 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       });
       _saveToHistory(chapter, url);
       _loadLastPage();
-      // Preload semua gambar setelah data diambil
-      _preloadImages();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -357,47 +351,6 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     }
   }
 
-  // Metode untuk melakukan preload semua gambar
-  void _preloadImages() {
-    if (_pages.isEmpty) return;
-
-    setState(() {
-      _isPreloading = true;
-      _preloadedCount = 0;
-    });
-
-    for (int i = 0; i < _pages.length; i++) {
-      // Pastikan URL gambar sudah dibersihkan dari spasi
-      final cleanImageUrl = _pages[i].trim();
-      // Preload gambar menggunakan CachedNetworkImageProvider
-      final ImageProvider<Object> provider = cleanImageUrl.startsWith('/') || cleanImageUrl.startsWith('file://')
-          ? FileImage(File(cleanImageUrl.replaceFirst('file://', ''))) as ImageProvider<Object>
-          : CachedNetworkImageProvider(
-          cleanImageUrl,
-          cacheKey: 'manga_${_chapterId}_$i',
-        ) as ImageProvider<Object>;
-      precacheImage(provider, context,
-        onError: (exception, stackTrace) {
-          // Tangani error saat preload
-          setState(() {
-            _preloadedCount++;
-            if (_preloadedCount >= _pages.length) {
-              _isPreloading = false;
-            }
-          });
-        },
-      ).then((_) {
-        // Update counter saat gambar berhasil di-preload
-        setState(() {
-          _preloadedCount++;
-          if (_preloadedCount >= _pages.length) {
-            _isPreloading = false;
-          }
-        });
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -412,17 +365,6 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
       );
     }
 
-    if (_isPreloading) {
-      return Scaffold(
-        backgroundColor: _isDarkMode ? Colors.black : Colors.white,
-        body: Center(
-          child: CustomLoadingWidget(
-            message: 'جارٍ تجهيز صفحات الفصل... (${_preloadedCount}/${_pages.length})',
-            color: AppTheme.primaryColor,
-          ),
-        ),
-      );
-    }
     if (_error != null) {
       return Scaffold(
         backgroundColor: _isDarkMode ? Colors.black : Colors.white,

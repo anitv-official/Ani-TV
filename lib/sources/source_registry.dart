@@ -1,149 +1,141 @@
-import 'anime3rb_source.dart';
-import 'anyplay_source.dart';
 import 'animefy_source.dart';
 import 'anime_slayer_source.dart';
-import 'azorafy_source.dart';
+import 'drama_source.dart';
+import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
-import 'hijala_source.dart';
-import 'olympus_source.dart';
-import 'risto_anime_source.dart';
-import 'drama_source.dart';
-import 'cimalight_source.dart';
 import 'source_base.dart';
 
+/// Internal API catalog.
+///
+/// These adapters are implementation details, not user-facing "sources".
+/// HTML/scraping-only adapters are intentionally not registered here.
 class SourceRegistry {
-  static const Duration _sourceTimeout = Duration(seconds: 12);
+  static const Duration _requestTimeout = Duration(seconds: 35);
   static const Duration _cacheDuration = Duration(minutes: 3);
+  static const int _maxAttempts = 3;
   static final Map<String, _RegistryCache> _cache = {};
-  static final List<ContentSource> all = [
-    AnyPlaySource(),
+  static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
+
+  // API-only adapters. Keep this list private so the UI cannot expose them.
+  static final List<ContentSource> _apis = [
     AnimeSlayerSource(),
-    RistoAnimeSource(),
     AnimefySource(),
-    Anime3rbSource(),
-    OlympusSource(),
-    AzorafySource(),
+    DramaSource(),
     MangaSwatSource(),
     MangaTimeSource(),
-    HijalaSource(),
-    DramaSource(),
-    CimaLightSource(),
+    MangaMelloSource(),
   ];
 
-  static List<ContentSource> get animeSources =>
-      all.where((s) => s.kind == 'anime').toList();
+  static List<ContentSource> get _animeApis =>
+      _apis.where((s) => s.kind == 'anime').toList(growable: false);
+  static List<ContentSource> get _mangaApis =>
+      _apis.where((s) => s.kind == 'manga').toList(growable: false);
+  static List<ContentSource> get _dramaApis =>
+      _apis.where((s) => s.kind == 'drama').toList(growable: false);
 
-  static List<ContentSource> get mangaSources =>
-      all.where((s) => s.kind == 'manga').toList();
+  /// Kept for backwards compatibility. API adapters must not appear as sources.
+  static const List<ContentSource> all = <ContentSource>[];
 
-  static List<ContentSource> get dramaSources =>
-      all.where((s) => s.kind == 'drama').toList();
+  /// Compatibility getters for tests/services. The UI uses [all], which is
+  /// intentionally empty so API adapters are never shown as sources.
+  static List<ContentSource> get animeSources => _animeApis;
+  static List<ContentSource> get mangaSources => _mangaApis;
+  static List<ContentSource> get dramaSources => _dramaApis;
 
   static ContentSource? sourceFor(String url) {
-    for (final source in all) {
+    for (final source in _apis) {
       if (source.handles(url)) return source;
     }
     return null;
   }
 
-  static Future<List<Map<String, dynamic>>> searchAnime(String query) async {
-    return _merge([...animeSources, ...dramaSources].map((s) => s.search(query)), query: query);
+  static Future<List<Map<String, dynamic>>> searchAnime(String query) {
+    return _merge([
+      ..._animeApis,
+      ..._dramaApis,
+    ].map((source) => _retry(() => source.search(query))));
   }
 
-  static Future<List<Map<String, dynamic>>> searchManga(String query) async {
-    return _merge(mangaSources.map((s) => s.search(query)), query: query);
+  static Future<List<Map<String, dynamic>>> searchManga(String query) {
+    return _merge(_mangaApis.map((source) => _retry(() => source.search(query))));
   }
 
-  static Future<List<Map<String, dynamic>>> searchAll(String query) async {
-    return _merge(all.map((s) => s.search(query)), query: query);
+  static Future<List<Map<String, dynamic>>> searchAll(String query) {
+    return _merge(_apis.map((source) => _retry(() => source.search(query))));
   }
 
-  static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) async {
-    return _cached('anime:$page', () => _merge([...animeSources, ...dramaSources].map((s) => s.latest(page: page))));
+  static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) {
+    return _cached('anime:$page', () => _merge([
+          ..._animeApis,
+          ..._dramaApis,
+        ].map((source) => _retry(() => source.latest(page: page)))));
   }
 
-  static Future<List<Map<String, dynamic>>> latestManga({int page = 1}) async {
-    return _cached('manga:$page', () => _merge(mangaSources.map((s) => s.latest(page: page))));
+  static Future<List<Map<String, dynamic>>> latestManga({int page = 1}) {
+    return _cached('manga:$page', () =>
+        _merge(_mangaApis.map((source) => _retry(() => source.latest(page: page)))));
   }
 
-  static Future<List<Map<String, dynamic>>> latestFromSource(String sourceId, {int page = 1}) async {
-    final source = all.firstWhere((entry) => entry.id == sourceId);
-    return source.latest(page: page);
+  static Future<List<Map<String, dynamic>>> latestFromSource(
+      String sourceId, {int page = 1}) async {
+    final source = _apis.firstWhere((entry) => entry.id == sourceId);
+    return _retry(() => source.latest(page: page));
   }
 
   static Future<Map<String, dynamic>?> details(String url) async {
     final source = sourceFor(url);
     if (source == null) return null;
-    return source.details(url);
+    return _retry(() => source.details(url));
   }
 
   static Future<Map<String, dynamic>?> streams(String url) async {
     final source = sourceFor(url);
     if (source == null) return null;
-    final result = await source.streams(url);
+    final result = await _retry(() => source.streams(url));
     if (result == null) return null;
-
     final links = (result['direct_stream_urls'] as List?)
             ?.whereType<Map>()
-            .where((link) {
-              final value = link['url']?.toString() ?? '';
-              final uri = Uri.tryParse(value);
-              // AnyPlay's current API intentionally returns third-party
-              // player pages (e.g. Videasy/Vidlink/VidSrc), not media files.
-              // Keep only valid HTTP player URLs for this source; other
-              // sources retain the existing direct-media-only behavior.
-              final isAnyPlayPlayer = source.id == 'anyplay' &&
-                  uri != null &&
-                  (uri.scheme == 'http' || uri.scheme == 'https') &&
-                  uri.host.isNotEmpty;
-              return _isDirectMediaUrl(value) || isAnyPlayPlayer;
-            })
+            .where((link) => _validPlayableLink(link['url']?.toString() ?? '', source))
             .toList() ??
         [];
-
-    final playable = links.any((link) {
-      final value = link['url']?.toString() ?? '';
-      final isEmbeddedPlayer =
-          (source.id == 'anyplay' && value.contains('anyplay.stream/embed/')) ||
-          (source.id == 'cimalight' && value.contains('/videos.php?')) ||
-          (source.id == 'anime3rb' && value.contains('anime3rb.com/episode/'));
-      final sourceHost = Uri.tryParse(url)?.host.toLowerCase() ?? '';
-      final linkHost = Uri.tryParse(value)?.host.toLowerCase() ?? '';
-      return value.isNotEmpty && value != url &&
-          (_isDirectMediaUrl(value) || isEmbeddedPlayer || linkHost != sourceHost);
-    });
-    return playable ? result : null;
+    // APIs may return player URLs rather than direct media; preserve valid
+    // HTTP(S) player URLs while rejecting malformed links.
+    if (links.isEmpty) return null;
+    return {...result, 'direct_stream_urls': links};
   }
 
-  static bool _isDirectMediaUrl(String value) {
+  static bool _validPlayableLink(String value, ContentSource source) {
+    final uri = Uri.tryParse(value);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https') || uri.host.isEmpty) {
+      return false;
+    }
     final lower = value.toLowerCase();
-    return RegExp(r'\.(?:mp4|m3u8|mov|webm)(?:[?#].*)?$').hasMatch(lower) ||
+    final media = RegExp(r'\.(?:mp4|m3u8|mov|webm|mpd)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
+    return media || source.kind == 'anime' || source.kind == 'drama';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {
     final source = sourceFor(url);
     if (source == null) return null;
-    return source.chapterImages(url);
+    return _retry(() => source.chapterImages(url));
   }
 
   static Future<List<Map<String, dynamic>>> _merge(
-      Iterable<Future<List<Map<String, dynamic>>>> tasks, {String query = ''}) async {
-    final results = await Future.wait(
-      tasks.map((task) async {
-        try {
-          return await task.timeout(_sourceTimeout);
-        } catch (_) {
-          return <Map<String, dynamic>>[];
-        }
-      }),
-    );
+      Iterable<Future<List<Map<String, dynamic>>>> tasks) async {
+    final results = await Future.wait(tasks.map((task) async {
+      try {
+        return await task;
+      } catch (_) {
+        // An unavailable provider must not hide results from healthy APIs.
+        return <Map<String, dynamic>>[];
+      }
+    }));
     final merged = <Map<String, dynamic>>[];
     final seen = <String>{};
     for (final list in results) {
       for (final item in list) {
-        if (query.trim().isNotEmpty && !_matchesQuery(item, query)) continue;
         final key = '${item['url']}|${item['source_id']}|${item['title']}';
         if (seen.add(key)) merged.add(item);
       }
@@ -152,38 +144,63 @@ class SourceRegistry {
     return merged;
   }
 
-  static int _sourcePriority(Map<String, dynamic> item) {
-    final source = '${item['source_id'] ?? item['source'] ?? ''}'.toLowerCase();
-    final url = '${item['url'] ?? ''}'.toLowerCase();
-    if (source == 'anime_slayer' || source.contains('anime slayer') || url.contains('anime_slayer')) return 0;
-    return 1;
+  static Future<T> _retry<T>(Future<T> Function() operation) async {
+    Object? lastError;
+    for (var attempt = 1; attempt <= _maxAttempts; attempt++) {
+      try {
+        return await operation().timeout(_requestTimeout);
+      } catch (error) {
+        lastError = error;
+        if (attempt < _maxAttempts) {
+          await Future<void>.delayed(Duration(milliseconds: 250 * attempt));
+        }
+      }
+    }
+    throw lastError ?? Exception('API request failed');
   }
 
-  static bool _matchesQuery(Map<String, dynamic> item, String query) {
-    if ('${item['source_id'] ?? ''}'.toLowerCase() == 'anyplay') return true;
-    final normalizedQuery = query.toLowerCase().trim();
-    final haystack = '${item['title'] ?? ''} ${item['url'] ?? ''}'.toLowerCase();
-    final terms = normalizedQuery.split(RegExp(r'\s+')).where((term) => term.length > 1).toList();
-    if (terms.isEmpty) return haystack.contains(normalizedQuery);
-    return terms.any(haystack.contains);
+  static int _sourcePriority(Map<String, dynamic> item) {
+    final source = '${item['source_id'] ?? item['source'] ?? ''}'.toLowerCase();
+    return source == 'anime_slayer' ? 0 : 1;
   }
 
   static Future<List<Map<String, dynamic>>> _cached(
-      String key, Future<List<Map<String, dynamic>>> Function() loader) async {
+      String key, Future<List<Map<String, dynamic>>> Function() loader) {
     final existing = _cache[key];
-    if (existing != null && DateTime.now().difference(existing.createdAt) < _cacheDuration) {
-      return existing.value;
+    if (existing != null &&
+        DateTime.now().difference(existing.createdAt) < _cacheDuration) {
+      return Future<List<Map<String, dynamic>>>.value(existing.value);
     }
-    final value = await loader();
-    if (value.isNotEmpty) _cache[key] = _RegistryCache(value);
-    return value;
+    final running = _inFlight[key];
+    if (running != null) return running;
+    final future = loader();
+    _inFlight[key] = future;
+    future.then((value) {
+      if (value.isNotEmpty) _cache[key] = _RegistryCache(value);
+    }).whenComplete(() {
+      if (identical(_inFlight[key], future)) _inFlight.remove(key);
+    });
+    return future;
   }
 
-  static void clearCache() => _cache.clear();
+  static void clearCache() {
+    _cache.clear();
+  }
 }
 
 class _RegistryCache {
   final List<Map<String, dynamic>> value;
   final DateTime createdAt = DateTime.now();
   _RegistryCache(this.value);
+}
+
+/// Explicit API group names for non-UI callers and diagnostics.
+enum InternalApiGroup { anime, manga, drama }
+
+extension InternalApiGroupLabel on InternalApiGroup {
+  String get key => switch (this) {
+        InternalApiGroup.anime => 'api_anime',
+        InternalApiGroup.manga => 'api_manga',
+        InternalApiGroup.drama => 'api_drama',
+      };
 }

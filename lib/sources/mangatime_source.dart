@@ -13,6 +13,7 @@ class MangaTimeSource extends ContentSource {
   static const _site = 'https://mangatime.org';
   static const _trpc = '$_site/api/trpc';
   static const _appVersion = '1.5.45';
+  static final http.Client _client = http.Client();
 
   @override
   String get id => 'mangatime';
@@ -54,8 +55,9 @@ class MangaTimeSource extends ContentSource {
     final raw = _asMap(await _call('content.getSeriesBySlug', {'slug': slug}));
     if (raw.isEmpty) throw Exception('MangaTime: series not found');
     final item = _series(raw);
-    item['url'] = _seriesUrl(_string(raw['id']), slug);
-    item['chapters'] = await _chapters(_string(raw['id']));
+    final seriesId = _string(raw['id'] ?? raw['_id'] ?? raw['seriesId']);
+    item['url'] = _seriesUrl(seriesId, slug);
+    item['chapters'] = await _chapters(seriesId);
     item['total_chapters'] = (item['chapters'] as List).length;
     return item;
   }
@@ -89,21 +91,16 @@ class MangaTimeSource extends ContentSource {
 
   Future<List<Map<String, dynamic>>> _chapters(String seriesId) async {
     if (seriesId.isEmpty) return const [];
-    final all = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    for (var page = 1; page <= 50; page++) {
-      final response = await _call('content.getChapters', {'seriesId': seriesId, 'page': page, 'limit': 100});
-      final batch = _list(response);
-      if (batch.isEmpty) break;
-      for (final raw in batch) {
-        final id = _string(raw['id']);
-        if (id.isNotEmpty && seen.add(id)) all.add(raw);
-      }
-      if (batch.length < 100) break;
-    }
+    // MangaTime's current contract ignores page/offset for this procedure.
+    // `limit: -1` is the documented internal flag used by its web client and
+    // returns the complete chapter list (not just the first 100 chapters).
+    final all = _list(await _call('content.getChapters', {
+      'seriesId': seriesId,
+      'limit': -1,
+    }));
     final result = all.map((raw) {
-      final id = _string(raw['id']);
-      final number = raw['number'] ?? _number(raw['title']);
+      final id = _chapterId(raw);
+      final number = raw['number'] ?? raw['chapterNumber'] ?? _number(raw['title']);
       return {
         'id': id,
         'chapter_id': id,
@@ -157,7 +154,7 @@ class MangaTimeSource extends ContentSource {
 
   Future<dynamic> _call(String procedure, Map<String, dynamic> input) async {
     final encoded = Uri.encodeQueryComponent(jsonEncode({'json': input}));
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('$_trpc/$procedure?input=$encoded'),
       headers: const {
         'Accept': 'application/json',
@@ -192,7 +189,7 @@ class MangaTimeSource extends ContentSource {
     final unwrapped = _unwrap(value);
     if (unwrapped is List) return unwrapped.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
     if (unwrapped is Map) {
-      for (final key in const ['results', 'items', 'chapters', 'data']) {
+      for (final key in const ['results', 'items', 'chapters', 'docs', 'records', 'rows', 'data']) {
         final found = _list(unwrapped[key]);
         if (found.isNotEmpty) return found;
       }
@@ -201,6 +198,8 @@ class MangaTimeSource extends ContentSource {
   }
 
   static Map<String, dynamic> _asMap(dynamic value) => value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+  static String _chapterId(Map<String, dynamic> raw) =>
+      _string(raw['id'] ?? raw['_id'] ?? raw['chapterId'] ?? raw['chapter_id']);
 
   static String _string(dynamic value, [String fallback = '']) => value == null ? fallback : value.toString().trim().isEmpty ? fallback : value.toString().trim();
 

@@ -231,6 +231,7 @@ class SourceSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sources = SourceRegistry.all;
+    if (sources.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

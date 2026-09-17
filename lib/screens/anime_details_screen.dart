@@ -15,6 +15,7 @@ import '../widgets/ui/poster_image.dart';
 import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/ui/detail_ui.dart';
 
 class AnimeDetailsScreen extends StatefulWidget {
   final String url;
@@ -178,32 +179,16 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
             SourceBadge(label: anime['status']?.toString()),
         ]),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if ((anime['release_date'] ?? '').toString().trim().isNotEmpty)
-              Text(
-                anime['release_date'].toString().split(',').last.trim(),
-                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-              ),
-            Text(
-              '${anime['total_episodes'] ?? (anime['episodes'] as List?)?.length ?? 0} حلقة',
-              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-            ),
-            if ((anime['rating'] ?? '').toString().trim().isNotEmpty) ...[
-              const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
-              Text(
-                anime['rating'].toString(),
-                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Genres as text or simple list? Reference image uses text description.
-        // Let's use the synopsis as the main text block.
+        DetailStatsCard(stats: [
+          DetailStat(value: '${anime['total_episodes'] ?? (anime['episodes'] as List?)?.length ?? 0}', label: 'الحلقات', icon: Icons.play_circle_outline_rounded, color: const Color(0xFF67C96B)),
+          DetailStat(value: '${anime['rating'] ?? '—'}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
+          DetailStat(value: anime['status']?.toString() ?? '—', label: 'الحالة', icon: Icons.info_outline_rounded, color: const Color(0xFF36B9E8)),
+        ]),
+        if (anime['genres'] is List && (anime['genres'] as List).isNotEmpty) ...[
+          const DetailSectionTitle('التصنيفات'),
+          DetailTags(tags: anime['genres'] as List),
+          const SizedBox(height: 16),
+        ],
         _ExpandableDetails(anime: anime),
       ],
     );
@@ -450,23 +435,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
       final List<dynamic> directStreams = streams['direct_stream_urls'] ?? [];
       final String streamUrl = streams['stream_url'] ?? '';
-      final sourceId = streams['source_id']?.toString() ?? '';
-      if (_isInAppSource(sourceId) && streamUrl.isNotEmpty && context.mounted) {
-        _playVideo(
-          context,
-          streamUrl,
-          'مشغل',
-          {
-            ...streams,
-            'title': episode['title'] ?? streams['title'] ?? 'حلقة',
-            'url': episode['url'],
-            'id': episode['url'] ?? episode['id'],
-          },
-          anime,
-          popSheet: false,
-        );
-        return;
-      }
 
       if (context.mounted) {
         showModalBottomSheet(
@@ -672,10 +640,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (context.mounted) Navigator.pop(context); // Close loading
       ToastUtils.show('تعذر تحميل روابط التنزيل', backgroundColor: Color(0xFF1976D2));
     }
-  }
-
-  bool _isInAppSource(String sourceId) {
-    return sourceId == 'risto' || sourceId == 'anime3rb' || sourceId == 'anime4up' || sourceId == 'anyplay';
   }
 
 }
