@@ -113,8 +113,9 @@ class SourceRegistry {
             .where((link) => _validPlayableLink(link['url']?.toString() ?? '', source))
             .toList() ??
         [];
-    // APIs may return player URLs rather than direct media; preserve valid
-    // HTTP(S) player URLs while rejecting malformed links.
+    // Never pass third-party player pages to the app. They commonly contain
+    // login/social buttons, pop-under ads, and redirect scripts. Only direct
+    // media URLs may enter the native player for movie/series providers.
     if (links.isEmpty) return null;
     return {...result, 'direct_stream_urls': links};
   }
@@ -127,7 +128,7 @@ class SourceRegistry {
     final lower = value.toLowerCase();
     final media = RegExp(r'\.(?:mp4|m3u8|mov|webm|mpd)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
-    return media || source.kind == 'anime' || source.kind == 'drama' || source.kind == 'movie';
+    return media || source.kind != 'movie';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

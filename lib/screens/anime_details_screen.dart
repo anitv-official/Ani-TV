@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
 import '../services/content_link_service.dart';
+import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
@@ -34,7 +35,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _animeDetailsFuture = ApiService.fetchAnimeDetails(widget.url);
+    final source = SourceRegistry.sourceFor(widget.url);
+    _animeDetailsFuture = source?.kind == 'movie'
+        ? ApiService.fetchMovieDetails(widget.url)
+        : ApiService.fetchAnimeDetails(widget.url);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Provider.of<AppStateProvider>(context, listen: false).initialize();
     });
@@ -44,6 +48,13 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   void dispose() {
     _episodeSearchController.dispose();
     super.dispose();
+  }
+
+  Future<dynamic> _loadDetails() {
+    final source = SourceRegistry.sourceFor(widget.url);
+    return source?.kind == 'movie'
+        ? ApiService.fetchMovieDetails(widget.url)
+        : ApiService.fetchAnimeDetails(widget.url);
   }
 
   @override
@@ -56,7 +67,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const LoadingView(message: 'جارٍ تحميل التفاصيل...', size: 64);
           } else if (snapshot.hasError) {
-            return ErrorState(onRetry: () => setState(() => _animeDetailsFuture = ApiService.fetchAnimeDetails(widget.url)));
+            return ErrorState(onRetry: () => setState(() => _animeDetailsFuture = _loadDetails()));
           } else if (!snapshot.hasData) {
             return const EmptyState(icon: Icons.movie_outlined, title: 'لا توجد بيانات');
           }

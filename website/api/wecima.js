@@ -1,16 +1,153 @@
-const BASES = ['https://wecimamax.com', 'https://wec.im', 'https://wecima.cx'];
-const headers = { 'User-Agent': 'AniTV-WecimaBridge/1.1 (licensed integration)', Accept: 'text/html,application/xhtml+xml' };
+const BASES = ['https://wecimamax.com', 'https://wec.im'];
+const headers = {
+  'User-Agent': 'AniTV-WecimaBridge/2.0 (licensed integration)',
+  Accept: 'text/html,application/xhtml+xml',
+};
 const cache = new Map();
-function decode(v = '') { return v.replace(/&(?:amp|lt|gt|quot|#039|nbsp|#\d+);/g, m => ({'&amp;':'&','&lt;':'<','&gt;':'>','&quot;':'"','&#039;':"'",'&nbsp;':' '}[m] || String.fromCodePoint(Number(m.match(/#(\d+)/)?.[1] || 0)))); }
-function strip(v = '') { return decode(v.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()); }
-function abs(v, base = BASES[0]) { if (!v) return ''; try { return new URL(v, base).href; } catch (_) { return ''; } }
-function attr(html, name) { const m = html.match(new RegExp(`${name}=["']([^"']+)`, 'i')); return m ? decode(m[1]) : ''; }
-function blocks(html, re) { return [...html.matchAll(re)].map(m => m[0]); }
-function mediaUrl(v) { return /^(?:https?:|\/\/)/i.test(v) ? abs(v) : ''; }
-function titleFrom(block) { return strip((block.match(/<(?:h[1-4]|a|div|span)[^>]*>([\s\S]*?)<\/(?:h[1-4]|a|div|span)>/i) || [,''])[1]) || attr(block, 'title') || 'بدون عنوان'; }
-function imageFrom(block, base = BASES[0]) { return abs((block.match(/<img[^>]+(?:data-src|data-lazy-src|src)=["']([^"']+)/i) || [,''])[1], base); }
-function itemFrom(block, base) { const link = block.match(/href=["']([^"']+)["']/i); if (!link) return null; const url = abs(link[1], base); if (!url || /(?:page|category|tag|search)/i.test(url)) return null; const rawTitle = titleFrom(block); const isSeries = /مسلسل|series|season|حلقة|episode/i.test(block + rawTitle); return { title: rawTitle, url, image_url: imageFrom(block, base), type: isSeries ? 'مسلسل' : 'فيلم', category: 'wecima', source: 'Wecima', source_id: 'wecima' }; }
-function extractServers(html) { const found = new Map(); const add = (raw, label = '') => { const url = mediaUrl(raw.replace(/&amp;/g, '&')); if (!url || found.has(url) || BASES.some(base => url.startsWith(base))) return; found.set(url, { name: strip(label) || `سيرفر ${found.size + 1}`, url, type: /\.m3u8|\.mp4|\.mpd/i.test(url) ? 'direct' : 'player' }); }; for (const m of html.matchAll(/<(?:iframe|embed|video|source)[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi)) add(m[1], 'مشغل'); for (const m of html.matchAll(/<(?:a|button|div)[^>]*(?:data-(?:url|embed|src)|href)=["']([^"']+)["'][^>]*>([\s\S]*?)<\/(?:a|button|div)>/gi)) if (/سيرفر|server|مشاهدة|watch|play|تحميل/i.test(m[0])) add(m[1], m[2]); for (const m of html.matchAll(/https?:\/\/[^\s"'<>\\]+/gi)) if (/(?:m3u8|mp4|mpd|dood|vid|filemoon|voe|stream|uqload|mixdrop|ok\.ru|pixeldrain)/i.test(m[0])) add(m[0], 'رابط مستخرج'); return [...found.values()]; }
-function parseDetails(html, url, base) { const title = strip((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,'فيلم بدون عنوان'])[1]); const image = imageFrom(html, base); const description = strip((html.match(/<(?:div|p)[^>]*class=["'][^"']*(?:story|description|synopsis|wp-content)[^"']*["'][^>]*>([\s\S]*?)<\//i) || [,''])[1]); const episodes = []; const seen = new Set(); for (const m of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) if (/(?:حلقة|episode|season|مسلسل|series)/i.test(m[1] + m[2])) { const u = abs(m[1], base); if (!seen.has(u) && u !== url) { seen.add(u); episodes.push({ title: strip(m[2]) || `الحلقة ${episodes.length + 1}`, url: u, number: Number((m[2].match(/\d+/) || [episodes.length + 1])[0]) }); } } return { title: title || 'فيلم بدون عنوان', url, image_url: image, description, category: 'wecima', type: /مسلسل|series|season|حلقة|episode/i.test(html) ? 'مسلسل' : 'فيلم', episodes: episodes.sort((a, b) => a.number - b.number), servers: extractServers(html) }; }
-async function get(url) { const hit = cache.get(url); if (hit && hit.expires > Date.now()) return hit.value; const original = new URL(url); const candidates = [url, ...BASES.filter(base => !url.startsWith(base)).map(base => `${base}${original.pathname}${original.search}`)]; let last; for (const candidate of candidates) { try { const r = await fetch(candidate, { headers }); if (!r.ok) throw new Error(`Wecima ${r.status}`); const html = await r.text(); if (/Just a moment|cf-chl-|challenge-platform/i.test(html)) throw new Error('Cloudflare challenge'); if (!/<a[^>]+(?:title|data-title)=["'][^"']+["']/i.test(html)) throw new Error('Wecima page has no catalog data'); const value = { html, base: new URL(candidate).origin }; cache.set(url, { value, expires: Date.now() + 90000 }); return value; } catch (e) { last = e; } } throw last || new Error('Wecima unavailable'); }
-module.exports = async function handler(req, res) { res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Cache-Control', 'public, max-age=30'); try { const { action = 'latest', page = '1', q = '', url = '' } = req.query; if (action === 'search' || action === 'latest') { const target = action === 'search' && q ? `${BASES[0]}/?s=${encodeURIComponent(q)}` : `${BASES[0]}/page/${Math.max(1, Number(page))}/`; const result = await get(target); const cardBlocks = blocks(result.html, /<(?:article|div)[^>]*(?:class=["'][^"']*(?:post|item|film|movie|series)[^"']*)[\s\S]*?<\/(?:article|div)>/gi); const titledLinks = [...result.html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]+title=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi)].map(match => match[0]); const items = [...cardBlocks, ...titledLinks].map(block => itemFrom(block, result.base)).filter(Boolean); return res.json({ items: [...new Map(items.map(x => [x.url, x])).values()], page: Number(page), hasMore: items.length > 0 }); } if (!url || !BASES.some(base => url.startsWith(base))) return res.status(400).json({ error: 'invalid url' }); const result = await get(url); return res.json(action === 'servers' ? { url, servers: extractServers(result.html) } : parseDetails(result.html, url, result.base)); } catch (e) { return res.status(502).json({ error: 'wecima bridge unavailable', message: e.message }); } };
+
+function decode(value = '') {
+  return value
+    .replace(/&(?:amp|lt|gt|quot|#039|nbsp|#\d+);/g, (match) => ({
+      '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#039;': "'", '&nbsp;': ' ',
+    }[match] || String.fromCodePoint(Number(match.match(/#(\d+)/)?.[1] || 0))));
+}
+function strip(value = '') {
+  return decode(value.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim());
+}
+function abs(value, base = BASES[0]) {
+  if (!value) return '';
+  try { return new URL(decode(value), base).href; } catch (_) { return ''; }
+}
+function attr(html, name) {
+  const match = html.match(new RegExp(`${name}=["']([^"']+)`, 'i'));
+  return match ? decode(match[1]) : '';
+}
+function isCatalogItemUrl(value) {
+  try {
+    const path = new URL(value).pathname.replace(/\/+$/, '');
+    return /^\/(?:movies|shows)\/[^/]+(?:\/[^/]+)?$/i.test(path) &&
+      !/(?:\/genre\/|\/season(?:s)?\/|\/tag\/|\/category\/)/i.test(path);
+  } catch (_) { return false; }
+}
+function titleFrom(block, url = '') {
+  const match = block.match(/<(?:h[1-4]|h[1-4]|a|div|span)[^>]*>([\s\S]*?)<\/(?:h[1-4]|a|div|span)>/i);
+  const value = strip(match?.[1] || attr(block, 'title'));
+  if (value && !/^(home|تسجيل الدخول|facebook|قائمة الأفلام|قائمة المسلسلات)$/i.test(value)) return value;
+  try { return decode(new URL(url).pathname.split('/').filter(Boolean).pop() || 'بدون عنوان').replace(/[-_]+/g, ' '); } catch (_) { return 'بدون عنوان'; }
+}
+function imageFrom(block, base) {
+  return abs((block.match(/<img[^>]+(?:data-src|data-lazy-src|src)=["']([^"']+)/i) || [,''])[1], base);
+}
+function itemFrom(block, base) {
+  const link = block.match(/href=["']([^"']+)["']/i);
+  if (!link) return null;
+  const url = abs(link[1], base);
+  if (!isCatalogItemUrl(url)) return null;
+  const rawTitle = titleFrom(block, url);
+  const isSeries = new URL(url).pathname.startsWith('/shows/');
+  return {
+    title: rawTitle,
+    url,
+    image_url: imageFrom(block, base),
+    type: isSeries ? 'مسلسل' : 'فيلم',
+    category: 'wecima',
+    source: 'Wecima',
+    source_id: 'wecima',
+  };
+}
+function catalogItems(html, base) {
+  const result = [];
+  const seen = new Set();
+  // Parse only links that are actual movie/show pages. Navigation, login and social links
+  // are intentionally excluded even when the site changes its card markup.
+  for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>[\s\S]*?<\/a>/gi)) {
+    const item = itemFrom(match[0], base);
+    if (item && !seen.has(item.url)) { seen.add(item.url); result.push(item); }
+  }
+  return result;
+}
+function directMediaUrl(value) {
+  const url = abs(value);
+  if (!url || !/^https?:/i.test(url)) return '';
+  const lower = url.toLowerCase();
+  return /\.(?:m3u8|mp4|mpd|webm)(?:[?#].*)?$/i.test(lower) ? url : '';
+}
+function extractServers(html) {
+  const found = new Map();
+  const add = (raw, label = 'فيديو مباشر') => {
+    const url = directMediaUrl(raw);
+    if (!url || found.has(url)) return;
+    found.set(url, { name: strip(label) || 'فيديو مباشر', url, type: 'direct' });
+  };
+  // Never expose iframe/embed/player pages: those are the source of ads and redirects.
+  for (const match of html.matchAll(/(?:src|data-src|data-url|data-video|file|url)=["']([^"']+)["']/gi)) add(match[1]);
+  for (const match of html.matchAll(/https?:\/\/[^\s"'<>\\]+/gi)) add(match[0]);
+  return [...found.values()];
+}
+function parseDetails(html, url, base) {
+  const title = strip((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,'فيلم بدون عنوان'])[1]);
+  const image = imageFrom(html, base);
+  const description = strip((html.match(/<(?:div|p)[^>]*class=["'][^"']*(?:story|description|synopsis|wp-content)[^"']*["'][^>]*>([\s\S]*?)<\//i) || [,''])[1]);
+  const episodes = [];
+  const seen = new Set();
+  for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    const episodeUrl = abs(match[1], base);
+    if (!/^https?:/i.test(episodeUrl) || !isCatalogItemUrl(episodeUrl) || episodeUrl === url || seen.has(episodeUrl)) continue;
+    if (!/\/shows\//i.test(episodeUrl)) continue;
+    const label = strip(match[2]);
+    if (!/(?:حلقة|episode|season|مسلسل|series|\d+)/i.test(label + episodeUrl)) continue;
+    seen.add(episodeUrl);
+    const number = Number((label.match(/\d+/) || [episodes.length + 1])[0]);
+    episodes.push({ title: label || `الحلقة ${number}`, url: episodeUrl, number });
+  }
+  return {
+    title: title || 'فيلم بدون عنوان', url, image_url: image, description,
+    category: 'wecima', type: /\/shows\//i.test(url) ? 'مسلسل' : 'فيلم',
+    episodes: episodes.sort((a, b) => a.number - b.number), servers: extractServers(html),
+  };
+}
+async function get(url) {
+  const hit = cache.get(url);
+  if (hit && hit.expires > Date.now()) return hit.value;
+  const original = new URL(url);
+  const candidates = [url, ...BASES.filter((base) => !url.startsWith(base)).map((base) => `${base}${original.pathname}${original.search}`)];
+  let last;
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, { headers });
+      if (!response.ok) throw new Error(`Wecima ${response.status}`);
+      const html = await response.text();
+      if (/Just a moment|cf-chl-|challenge-platform|cf-mitigated/i.test(html)) throw new Error('Cloudflare challenge');
+      if (html.length < 500) throw new Error('Wecima page is empty');
+      const value = { html, base: new URL(candidate).origin };
+      cache.set(url, { value, expires: Date.now() + 90000 });
+      return value;
+    } catch (error) { last = error; }
+  }
+  throw last || new Error('Wecima unavailable');
+}
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=30');
+  try {
+    const { action = 'latest', page = '1', q = '', url = '' } = req.query;
+    if (action === 'latest' || action === 'search') {
+      const target = action === 'search' && q
+        ? `${BASES[0]}/?s=${encodeURIComponent(q)}`
+        : (Number(page) <= 1 ? `${BASES[0]}/` : `${BASES[0]}/page/${Math.max(1, Number(page))}/`);
+      const result = await get(target);
+      const items = catalogItems(result.html, result.base);
+      return res.json({ items, page: Number(page), hasMore: items.length > 0 });
+    }
+    if (!url || !BASES.some((base) => url.startsWith(base))) return res.status(400).json({ error: 'invalid url' });
+    const result = await get(url);
+    if (action === 'servers') return res.json({ url, servers: extractServers(result.html) });
+    return res.json(parseDetails(result.html, url, result.base));
+  } catch (error) {
+    return res.status(502).json({ error: 'wecima bridge unavailable', message: error.message });
+  }
+};
+
+module.exports._test = { isCatalogItemUrl, directMediaUrl, catalogItems, extractServers };

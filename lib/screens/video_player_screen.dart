@@ -485,7 +485,15 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       }
     } else {
       _isDirectVideo = false;
-      _initializeWebView();
+      // Do not open arbitrary provider pages in a WebView. Those pages are
+      // navigation surfaces, not media streams, and may show login prompts,
+      // social links, ads, or redirect the user outside AniTV.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isInitialized = true;
+        });
+      }
     }
   }
 
@@ -850,6 +858,36 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           ],
         ),
       ),
+      );
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.shield_outlined, color: Colors.orange, size: 52),
+            const SizedBox(height: 16),
+            const Text(
+              'مصدر التشغيل غير صالح',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'تم حظر صفحة خارجية أو رابط إعلاني لحمايتك. جرّب مصدرًا مباشرًا آخر.',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('العودة للمصادر'),
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
