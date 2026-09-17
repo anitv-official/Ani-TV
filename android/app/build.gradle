@@ -40,13 +40,15 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.create("release")
-            signingConfig.storeFile = keystorePropertiesFile.exists()
-                ? file(keystoreProperties["storeFile"])
-                : null
-            signingConfig.storePassword = keystoreProperties["storePassword"]
-            signingConfig.keyAlias = keystoreProperties["keyAlias"]
-            signingConfig.keyPassword = keystoreProperties["keyPassword"]
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.create("release")
+                signingConfig.storeFile = file(keystoreProperties["storeFile"])
+                signingConfig.storePassword = keystoreProperties["storePassword"]
+                signingConfig.keyAlias = keystoreProperties["keyAlias"]
+                signingConfig.keyPassword = keystoreProperties["keyPassword"]
+            } else {
+                signingConfig = signingConfigs.debug
+            }
         }
     }
 }
