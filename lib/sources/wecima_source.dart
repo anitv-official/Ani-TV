@@ -89,9 +89,9 @@ class CimaCloudSource extends ContentSource {
       final isSeries = _text(value['type']).toLowerCase() == 'serie' || _text(value['type']).toLowerCase() == 'series';
       if (id.isEmpty) continue;
       final path = isSeries ? 'series' : 'movie';
-      final item = item(title: _text(value['title'] ?? value['name'], 'بدون عنوان'), url: '$_base$path/$id/0', image: _text(value['poster_path'] ?? value['poster']), type: isSeries ? 'مسلسل' : 'فيلم', description: _description(value), rating: _text(value['vote_average']));
-      result.add(item);
-      _cache[item['url'].toString()] = item;
+      final catalogItem = item(title: _text(value['title'] ?? value['name'], 'بدون عنوان'), url: '$_base$path/$id/0', image: _text(value['poster_path'] ?? value['poster']), type: isSeries ? 'مسلسل' : 'فيلم', description: _description(value), rating: _text(value['vote_average']));
+      result.add(catalogItem);
+      _cache[catalogItem['url'].toString()] = catalogItem;
     }
     return result;
   }
