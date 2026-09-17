@@ -1,4 +1,3 @@
-import 'anyplay_source.dart';
 import 'animefy_source.dart';
 import 'anime_slayer_source.dart';
 import 'drama_source.dart';
@@ -20,7 +19,6 @@ class SourceRegistry {
 
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
-    AnyPlaySource(),
     AnimeSlayerSource(),
     AnimefySource(),
     DramaSource(),
@@ -35,8 +33,6 @@ class SourceRegistry {
       _apis.where((s) => s.kind == 'manga').toList(growable: false);
   static List<ContentSource> get _dramaApis =>
       _apis.where((s) => s.kind == 'drama').toList(growable: false);
-  static List<ContentSource> get _movieApis =>
-      _apis.where((s) => s.id == 'anyplay').toList(growable: false);
 
   /// Kept for backwards compatibility. API adapters must not appear as sources.
   static const List<ContentSource> all = <ContentSource>[];
@@ -81,15 +77,6 @@ class SourceRegistry {
         _merge(_mangaApis.map((source) => _retry(() => source.latest(page: page)))));
   }
 
-  static Future<List<Map<String, dynamic>>> searchMovies(String query) {
-    return _merge(_movieApis.map((source) => _retry(() => source.search(query))));
-  }
-
-  static Future<List<Map<String, dynamic>>> latestMovies({int page = 1}) {
-    return _cached('movies:$page', () =>
-        _merge(_movieApis.map((source) => _retry(() => source.latest(page: page)))));
-  }
-
   static Future<List<Map<String, dynamic>>> latestFromSource(
       String sourceId, {int page = 1}) async {
     final source = _apis.firstWhere((entry) => entry.id == sourceId);
@@ -112,8 +99,8 @@ class SourceRegistry {
             .where((link) => _validPlayableLink(link['url']?.toString() ?? '', source))
             .toList() ??
         [];
-    // APIs may return player URLs rather than direct media. Preserve those
-    // for AnyPlay; all other APIs must return a valid media/player URL.
+    // APIs may return player URLs rather than direct media; preserve valid
+    // HTTP(S) player URLs while rejecting malformed links.
     if (links.isEmpty) return null;
     return {...result, 'direct_stream_urls': links};
   }
@@ -126,7 +113,7 @@ class SourceRegistry {
     final lower = value.toLowerCase();
     final media = RegExp(r'\.(?:mp4|m3u8|mov|webm|mpd)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
-    return media || source.id == 'anyplay';
+    return media || source.kind == 'anime' || source.kind == 'drama';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

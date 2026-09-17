@@ -84,9 +84,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       final animePage = _animePage + 1;
       final comicPage = _comicPage + 1;
       final loaded = await Future.wait([
-        SourceRegistry.latestFromSource('anyplay', page: animePage),
-        SourceRegistry.latestFromSource('drama_slayer', page: animePage),
-        SourceRegistry.latestFromSource('mangatime', page: comicPage),
+        _safeLatest('anime_slayer', page: animePage),
+        _safeLatest('drama_slayer', page: animePage),
+        _safeLatest('mangatime', page: comicPage),
       ]);
       if (!mounted) return;
       final anime = loaded[0] as List<dynamic>;
@@ -120,9 +120,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
     });
     try {
       final loaded = await Future.wait([
-        SourceRegistry.latestFromSource('anyplay'),
-        SourceRegistry.latestFromSource('drama_slayer'),
-        SourceRegistry.latestFromSource('mangatime'),
+        _safeLatest('anime_slayer'),
+        _safeLatest('drama_slayer'),
+        _safeLatest('mangatime'),
       ]);
       final movies = loaded[0] as List<dynamic>;
       final drama = loaded[1] as List<dynamic>;
@@ -130,7 +130,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
 
       if (mounted) {
         setState(() {
-          final featuredMovies = movies.take(3).map((item) => {...item, 'type': 'drama'}).toList();
+          final featuredMovies = movies.take(3).map((item) => {...item, 'type': 'anime'}).toList();
           final featuredDrama = drama.take(3).map((item) => {...item, 'type': 'drama'}).toList();
           final featuredComics = comics.take(3).map((item) => {...item, 'type': 'comic'}).toList();
           featuredContent = [...featuredMovies, ...featuredDrama, ...featuredComics];
@@ -151,6 +151,14 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         });
         _showErrorDialog('خطأ في التحميل', 'تعذر تحميل المحتوى. حاول مرة أخرى.');
       }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _safeLatest(String sourceId, {int page = 1}) async {
+    try {
+      return await SourceRegistry.latestFromSource(sourceId, page: page);
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
     }
   }
 
@@ -213,7 +221,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       children: [
         if (featuredContent.isNotEmpty) _buildFeatured(),
         if (latestAnime.isNotEmpty) ...[
-          _buildSectionHeader('أحدث الأفلام', 'اختيارات جديدة من AnyPlay'),
+          _buildSectionHeader('أحدث الأنمي', 'أحدث الحلقات من Anime Slayer'),
           _buildHorizontal(latestAnime, isAnime: true),
         ],
         if (latestDrama.isNotEmpty) ...[

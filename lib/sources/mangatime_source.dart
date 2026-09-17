@@ -13,6 +13,7 @@ class MangaTimeSource extends ContentSource {
   static const _site = 'https://mangatime.org';
   static const _trpc = '$_site/api/trpc';
   static const _appVersion = '1.5.45';
+  static final http.Client _client = http.Client();
 
   @override
   String get id => 'mangatime';
@@ -91,15 +92,31 @@ class MangaTimeSource extends ContentSource {
     if (seriesId.isEmpty) return const [];
     final all = <Map<String, dynamic>>[];
     final seen = <String>{};
-    for (var page = 1; page <= 50; page++) {
-      final response = await _call('content.getChapters', {'seriesId': seriesId, 'page': page, 'limit': 100});
-      final batch = _list(response);
-      if (batch.isEmpty) break;
-      for (final raw in batch) {
-        final id = _string(raw['id']);
-        if (id.isNotEmpty && seen.add(id)) all.add(raw);
+    const pageSize = 100;
+    const pagesPerBatch = 5;
+    for (var page = 1; page <= 50; page += pagesPerBatch) {
+      final responses = await Future.wait(
+        List.generate(pagesPerBatch, (index) async {
+          try {
+            return _list(await _call('content.getChapters', {
+              'seriesId': seriesId,
+              'page': page + index,
+              'limit': pageSize,
+            }));
+          } catch (_) {
+            return const <Map<String, dynamic>>[];
+          }
+        }),
+      );
+      var reachedEnd = false;
+      for (final batch in responses) {
+        if (batch.isEmpty || batch.length < pageSize) reachedEnd = true;
+        for (final raw in batch) {
+          final id = _string(raw['id']);
+          if (id.isNotEmpty && seen.add(id)) all.add(raw);
+        }
       }
-      if (batch.length < 100) break;
+      if (reachedEnd) break;
     }
     final result = all.map((raw) {
       final id = _string(raw['id']);
@@ -157,7 +174,7 @@ class MangaTimeSource extends ContentSource {
 
   Future<dynamic> _call(String procedure, Map<String, dynamic> input) async {
     final encoded = Uri.encodeQueryComponent(jsonEncode({'json': input}));
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('$_trpc/$procedure?input=$encoded'),
       headers: const {
         'Accept': 'application/json',

@@ -4,7 +4,7 @@
   "version": "1.2.6",
   "published_at": "2026-09-17T02:49:50Z",
   "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.6",
-  "body": "إصلاح تشغيل AnyPlay وتجاوز VidNest، تحسين fallback لمصدر Anime3rb، جلب الفصول كاملة وتنظيف وصف MangaTime، وإزالة المصادر المطلوبة.",
+  "body": "تخفيف التطبيق، اعتماد Anime Slayer للصفحة الرئيسية، وتحسين سرعة MangaTime وجلب جميع الفصول عبر API.",
   "deployment_id": "anitv-v1.2.6",
   "assets": [
     {

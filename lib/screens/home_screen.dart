@@ -105,8 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return const ExploreScreen(initialIsAnime: false, embedded: true, title: 'لائحة المانجا');
       case AppSection.drama:
         return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
-      case AppSection.movies:
-        return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'anyplay', title: 'لائحة الأفلام');
       case AppSection.favorites:
         return const FavoritesScreen(embedded: true);
       case AppSection.downloads:

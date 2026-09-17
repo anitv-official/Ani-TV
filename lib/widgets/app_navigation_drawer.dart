@@ -42,7 +42,6 @@ class AppNavigationDrawer extends StatelessWidget {
             _item(context, Icons.movie_outlined, 'لائحة الأنمي', () => _select(context, AppSection.anime), selected: currentSection == AppSection.anime),
             _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
             _item(context, Icons.live_tv_rounded, 'لائحة الدراما', () => _select(context, AppSection.drama), selected: currentSection == AppSection.drama),
-            _item(context, Icons.local_movies_rounded, 'لائحة الأفلام', () => _select(context, AppSection.movies), selected: currentSection == AppSection.movies),
             _item(context, Icons.forum_outlined, 'المجتمع', () => _select(context, AppSection.community), selected: currentSection == AppSection.community),
             const SizedBox(height: 14),
             Padding(

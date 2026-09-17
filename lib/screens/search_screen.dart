@@ -654,9 +654,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return ContentCard(
       title: item['title']?.toString(),
       imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-      badge: item['source_id']?.toString().toLowerCase() == 'anyplay'
-          ? 'ANYPLAY'
-          : item['type']?.toString() ?? category,
+      badge: item['type']?.toString() ?? category,
       onTap: () {
         if (targetScreen != null) {
           Navigator.push(context, MaterialPageRoute(builder: (context) => targetScreen!));
@@ -695,11 +693,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
       final List<dynamic> directStreams = streams['direct_stream_urls'] ?? [];
       final String streamUrl = streams['stream_url'] ?? '';
-      final sourceId = streams['source_id']?.toString() ?? '';
-      if (_isInAppSource(sourceId) && streamUrl.isNotEmpty && mounted) {
-        _playVideo(context, streamUrl, 'مشغل', streams, historyItem, popSheet: false);
-        return;
-      }
 
       if (mounted) {
         showModalBottomSheet(
@@ -758,10 +751,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       if (mounted) Navigator.pop(context); // Close loading
       ToastUtils.show('تعذر تحميل مصادر التشغيل', backgroundColor: Color(0xFF1976D2));
     }
-  }
-
-  bool _isInAppSource(String sourceId) {
-    return sourceId == 'anyplay';
   }
 
   void _playVideo(BuildContext context, String url, String quality, Map<String, dynamic> episodeData, Map<String, dynamic> historyItem, {bool popSheet = true}) {

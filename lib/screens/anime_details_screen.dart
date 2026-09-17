@@ -450,23 +450,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
       final List<dynamic> directStreams = streams['direct_stream_urls'] ?? [];
       final String streamUrl = streams['stream_url'] ?? '';
-      final sourceId = streams['source_id']?.toString() ?? '';
-      if (_isInAppSource(sourceId) && streamUrl.isNotEmpty && context.mounted) {
-        _playVideo(
-          context,
-          streamUrl,
-          'مشغل',
-          {
-            ...streams,
-            'title': episode['title'] ?? streams['title'] ?? 'حلقة',
-            'url': episode['url'],
-            'id': episode['url'] ?? episode['id'],
-          },
-          anime,
-          popSheet: false,
-        );
-        return;
-      }
 
       if (context.mounted) {
         showModalBottomSheet(
@@ -672,10 +655,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       if (context.mounted) Navigator.pop(context); // Close loading
       ToastUtils.show('تعذر تحميل روابط التنزيل', backgroundColor: Color(0xFF1976D2));
     }
-  }
-
-  bool _isInAppSource(String sourceId) {
-    return sourceId == 'anyplay';
   }
 
 }
