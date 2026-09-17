@@ -158,7 +158,7 @@ class CimaCloudSource extends ContentSource {
   };
 
   void _rememberCookie(String value) {
-    final match = RegExp(r'(?i)([a-z0-9_]+)=([^;]+)').firstMatch(value);
+    final match = RegExp(r'([a-z0-9_]+)=([^;]+)', caseSensitive: false).firstMatch(value);
     if (match == null) return;
     if (match.group(1) == 'ci_session') _cookie = '${match.group(1)}=${match.group(2)}';
   }
