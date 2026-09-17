@@ -4,6 +4,7 @@ import 'drama_source.dart';
 import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
+import 'wecima_source.dart';
 import 'source_base.dart';
 
 /// Internal API catalog.
@@ -25,6 +26,7 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
+    WecimaSource(),
   ];
 
   static List<ContentSource> get _animeApis =>
@@ -33,6 +35,8 @@ class SourceRegistry {
       _apis.where((s) => s.kind == 'manga').toList(growable: false);
   static List<ContentSource> get _dramaApis =>
       _apis.where((s) => s.kind == 'drama').toList(growable: false);
+  static List<ContentSource> get _movieApis =>
+      _apis.where((s) => s.kind == 'movie').toList(growable: false);
 
   /// Kept for backwards compatibility. API adapters must not appear as sources.
   static const List<ContentSource> all = <ContentSource>[];
@@ -42,6 +46,7 @@ class SourceRegistry {
   static List<ContentSource> get animeSources => _animeApis;
   static List<ContentSource> get mangaSources => _mangaApis;
   static List<ContentSource> get dramaSources => _dramaApis;
+  static List<ContentSource> get movieSources => _movieApis;
 
   static ContentSource? sourceFor(String url) {
     for (final source in _apis) {
@@ -65,6 +70,10 @@ class SourceRegistry {
     return _merge(_apis.map((source) => _retry(() => source.search(query))));
   }
 
+  static Future<List<Map<String, dynamic>>> searchMovies(String query) {
+    return _merge(_movieApis.map((source) => _retry(() => source.search(query))));
+  }
+
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) {
     return _cached('anime:$page', () => _merge([
           ..._animeApis,
@@ -75,6 +84,11 @@ class SourceRegistry {
   static Future<List<Map<String, dynamic>>> latestManga({int page = 1}) {
     return _cached('manga:$page', () =>
         _merge(_mangaApis.map((source) => _retry(() => source.latest(page: page)))));
+  }
+
+  static Future<List<Map<String, dynamic>>> latestMovies({int page = 1}) {
+    return _cached('movie:$page', () =>
+        _merge(_movieApis.map((source) => _retry(() => source.latest(page: page)))));
   }
 
   static Future<List<Map<String, dynamic>>> latestFromSource(
@@ -113,7 +127,7 @@ class SourceRegistry {
     final lower = value.toLowerCase();
     final media = RegExp(r'\.(?:mp4|m3u8|mov|webm|mpd)(?:[?#].*)?$').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file');
-    return media || source.kind == 'anime' || source.kind == 'drama';
+    return media || source.kind == 'anime' || source.kind == 'drama' || source.kind == 'movie';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

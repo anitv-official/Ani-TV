@@ -9,6 +9,7 @@ import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
+import 'wecima_explore_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
 import '../widgets/ui/app_search_bar.dart';
@@ -172,8 +173,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     try {
       final animeResults = await ApiService.searchAnime(query);
       final comicResults = await ApiService.searchComics(query);
+      final movieResults = await ApiService.searchMovies(query);
 
-      final allResults = [...animeResults, ...comicResults];
+      final allResults = [...animeResults, ...comicResults, ...movieResults];
 
       if (mounted) {
         setState(() {
@@ -649,6 +651,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       targetScreen = AnimeDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
+    } else if (category == 'wecima' || item['source_id'] == 'wecima') {
+      targetScreen = WecimaDetailsScreen(url: item['url']);
     }
 
     return ContentCard(

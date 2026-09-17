@@ -80,6 +80,34 @@ class ApiService {
     }
   }
 
+  static Future<List<dynamic>> fetchLatestMovies({int page = 1}) async {
+    try {
+      return await SourceRegistry.latestMovies(page: page);
+    } catch (e) {
+      throw ApiException('تعذر تحميل الأفلام والمسلسلات: $e');
+    }
+  }
+
+  static Future<List<dynamic>> searchMovies(String query) async {
+    try {
+      return await SourceRegistry.searchMovies(query);
+    } catch (e) {
+      throw ApiException('تعذر البحث في الأفلام والمسلسلات: $e');
+    }
+  }
+
+  static Future<dynamic> fetchMovieDetails(String url) async {
+    final sourced = await SourceRegistry.details(url);
+    if (sourced != null) return sourced;
+    throw ApiException('لم يتم العثور على تفاصيل المحتوى');
+  }
+
+  static Future<dynamic> fetchMovieStreams(String url) async {
+    final sourced = await SourceRegistry.streams(url);
+    if (sourced != null) return sourced;
+    throw ApiException('لا توجد سيرفرات تشغيل متاحة');
+  }
+
   static Future<dynamic> fetchChapterImages(String url) async {
     try {
       final sourced = await SourceRegistry.chapterImages(url);
