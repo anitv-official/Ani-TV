@@ -14,6 +14,7 @@ import '../widgets/ui/poster_image.dart';
 import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/ui/detail_ui.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
   final String url;
@@ -355,30 +356,16 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
             SourceBadge(label: comic['type']?.toString()),
         ]),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if ((comic['year'] ?? comic['status'] ?? '').toString().trim().isNotEmpty)
-              Text(
-                (comic['year'] ?? comic['status']).toString(),
-                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-              ),
-            Text(
-              '${chapters.length} فصل',
-              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-            ),
-            if ((comic['rating'] ?? '').toString().trim().isNotEmpty) ...[
-              const Icon(Icons.star_rounded, size: 14, color: Colors.amber),
-              Text(
-                comic['rating'].toString(),
-                style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 10),
+        DetailStatsCard(stats: [
+          DetailStat(value: '${chapters.length}', label: 'الفصول', icon: Icons.menu_book_rounded, color: const Color(0xFF67C96B)),
+          DetailStat(value: '${comic['rating'] ?? '—'}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
+          DetailStat(value: comic['status']?.toString() ?? '—', label: 'الحالة', icon: Icons.info_outline_rounded, color: const Color(0xFF36B9E8)),
+        ]),
+        if (comic['genres'] is List && (comic['genres'] as List).isNotEmpty) ...[
+          const DetailSectionTitle('التصنيفات'),
+          DetailTags(tags: comic['genres'] as List),
+          const SizedBox(height: 16),
+        ],
         _ExpandableDetails(comic: comic),
       ],
     );
