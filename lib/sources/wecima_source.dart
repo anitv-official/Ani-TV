@@ -114,7 +114,7 @@ class CimaCloudSource extends ContentSource {
     final isSeries = (_text(raw['type']).toLowerCase() == 'series' || _text(raw['type']).toLowerCase() == 'serie');
     final type = isSeries ? 'مسلسل' : 'فيلم';
     final path = isSeries ? 'series' : 'movie';
-    return item(title: _text(raw['name'] ?? raw['title'], 'بدون عنوان'), url: '$_api/$path/$id', image: _text(raw['poster'] ?? raw['image'] ?? raw['image_url']), type: type, description: _text(raw['overview'] ?? raw['description']), rating: _text(raw['vote_average']));
+    return item(title: _text(raw['name'] ?? raw['title'], 'بدون عنوان'), url: '$_api/$path/$id', image: _text(raw['poster'] ?? raw['image'] ?? raw['image_url']), type: type, description: _description(raw), rating: _text(raw['vote_average']));
   }
 
   bool _isCatalogItem(Map raw) {
@@ -123,11 +123,25 @@ class CimaCloudSource extends ContentSource {
   }
 
   Map<String, dynamic> _normalizeDetails(Map raw, String type, String id) => {
-    ...item(title: _text(raw['name'] ?? raw['title'], 'بدون عنوان'), url: '$_api/$type/$id', image: _text(raw['poster'] ?? raw['image'] ?? raw['image_url']), type: type == 'series' ? 'مسلسل' : 'فيلم', description: _text(raw['overview'] ?? raw['description']), rating: _text(raw['vote_average'])),
+    ...item(title: _text(raw['name'] ?? raw['title'], 'بدون عنوان'), url: '$_api/$type/$id', image: _text(raw['poster'] ?? raw['image'] ?? raw['image_url']), type: type == 'series' ? 'مسلسل' : 'فيلم', description: _description(raw), rating: _text(raw['vote_average'])),
     'episodes': _normalizeEpisodes(raw['episodes']),
     'backdrop': _text(raw['backdrop']),
     'year': raw['year'] ?? raw['release_year'] ?? '',
   };
+
+  String _description(Map raw) {
+    final direct = _text(raw['overview'] ?? raw['description']);
+    if (direct.isNotEmpty) return direct;
+    final year = _text(raw['release_date'] ?? raw['year'] ?? raw['release_year']);
+    final genres = raw['genres'];
+    final names = genres is List
+        ? genres.whereType<Map>().map((g) => _text(g['name'])).where((g) => g.isNotEmpty).join('، ')
+        : '';
+    final parts = <String>[];
+    if (year.isNotEmpty) parts.add('سنة الإصدار: $year');
+    if (names.isNotEmpty) parts.add('التصنيف: $names');
+    return parts.isEmpty ? 'لا يتوفر وصف من خادم Cima Cloud لهذا العمل حاليًا.' : parts.join(' — ');
+  }
 
   List<Map<String, dynamic>> _normalizeEpisodes(dynamic raw) {
     if (raw is Map) raw = raw['episodes'] ?? raw['data'] ?? raw['items'] ?? raw['seasons'];
@@ -188,7 +202,7 @@ class CimaCloudSource extends ContentSource {
 
   dynamic _unwrap(Map<String, dynamic> data) => data['data'] is Map || data['data'] is List ? data['data'] : data;
   String _text(dynamic value, [String fallback = '']) => value == null || value.toString().trim().isEmpty || value.toString() == 'false' ? fallback : SourceUtils.cleanTitle(value.toString());
-  bool _safePlayable(String value) { final uri = Uri.tryParse(value); if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return false; final lower = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(lower) || lower.contains('/api/file') || lower.contains('streamtape') || lower.contains('filemoon') || lower.contains('uqload'); }
+  bool _safePlayable(String value) { final uri = Uri.tryParse(value); if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) return false; final lower = value.toLowerCase(); return RegExp(r'\.(mp4|m3u8|webm|mpd)(?:[?#].*)?$').hasMatch(lower) || lower.contains('/api/file') || RegExp(r'(streamtape|filemoon|uqload|streamwish|voe\.sx|vidmoly|dood|ok\.ru|mp4upload|mixdrop|yourupload|topcinemaa)').hasMatch(lower); }
   List<Map<String, dynamic>> _unique(List<Map<String, dynamic>> input) { final seen = <String>{}; return input.where((x) => seen.add('${x['url']}|${x['title']}')).toList(); }
 }
 
