@@ -215,18 +215,100 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         ),
       );
     }
-    return ContentGrid(
-      shrinkWrap: true,
-      columns: 3,
-      itemCount: items.length,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (featuredContent.isNotEmpty) _buildFeatured(),
+        if (latestAnime.isNotEmpty) ...[
+          _buildSectionHeader('أحدث الأنمي', 'اكتشف الإضافات الجديدة'),
+          _buildHorizontal(latestAnime, isAnime: true),
+        ],
+        if (latestComics.isNotEmpty) ...[
+          _buildSectionHeader('أحدث المانجا', 'قصص جديدة بانتظارك'),
+          _buildHorizontal(latestComics, isAnime: false),
+        ],
+        _buildSectionHeader('كل المحتوى', 'تصفح أحدث الإضافات'),
+        ContentGrid(
+          shrinkWrap: true,
+          columns: 3,
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            return ContentCard(
+              title: item['title']?.toString(),
+              imageUrl: (item['image_url'] ?? item['image'])?.toString(),
+              badge: item['source']?.toString(),
+              onTap: () => _openItem(item, isAnime: true),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 12),
+      child: Row(
+        children: [
+          Container(width: 4, height: 28, decoration: BoxDecoration(color: AppTheme.primaryColor, borderRadius: BorderRadius.circular(8))),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+          ])),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorizontal(List<dynamic> items, {required bool isAnime}) {
+    final visible = items.take(12).toList();
+    return HorizontalContentList(
+      height: 222,
+      itemWidth: 132,
+      itemCount: visible.length,
       itemBuilder: (context, index) {
-        final item = items[index];
+        final item = visible[index];
         return ContentCard(
           title: item['title']?.toString(),
           imageUrl: (item['image_url'] ?? item['image'])?.toString(),
-          onTap: () => _openItem(item, isAnime: true),
+          badge: item['source']?.toString(),
+          onTap: () => _openItem(item, isAnime: isAnime),
         );
       },
+    );
+  }
+
+  Widget _buildFeatured() {
+    final item = featuredContent.first;
+    final image = (item['backdrop_url'] ?? item['image_url'] ?? item['image'])?.toString();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
+      child: GestureDetector(
+        onTap: () => _openItem(item, isAnime: item['type'] != 'comic'),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          child: Container(
+            height: 210,
+            decoration: BoxDecoration(color: AppTheme.surfaceColor, image: image == null ? null : DecorationImage(image: NetworkImage(image), fit: BoxFit.cover)),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Color(0xF2080B12), Color(0x99080B12), Colors.transparent])),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: SizedBox(width: 220, child: Column(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('اختيار اليوم', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppTheme.primaryColor)),
+                  const SizedBox(height: 6),
+                  Text(item['title']?.toString() ?? 'محتوى مميز', maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 8),
+                  Text('اضغط للانتقال إلى التفاصيل', style: Theme.of(context).textTheme.bodySmall),
+                ])),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
