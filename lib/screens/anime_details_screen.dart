@@ -122,10 +122,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.4),
+                  AppTheme.backgroundColor.withOpacity(0.18),
                   Colors.transparent,
-                  Colors.black.withOpacity(0.6),
-                  Colors.black, // Blend into body
+                  AppTheme.backgroundColor.withOpacity(0.78),
+                  AppTheme.backgroundColor,
                 ],
                 stops: const [0.0, 0.3, 0.8, 1.0],
               ),
@@ -168,7 +168,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       children: [
         Text(
           anime['title'] ?? 'بدون عنوان',
-          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, height: 1.25),
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1.2),
         ),
         const SizedBox(height: 8),
         Row(children: [
