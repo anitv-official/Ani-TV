@@ -94,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _streamCellular = prefs.getBool('stream_cellular_$scope') ?? false;
       _showMatureContent = prefs.getBool('show_mature_content_$scope') ?? false;
-      _notificationsEnabled = prefs.getBool('notifications_enabled_$scope') ?? true;
+      _notificationsEnabled = prefs.getBool(FcmService.notificationsEnabledKey) ?? true;
       _avatarPath = prefs.getString(userId == null ? 'profile_avatar_path' : 'profile_avatar_path_$userId');
     });
   }
@@ -120,6 +120,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _savePreference(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
+    if (key == FcmService.notificationsEnabledKey) {
+      await prefs.setBool(key, value);
+      return;
+    }
     final userId = context.read<AppStateProvider>().userId;
     final scope = userId == null ? 'guest' : 'user_$userId';
     await prefs.setBool('${key}_$scope', value);
@@ -159,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _resetPreferences() => _confirmLocalAction('إعادة ضبط الإعدادات', 'سيتم إعادة التفضيلات المحلية فقط. لن يتم حذف الحساب أو المفضلة أو التنزيلات.', () async {
     final prefs = await SharedPreferences.getInstance();
-    for (final key in prefs.getKeys().where((key) => key.startsWith('stream_cellular_') || key.startsWith('show_mature_content_') || key.startsWith('notifications_enabled_') || key.startsWith('dark_mode_'))) {
+    for (final key in prefs.getKeys().where((key) => key.startsWith('stream_cellular_') || key.startsWith('show_mature_content_') || key.startsWith('notifications_enabled_') || key == FcmService.notificationsEnabledKey || key.startsWith('dark_mode_'))) {
       await prefs.remove(key);
     }
     if (mounted) setState(() { _streamCellular = false; _showMatureContent = false; _notificationsEnabled = true; isDarkMode = true; });

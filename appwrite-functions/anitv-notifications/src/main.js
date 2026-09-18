@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
+const faselhd = require('./adapters/faselhd');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
 const FAVORITES_COLLECTION_ID = '6aa58e3a003b23556872';
@@ -60,87 +61,89 @@ const sameSecret = (provided, expected) => {
 const sourceAdapter = (favorite) => {
   const source = String(favorite.source || '').trim().toLowerCase();
   const itemId = String(favorite.itemId || '').trim();
-  return anime4up.supports(source, itemId) ? anime4up : null;
+  if (anime4up.supports(source, itemId)) return anime4up;
+  if (faselhd.supports(source, itemId)) return faselhd;
+  return null;
 };
+
+async function withRetry(operation, attempts, waitMs = 250) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try { return await operation(); } catch (error) {
+      lastError = error;
+      if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, waitMs * attempt));
+    }
+  }
+  throw lastError;
+}
 
 async function runFavoriteScan({ rows, messaging, payload, log, error }) {
   const dryRun = payload.dryRun === true;
   const result = { scanned: 0, checked: 0, notified: 0, initialized: 0, skipped: 0, unsupported: 0, errors: 0, dryRun };
   log(`favorite scan started; dryRun=${dryRun}`);
-  log(`favorite scan reading rows; database=${FAVORITES_DATABASE_ID}; table=${FAVORITES_COLLECTION_ID}`);
-  let documents;
-  try {
-    documents = await rows.listRows({
-      databaseId: FAVORITES_DATABASE_ID,
-      tableId: FAVORITES_COLLECTION_ID,
-      queries: [Query.limit(100)],
-    });
-  } catch (readError) {
-    const details = errorDetails(readError);
-    error(`favorite rows read failed; code=${details.code}; type=${details.type}; message=${details.message}`);
-    throw readError;
-  }
-  result.scanned = documents.rows.length;
-  log(`favorites count=${result.scanned}`);
-
-  for (const document of documents.rows) {
-    const favorite = document || {};
-    const userId = String(favorite.userId || '').trim();
-    const itemId = String(favorite.itemId || '').trim();
-    const title = String(favorite.title || 'AniTV').trim() || 'AniTV';
-    const adapter = sourceAdapter(favorite);
-    if (!userId || !itemId || !adapter || String(favorite.type || '').toLowerCase() !== 'anime') {
-      result.unsupported += 1;
-      log(`favorite unsupported; document=${document.$id}`);
-      continue;
-    }
-    result.checked += 1;
+  let cursor;
+  const pageSize = 100;
+  do {
+    const queries = [Query.limit(pageSize)];
+    if (cursor) queries.push(Query.cursorAfter(cursor));
+    let documents;
     try {
-      const latest = await adapter.latestEpisode({ source: favorite.source, itemId });
-      const checkedAt = new Date().toISOString();
-      if (!latest) {
-        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
-        result.skipped += 1;
-        continue;
-      }
-      const current = String(latest.number);
-      const previous = String(favorite.lastNotifiedEpisode || '').trim();
-      if (!previous) {
-        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
-        result.initialized += 1;
-        log(`favorite initialized; document=${document.$id}; episode=${current}`);
-        continue;
-      }
-      if (Number(latest.number) <= Number(previous)) {
-        if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
-        result.skipped += 1;
-        continue;
-      }
-      if (!dryRun) {
-        await messaging.createPush({
-          messageId: ID.unique(),
-          users: [userId],
-          title: `حلقة جديدة: ${title}`,
-          body: `تمت إضافة الحلقة ${current}`,
-          data: { type: 'new_content', url: itemId, source: String(favorite.source || 'anime4up'), episode: current },
-          priority: 'high',
-        });
-        await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
-        result.notified += 1;
-        log(`notification sent; document=${document.$id}; episode=${current}`);
-      } else {
-        result.notified += 1;
-        log(`notification would be sent; document=${document.$id}; episode=${current}`);
-      }
-    } catch (scanError) {
-      result.errors += 1;
-      error(`favorite source error; document=${document.$id}; type=${scanError?.name || 'unknown'}`);
+      documents = await rows.listRows({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, queries });
+    } catch (readError) {
+      const details = errorDetails(readError);
+      error(`favorite rows read failed; code=${details.code}; type=${details.type}; message=${details.message}`);
+      throw readError;
     }
-  }
-  log(`favorite scan completed; checked=${result.checked}; notified=${result.notified}; errors=${result.errors}`);
+    const page = documents.rows || [];
+    result.scanned += page.length;
+    log(`favorites page read; count=${page.length}; total=${result.scanned}`);
+    for (const document of page) {
+      const favorite = document || {};
+      const userId = String(favorite.userId || '').trim();
+      const itemId = String(favorite.itemId || '').trim();
+      const title = String(favorite.title || 'AniTV').trim() || 'AniTV';
+      const adapter = sourceAdapter(favorite);
+      if (!userId || !itemId || !adapter) {
+        result.unsupported += 1;
+        continue;
+      }
+      result.checked += 1;
+      try {
+        const latest = await withRetry(() => adapter.latestEpisode({ source: favorite.source, itemId }), 2);
+        const checkedAt = new Date().toISOString();
+        if (!latest) {
+          if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
+          result.skipped += 1;
+          continue;
+        }
+        const current = String(latest.number);
+        const previous = String(favorite.lastNotifiedEpisode || '').trim();
+        if (!previous) {
+          if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+          result.initialized += 1;
+          continue;
+        }
+        if (Number(latest.number) <= Number(previous)) {
+          if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
+          result.skipped += 1;
+          continue;
+        }
+        const notificationType = String(favorite.contentType || favorite.type || 'anime').toLowerCase().includes('chapter') ? 'chapter' : 'episode';
+        if (!dryRun) {
+          await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, data: { type: notificationType, itemId, url: itemId, title, source: String(favorite.source || adapter.id), episode: current }, priority: 'high' }), 2);
+          await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+        }
+        result.notified += 1;
+      } catch (scanError) {
+        result.errors += 1;
+        error(`favorite source error; document=${document.$id}; type=${scanError?.name || 'unknown'}; message=${String(scanError?.message || '').slice(0, 160)}`);
+      }
+    }
+    cursor = page.length === pageSize ? page.at(-1)?.$id : null;
+  } while (cursor);
+  log(`favorite scan completed; scanned=${result.scanned}; checked=${result.checked}; notified=${result.notified}; errors=${result.errors}`);
   return result;
 }
-
 module.exports = async ({ req, res, log, error }) => {
   log('Notification request received');
   if (requestMethod(req) !== 'POST') {

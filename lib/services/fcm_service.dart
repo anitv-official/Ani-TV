@@ -10,7 +10,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'appwrite_service.dart';
 
 /// FCM transport plus Appwrite Messaging target/subscriber lifecycle.
-/// Appwrite remains the authentication and backend system.
 class FcmService {
   FcmService._();
 
@@ -19,6 +18,7 @@ class FcmService {
   static const _providerId = String.fromEnvironment('ANITV_FCM_PROVIDER_ID');
   static const _targetIdKey = 'anitv_appwrite_push_target_id';
   static const _subscriberIdKey = 'anitv_appwrite_push_subscriber_id';
+  static const notificationsEnabledKey = 'notifications_enabled';
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final AppwriteService _appwrite = AppwriteService.instance;
@@ -34,6 +34,7 @@ class FcmService {
   RemoteMessage? _pendingOpenedMessage;
   void Function(RemoteMessage message)? onNotificationOpened;
   void Function(RemoteMessage message)? onForegroundMessage;
+  void Function(Map<String, String> data)? onLocalNotificationOpened;
 
   String? get token => _token;
   bool get isConfigured => _topicId.isNotEmpty && _providerId.isNotEmpty;
@@ -42,11 +43,26 @@ class FcmService {
     if (_initialized) return;
     _initialized = true;
     final prefs = await SharedPreferences.getInstance();
-    _enabled = prefs.getBool('notifications_enabled_guest') ?? true;
+    _enabled = prefs.getBool(notificationsEnabledKey) ?? true;
     if (!_enabled) return;
 
     const channel = AndroidNotificationChannel('anitv_general', 'AniTV Notifications', description: 'General AniTV updates', importance: Importance.high);
-    await _localNotifications.initialize(const InitializationSettings(android: AndroidInitializationSettings('launcher_icon')));
+    await _localNotifications.initialize(
+      const InitializationSettings(android: AndroidInitializationSettings('launcher_icon')),
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload == null || payload.isEmpty) return;
+        final data = <String, String>{};
+        for (final part in payload.split('&')) {
+          final index = part.indexOf('=');
+          if (index <= 0) continue;
+          data[Uri.decodeComponent(part.substring(0, index))] = Uri.decodeComponent(part.substring(index + 1));
+        }
+        if (data['type']?.isNotEmpty == true && data['url']?.isNotEmpty == true) {
+          onLocalNotificationOpened?.call(data);
+        }
+      },
+    );
     await _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
 
     await _messaging.requestPermission(alert: true, badge: true, sound: true, provisional: false);
@@ -60,7 +76,6 @@ class FcmService {
     _messageSubscription = FirebaseMessaging.onMessage.listen((message) async {
       await _showForegroundNotification(message);
       onForegroundMessage?.call(message);
-      debugPrint('FCM foreground message received: ${message.messageId}');
     });
     _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(_deliverOpenedMessage);
     final initialMessage = await _messaging.getInitialMessage();
@@ -71,14 +86,14 @@ class FcmService {
     if (!_enabled) return;
     final notification = message.notification;
     final title = notification?.title ?? message.data['title']?.toString();
-    final body = notification?.body ?? message.data['message']?.toString();
+    final body = notification?.body ?? message.data['message']?.toString() ?? message.data['body']?.toString();
     if ((title == null || title.isEmpty) && (body == null || body.isEmpty)) return;
     await _localNotifications.show(
       message.hashCode,
       title ?? 'AniTV',
       body,
       const NotificationDetails(android: AndroidNotificationDetails('anitv_general', 'AniTV Notifications', channelDescription: 'General AniTV updates', importance: Importance.high, priority: Priority.high, icon: 'launcher_icon')),
-      payload: message.data['url']?.toString(),
+      payload: _encodePayload(message.data),
     );
   }
 
@@ -99,10 +114,9 @@ class FcmService {
 
   Future<void> setNotificationsEnabled(bool enabled) async {
     _enabled = enabled;
-    if (!enabled) {
-      await clearUser();
-      return;
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(notificationsEnabledKey, enabled);
+    if (!enabled) return;
     await _messaging.requestPermission(alert: true, badge: true, sound: true, provisional: false);
     _token ??= await _messaging.getToken();
     await _syncTarget();
@@ -149,7 +163,6 @@ class FcmService {
         try {
           await _appwrite.subscribePushTarget(topicId: _topicId, subscriberId: subscriberId, targetId: _targetId!);
         } on AppwriteException catch (error) {
-          // A duplicate subscription is already in the desired state.
           if (error.code != 409) rethrow;
         }
       }
@@ -157,6 +170,11 @@ class FcmService {
       debugPrint('Appwrite push target setup failed: $error');
     }
   }
+
+  String _encodePayload(Map<String, dynamic> data) => data.entries
+      .where((entry) => entry.value != null)
+      .map((entry) => '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value.toString())}')
+      .join('&');
 
   Future<void> dispose() async {
     await _tokenSubscription?.cancel();
@@ -168,5 +186,13 @@ class FcmService {
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint('FCM background message received: ${message.messageId}');
+  final plugin = FlutterLocalNotificationsPlugin();
+  const channel = AndroidNotificationChannel('anitv_general', 'AniTV Notifications', description: 'General AniTV updates', importance: Importance.high);
+  await plugin.initialize(const InitializationSettings(android: AndroidInitializationSettings('launcher_icon')));
+  await plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.createNotificationChannel(channel);
+  final title = message.notification?.title ?? message.data['title']?.toString() ?? 'AniTV';
+  final body = message.notification?.body ?? message.data['message']?.toString() ?? message.data['body']?.toString();
+  if (body == null || body.isEmpty) return;
+  final payload = message.data.entries.map((entry) => '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value.toString())}').join('&');
+  await plugin.show(message.hashCode, title, body, const NotificationDetails(android: AndroidNotificationDetails('anitv_general', 'AniTV Notifications', channelDescription: 'General AniTV updates', importance: Importance.high, priority: Priority.high, icon: 'launcher_icon')), payload: payload);
 }

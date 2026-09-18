@@ -51,7 +51,7 @@ Pass the secret only through this header; never place it in the body or logs:
 x-anitv-favorite-scan-secret: <value configured in Appwrite>
 ```
 
-`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The verified adapter currently supports Anime4Up anime Favorites; unsupported sources are reported and do not stop the scan.
+`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. The adapters currently support Anime4Up and FaselHD URL Favorites; unsupported sources are reported and do not stop the scan.
 
 ### مستخدم محدد
 
@@ -62,7 +62,7 @@ x-anitv-favorite-scan-secret: <value configured in Appwrite>
   "title": "AniTV",
   "message": "لديك تحديث جديد",
   "data": {
-    "type": "new_content",
+    "type": "episode",
     "url": "https://example.invalid/anime/123"
   }
 }
@@ -78,7 +78,7 @@ x-anitv-favorite-scan-secret: <value configured in Appwrite>
   "title": "AniTV",
   "message": "تمت إضافة محتوى جديد",
   "data": {
-    "type": "new_content",
+    "type": "broadcast",
     "url": "https://example.invalid/anime/123"
   }
 }
@@ -94,6 +94,7 @@ Broadcast للمشرفين فقط، ويستخدم `ANITV_BROADCAST_TOPIC_ID` و
 4. أنشئ Function جديدة باسم `AniTV Notifications`، Runtime Node.js 22، ثم ارفع محتويات هذا المجلد.
 5. أضف Environment Variables السابقة، وأنشئ Deployment جديدًا.
 6. لا تغيّر Function الحالية `6aa5ed04000f66117651`.
+7. من إعدادات Function نفسها اضبط **Schedule** واحدًا فقط لـ`favorite_scan` (مثل `0 */30 * * *`)، واستدعِها بالـsecret header. لا تنشئ Scheduler ثانيًا في Supabase أو جهاز العميل.
 
 ## Flutter build variables
 

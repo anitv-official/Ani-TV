@@ -11,6 +11,7 @@ import 'screens/email_verification_screen.dart';
 import 'screens/anime_details_screen.dart';
 import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
+import 'screens/fasel_explore_screen.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -101,6 +102,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     if (Firebase.apps.isNotEmpty) {
       FcmService.instance.onNotificationOpened = _handleNotificationMessage;
+      FcmService.instance.onLocalNotificationOpened = _handleNotificationData;
       final pending = FcmService.instance.takePendingOpenedMessage();
       if (pending != null) WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationMessage(pending));
     }
@@ -114,10 +116,16 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleNotificationMessage(RemoteMessage message) {
-    final url = message.data['url']?.toString();
-    final type = message.data['type']?.toString();
+    _handleNotificationData(message.data.map((key, value) => MapEntry(key, value.toString())));
+  }
+
+  void _handleNotificationData(Map<String, String> data) {
+    final url = (data['url'] ?? data['itemId'])?.toString();
+    final type = data['type']?.toString();
     if (url == null || url.isEmpty || type == null) return;
-    _handleUri(Uri.tryParse('anitv://$type?url=${Uri.encodeComponent(url)}'));
+    final source = data['source']?.toLowerCase();
+    final normalizedType = type == 'new_content' ? (data['episode'] != null ? 'episode' : 'movie') : type;
+    _handleUri(Uri.tryParse('anitv://$normalizedType?url=${Uri.encodeComponent(url)}&source=${Uri.encodeComponent(source ?? '')}'));
   }
 
   void _handleUri(Uri? uri) {
@@ -172,7 +180,7 @@ class _MyAppState extends State<MyApp> {
     }
     final type = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
     final sourceUrl = uri.queryParameters['url'];
-    if (sourceUrl == null || sourceUrl.isEmpty || !{'anime', 'episode', 'manga', 'chapter'}.contains(type)) return;
+    if (sourceUrl == null || sourceUrl.isEmpty || !{'anime', 'episode', 'manga', 'chapter', 'movie', 'series', 'drama'}.contains(type)) return;
     final key = '${type}:$sourceUrl';
     if (_lastContentLink == key) return;
     _lastContentLink = key;
@@ -180,7 +188,8 @@ class _MyAppState extends State<MyApp> {
       final navigator = appNavigatorKey.currentState;
       if (navigator != null) {
         final Widget destination = switch (type) {
-          'anime' || 'episode' => AnimeDetailsScreen(url: sourceUrl),
+          'movie' || 'series' || 'drama' => FaselDetailsScreen(url: sourceUrl),
+          'anime' || 'episode' => uri.queryParameters['source']?.toLowerCase() == 'faselhd' ? FaselDetailsScreen(url: sourceUrl) : AnimeDetailsScreen(url: sourceUrl),
           'manga' => ComicDetailsScreen(url: sourceUrl),
           'chapter' => MangaReaderScreen(url: sourceUrl),
           _ => AnimeDetailsScreen(url: sourceUrl),
