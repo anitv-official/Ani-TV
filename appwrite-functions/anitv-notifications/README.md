@@ -18,8 +18,10 @@ Function مستقلة لإرسال Push Notifications عبر **Appwrite Messagin
 | `APPWRITE_FUNCTION_API_KEY` | Automatically provided | Dynamic API key supplied by Appwrite for each Function execution; do not create or store it manually |
 | `ANITV_ADMIN_USER_IDS` | Yes for broadcast | قائمة Appwrite User IDs للمشرفين مفصولة بفواصل |
 | `ANITV_BROADCAST_TOPIC_ID` | Yes for broadcast | Topic ID الفعلي الذي أنشأته في Appwrite Messaging |
+| `SUPABASE_URL` | Yes for history/deduplication | Project URL لمشروع AniTV في Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes for history/deduplication | مفتاح Service Role داخل Function فقط؛ لا تضعه في Flutter أو Git |
 
-لا تضع أي قيمة سرية في Git أو Flutter. Appwrite يمرر Dynamic API Key تلقائيًا عبر `APPWRITE_FUNCTION_API_KEY` و`x-appwrite-key`. لا تسجل المفتاح أو FCM token أو محتوى بيانات حساس.
+يظل Appwrite هو مصدر Authentication وFavorites وPush Targets وFCM delivery في هذه المرحلة، بينما Supabase يدير Notification History وDeduplication وScan summaries. لا تضع أي قيمة سرية في Git أو Flutter. Appwrite يمرر Dynamic API Key تلقائيًا عبر `APPWRITE_FUNCTION_API_KEY` و`x-appwrite-key`. لا تسجل المفتاح أو FCM token أو محتوى بيانات حساس.
 
 ## أقل صلاحيات API key
 
@@ -95,6 +97,7 @@ Broadcast للمشرفين فقط، ويستخدم `ANITV_BROADCAST_TOPIC_ID` و
 5. أضف Environment Variables السابقة، وأنشئ Deployment جديدًا.
 6. لا تغيّر Function الحالية `6aa5ed04000f66117651`.
 7. من إعدادات Function نفسها اضبط **Schedule** واحدًا فقط لـ`favorite_scan` (مثل `0 */30 * * *`)، واستدعِها بالـsecret header. لا تنشئ Scheduler ثانيًا في Supabase أو جهاز العميل.
+8. أضف `SUPABASE_URL` و`SUPABASE_SERVICE_ROLE_KEY` إلى متغيرات Function السرية. لا تستخدم Service Role Key في Flutter.
 
 ## Flutter build variables
 

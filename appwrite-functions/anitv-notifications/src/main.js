@@ -5,6 +5,8 @@ const faselhd = require('./adapters/faselhd');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
 const FAVORITES_COLLECTION_ID = '6aa58e3a003b23556872';
+const SUPABASE_URL = () => String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = () => String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 
 const json = (res, statusCode, body) => res.json(body, statusCode);
 const required = (name) => {
@@ -57,6 +59,33 @@ const sameSecret = (provided, expected) => {
   const right = Buffer.from(expected);
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 };
+const supabaseConfigured = () => Boolean(SUPABASE_URL() && SUPABASE_KEY());
+const supabaseRequest = async (path, options = {}) => {
+  if (!supabaseConfigured()) return null;
+  const response = await fetch(`${SUPABASE_URL()}/rest/v1/${path}`, {
+    ...options,
+    headers: { apikey: SUPABASE_KEY(), Authorization: `Bearer ${SUPABASE_KEY()}`, 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+  if (!response.ok) throw new Error(`Supabase HTTP ${response.status}`);
+  return response.status === 204 ? null : response.json();
+};
+const claimDelivery = async ({ userId, source, itemId, type, number }) => {
+  if (!supabaseConfigured()) return true;
+  const dedupeKey = [userId, source, itemId, type, number].join('|');
+  const encoded = encodeURIComponent(dedupeKey);
+  const existing = await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encoded}&select=status&limit=1`);
+  if (Array.isArray(existing) && existing.length > 0) {
+    if (existing[0].status === 'sent' || existing[0].status === 'pending') return false;
+    await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encoded}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pending', attempts: 0, last_error: null }) });
+    return true;
+  }
+  await supabaseRequest('notification_deliveries', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ dedupe_key: dedupeKey, user_id: userId, source, item_id: itemId, type, content_number: String(number), status: 'pending' }) });
+  return true;
+};
+const saveHistory = async ({ userId, title, body, type, itemId, source, payload }) => {
+  if (!supabaseConfigured()) return;
+  await supabaseRequest('notification_history', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: userId, title, body, type, item_id: itemId, source, url: itemId, payload }) });
+};
 
 const sourceAdapter = (favorite) => {
   const source = String(favorite.source || '').trim().toLowerCase();
@@ -80,7 +109,7 @@ async function withRetry(operation, attempts, waitMs = 250) {
 async function runFavoriteScan({ rows, messaging, payload, log, error }) {
   const dryRun = payload.dryRun === true;
   const result = { scanned: 0, checked: 0, notified: 0, initialized: 0, skipped: 0, unsupported: 0, errors: 0, dryRun };
-  log(`favorite scan started; dryRun=${dryRun}`);
+  log(`favorite scan started; dryRun=${dryRun}; supabase=${supabaseConfigured()}`);
   let cursor;
   const pageSize = 100;
   do {
@@ -129,8 +158,18 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
           continue;
         }
         const notificationType = String(favorite.contentType || favorite.type || 'anime').toLowerCase().includes('chapter') ? 'chapter' : 'episode';
+        const source = String(favorite.source || adapter.id);
+        const notificationPayload = { type: notificationType, itemId, url: itemId, title, source, episode: current };
         if (!dryRun) {
-          await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, data: { type: notificationType, itemId, url: itemId, title, source: String(favorite.source || adapter.id), episode: current }, priority: 'high' }), 2);
+          const claimed = await claimDelivery({ userId, source, itemId, type: notificationType, number: current });
+          if (!claimed) { result.skipped += 1; continue; }
+          try {
+            await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, data: notificationPayload, priority: 'high' }), 2);
+            await saveHistory({ userId, title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, type: notificationType, itemId, source, payload: notificationPayload });
+          } catch (deliveryError) {
+            if (supabaseConfigured()) await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encodeURIComponent([userId, source, itemId, notificationType, current].join('|'))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'failed', attempts: 1, last_error: String(deliveryError.message || '').slice(0, 240) }) });
+            throw deliveryError;
+          }
           await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
         }
         result.notified += 1;
