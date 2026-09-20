@@ -92,7 +92,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     Expanded(child: TextField(controller: _urlController, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: extensionRepositoryHint, prefixIcon: Icon(Icons.link)))),
     const SizedBox(width: 8),
     IconButton(onPressed: _loading ? null : _addRepository, tooltip: extensionAddRepositoryLabel, icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryColor)),
-  ]));
+  ])));
 
   Widget _repositoryCard(SourceRepository repository) => Card(margin: const EdgeInsets.only(bottom: 14), child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [Expanded(child: Text(displayRepositoryName(repository), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))), IconButton(onPressed: () => _refresh(repository), icon: const Icon(Icons.refresh))]),
@@ -101,7 +101,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     Text('${repository.plugins.length} إضافة • ${repositoryHost(repository.url)}', style: const TextStyle(color: AppTheme.primaryColor)),
     const SizedBox(height: 8),
     ...repository.plugins.map(_pluginTile),
-  ]));
+  ])));
 
   Widget _pluginTile(RemotePlugin plugin) {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
