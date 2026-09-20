@@ -4,7 +4,7 @@ import 'source_base.dart';
 
 class YoutubeSource extends ContentSource {
   final http.Client _client = http.Client();
-  static const _userAgent = 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120 Safari/537.36';
+  static const _userAgent = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36';
 
   @override String get id => 'youtube';
   @override String get name => 'YouTube';
@@ -15,12 +15,17 @@ class YoutubeSource extends ContentSource {
 
   @override Future<List<Map<String, dynamic>>> search(String query) async {
     final value = query.trim().isEmpty ? 'أحدث فيديوهات عربية' : query.trim();
-    final uri = Uri.https('www.youtube.com', '/results', {'search_query': value});
-    final response = await _client.get(uri, headers: const {'User-Agent': _userAgent, 'Accept-Language': 'ar,en;q=0.8'}).timeout(const Duration(seconds: 30));
+    final uri = Uri.https('www.youtube.com', '/results', {'search_query': value, 'hl': 'ar', 'gl': 'US'});
+    final response = await _client.get(uri, headers: const {
+      'User-Agent': _userAgent,
+      'Accept-Language': 'ar,en;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    }).timeout(const Duration(seconds: 30));
     if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('تعذر الاتصال بـ YouTube (${response.statusCode})');
     final data = _initialData(response.body);
     final videos = <Map<String, dynamic>>[];
     _walk(data, videos);
+    if (videos.isEmpty) throw Exception('لم يعثر YouTube على فيديوهات لهذه الكلمة');
     return videos;
   }
 
@@ -29,6 +34,18 @@ class YoutubeSource extends ContentSource {
   @override Future<Map<String, dynamic>?> streams(String url) async => {'stream_url': url, 'direct_stream_urls': [{'url': url, 'label': 'YouTube', 'name': 'YouTube', 'type': 'youtube'}], 'title': 'YouTube'};
 
   Map<String, dynamic> _initialData(String html) {
+    final encoded = RegExp(
+      r"""var\s+ytInitialData\s*=\s*'((?:\\.|[^'])*)'""",
+      caseSensitive: false,
+    ).firstMatch(html)?.group(1);
+    if (encoded != null) {
+      final decoded = encoded
+          .replaceAllMapped(RegExp(r'\\x([0-9a-fA-F]{2})'), (m) => String.fromCharCode(int.parse(m.group(1)!, radix: 16)))
+          .replaceAllMapped(RegExp(r'\\u([0-9a-fA-F]{4})'), (m) => String.fromCharCode(int.parse(m.group(1)!, radix: 16)))
+          .replaceAll(r'\/', '/');
+      final value = jsonDecode(decoded);
+      if (value is Map) return Map<String, dynamic>.from(value);
+    }
     const marker = 'var ytInitialData = ';
     final start = html.indexOf(marker);
     if (start < 0) throw Exception('لم يتم العثور على بيانات YouTube');
@@ -43,15 +60,15 @@ class YoutubeSource extends ContentSource {
   void _walk(dynamic value, List<Map<String, dynamic>> output) {
     if (value is List) { for (final item in value) _walk(item, output); return; }
     if (value is! Map) return;
-    final renderer = value['videoRenderer'];
+    final renderer = value['videoRenderer'] ?? value['gridVideoRenderer'] ?? value['compactVideoRenderer'];
     if (renderer is Map) {
       final id = renderer['videoId']?.toString() ?? '';
-      if (id.isNotEmpty && output.every((item) => item['video_id'] != id)) {
+      if (id.isNotEmpty && output.every((item) => item['video_id'] != id) && output.length < 100) {
         final title = _runs(renderer['title']);
-        final channel = _runs(renderer['ownerText']);
+        final channel = _runs(renderer['ownerText'] ?? renderer['longBylineText'] ?? renderer['shortBylineText']);
         final thumbnails = renderer['thumbnail']?['thumbnails'];
         final image = thumbnails is List && thumbnails.isNotEmpty ? thumbnails.last['url']?.toString() ?? '' : '';
-        final duration = renderer['lengthText']?['simpleText']?.toString() ?? '';
+        final duration = _runs(renderer['lengthText']);
         output.add(item(title: title.isEmpty ? 'فيديو YouTube' : title, url: 'https://www.youtube.com/watch?v=$id', image: image, type: 'فيديو', description: channel, rating: duration)..['video_id'] = id);
       }
     }

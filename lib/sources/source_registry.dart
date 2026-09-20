@@ -86,6 +86,10 @@ class SourceRegistry {
     final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
     if (identity.contains('fasel')) return _repoFaselHd;
     if (identity.contains('youtube')) return _youtube;
+    if (identity.contains('witcher') || identity.contains('ويتشر')) return _animeWitcher;
+    if (identity.contains('anime3rb') || identity.contains('anime 3rb') || identity.contains('انمي عرب')) return _anime3rb;
+    if (identity.contains('wecima') || identity.contains('وى سيما') || identity.contains('وي سيما')) return _wecima;
+    if (identity.contains('kormoz') || identity.contains('kormoze') || identity.contains('قرمزي') || identity.contains('كرمزي')) return _kormoz;
     return null;
   }
 
@@ -188,6 +192,8 @@ class SourceRegistry {
       'kormoz.com',
       'kormozi.com',
       'kormozy.com',
+      'fasselhd.com',
+      'faselhd.club',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     return media || embeddedPlayer || source.kind != 'movie';
   }
