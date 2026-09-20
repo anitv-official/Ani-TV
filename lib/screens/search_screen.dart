@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
@@ -173,7 +174,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     try {
       final animeResults = await ApiService.searchAnime(query);
       final comicResults = await ApiService.searchComics(query);
-      final movieResults = await ApiService.searchMovies(query);
+      final movieResults = await SourceRegistry.searchMovies(query);
 
       final allResults = [...animeResults, ...comicResults, ...movieResults];
 

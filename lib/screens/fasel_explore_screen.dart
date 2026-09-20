@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/ui/content_card.dart';
@@ -22,7 +22,7 @@ class _FaselExploreScreenState extends State<FaselExploreScreen> {
     if (_loadingMore || (!reset && !_more)) return;
     if (reset) { _page = 1; setState(() { _loading = true; _loadingMore = false; _more = true; }); } else { setState(() => _loadingMore = true); }
     try {
-      final rows = _query.isEmpty ? await ApiService.fetchLatestMovies(page: _page) : await ApiService.searchMovies(_query);
+      final rows = _query.isEmpty ? await SourceRegistry.latestMovies(page: _page) : await SourceRegistry.searchMovies(_query);
       if (!mounted) return;
       setState(() { if (reset) _items.clear(); final keys = _items.map((x) => x['url']).toSet(); _items.addAll(rows.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).where((x) => keys.add(x['url']))); _page++; _loading = false; _loadingMore = false; _more = _query.isEmpty && rows.isNotEmpty; });
     } catch (_) { if (mounted) setState(() { _loading = false; _loadingMore = false; _more = false; }); }
@@ -40,11 +40,13 @@ class FaselDetailsScreen extends StatefulWidget {
   @override State<FaselDetailsScreen> createState() => _FaselDetailsScreenState();
 }
 class _FaselDetailsScreenState extends State<FaselDetailsScreen> {
-  late Future<dynamic> _future;
-  @override void initState() { super.initState(); _future = ApiService.fetchMovieDetails(widget.url); }
+  late Future<Map<String, dynamic>> _future;
+  @override void initState() { super.initState(); _future = _loadDetails(); }
+  Future<Map<String, dynamic>> _loadDetails() async => (await SourceRegistry.details(widget.url)) ?? (throw Exception('تعذر تحميل تفاصيل FaselHD'));
   Future<void> _play(String url, String title) async {
     try {
-      final data = await ApiService.fetchMovieStreams(url); if (!mounted) return;
+      final data = await SourceRegistry.streams(url); if (!mounted) return;
+      if (data == null) throw Exception('لا توجد مصادر تشغيل');
       final servers = (data['direct_stream_urls'] as List? ?? const []).whereType<Map>().map((x) => {'url': x['url']?.toString() ?? '', 'label': x['label']?.toString() ?? x['name']?.toString() ?? 'سيرفر', 'referer': x['referer']?.toString() ?? ''}).where((x) => x['url']!.isNotEmpty).toList();
       if (servers.isEmpty) throw Exception('لا توجد سيرفرات');
       if (servers.length == 1) { _openPlayer(servers.first, title); return; }
@@ -53,5 +55,5 @@ class _FaselDetailsScreenState extends State<FaselDetailsScreen> {
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحميل السيرفرات: $e'))); }
   }
   void _openPlayer(Map<String, String> server, String title) => Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: server['url']!, title: title, episodeId: widget.url, directStreamUrls: [server], headers: server['referer']!.isEmpty ? const {} : {'Referer': server['referer']!})));
-  @override Widget build(BuildContext context) => Scaffold(backgroundColor: AppTheme.backgroundColor, appBar: AppBar(title: const Text('تفاصيل المحتوى')), body: FutureBuilder<dynamic>(future: _future, builder: (context, snapshot) { if (!snapshot.hasData) return snapshot.hasError ? ErrorState(onRetry: () => setState(() => _future = ApiService.fetchMovieDetails(widget.url))) : const LoadingView(message: 'جارٍ تحميل التفاصيل...', size: 58); final data = Map<String, dynamic>.from(snapshot.data as Map); final title = data['title']?.toString() ?? 'بدون عنوان'; final episodes = (data['episodes'] as List? ?? const []).whereType<Map>().toList(); final image = data['image_url']?.toString() ?? ''; return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 30), children: [Row(crossAxisAlignment: CrossAxisAlignment.start, children: [ClipRRect(borderRadius: BorderRadius.circular(16), child: image.isEmpty ? Container(width: 112, height: 160, color: AppTheme.elevatedColor, child: const Icon(Icons.movie_outlined, size: 42)) : Image.network(image, width: 112, height: 160, fit: BoxFit.cover)), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)), const SizedBox(height: 10), Text(data['type']?.toString() ?? 'فيلم', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700))]))]), if ((data['description']?.toString() ?? '').isNotEmpty) ...[const SizedBox(height: 18), Text(data['description'].toString(), textDirection: TextDirection.rtl, style: const TextStyle(color: AppTheme.textSecondaryColor, height: 1.7))], const SizedBox(height: 22), if (episodes.isEmpty) ElevatedButton.icon(onPressed: () => _play(widget.url, title), icon: const Icon(Icons.play_arrow_rounded), label: const Text('تشغيل')) else ...[const Text('الحلقات', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 10), ...episodes.map((ep) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(title: Text(ep['title']?.toString() ?? 'حلقة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), trailing: const Icon(Icons.play_circle_outline_rounded), onTap: () => _play(ep['url']?.toString() ?? widget.url, '${title} - ${ep['title'] ?? 'حلقة'}'))))]]); }));
+  @override Widget build(BuildContext context) => Scaffold(backgroundColor: AppTheme.backgroundColor, appBar: AppBar(title: const Text('تفاصيل المحتوى')), body: FutureBuilder<Map<String, dynamic>>(future: _future, builder: (context, snapshot) { if (!snapshot.hasData) return snapshot.hasError ? ErrorState(onRetry: () => setState(() => _future = _loadDetails())) : const LoadingView(message: 'جارٍ تحميل التفاصيل...', size: 58); final data = snapshot.data!; final title = data['title']?.toString() ?? 'بدون عنوان'; final episodes = (data['episodes'] as List? ?? const []).whereType<Map>().toList(); final image = data['image_url']?.toString() ?? ''; return ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 30), children: [Row(crossAxisAlignment: CrossAxisAlignment.start, children: [ClipRRect(borderRadius: BorderRadius.circular(16), child: image.isEmpty ? Container(width: 112, height: 160, color: AppTheme.elevatedColor, child: const Icon(Icons.movie_outlined, size: 42)) : Image.network(image, width: 112, height: 160, fit: BoxFit.cover)), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)), const SizedBox(height: 10), Text(data['type']?.toString() ?? 'فيلم', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700))]))]), if ((data['description']?.toString() ?? '').isNotEmpty) ...[const SizedBox(height: 18), Text(data['description'].toString(), textDirection: TextDirection.rtl, style: const TextStyle(color: AppTheme.textSecondaryColor, height: 1.7))], const SizedBox(height: 22), if (episodes.isEmpty) ElevatedButton.icon(onPressed: () => _play(widget.url, title), icon: const Icon(Icons.play_arrow_rounded), label: const Text('تشغيل')) else ...[const Text('الحلقات', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 10), ...episodes.map((ep) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(title: Text(ep['title']?.toString() ?? 'حلقة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), trailing: const Icon(Icons.play_circle_outline_rounded), onTap: () => _play(ep['url']?.toString() ?? widget.url, '${title} - ${ep['title'] ?? 'حلقة'}'))))]]); }));
 }

@@ -15,6 +15,12 @@ import 'fasel_explore_screen.dart';
 import 'video_player_screen.dart';
 import 'explore_screen.dart';
 
+Widget sourceContentPage(ContentSource source) {
+  if (source.id == 'fasel_hd') return const FaselExploreScreen();
+  if (source.id == 'drama_slayer') return const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
+  return SourceContentScreen(source: source);
+}
+
 class SourcesScreen extends StatelessWidget {
   final bool embedded;
   const SourcesScreen({super.key, this.embedded = false});
@@ -41,12 +47,10 @@ class SourcesScreen extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('مصادر إضافية مثبتة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 6),
-                    ...installed.map((plugin) => ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.extension_outlined, color: AppTheme.primaryColor), title: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white)), subtitle: Text('اضغط لعرض أعمال المصدر', style: const TextStyle(color: Colors.white54, fontSize: 11)), onTap: () {
-                      final id = plugin.internalName.toLowerCase();
-                      if (id.contains('youtube')) Navigator.push(context, MaterialPageRoute(builder: (_) => SourceContentScreen(source: SourceRegistry.visibleSources.firstWhere((source) => source.id == 'youtube'))));
-                      else if (id.contains('fasel')) Navigator.push(context, MaterialPageRoute(builder: (_) => const FaselExploreScreen()));
-                      else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سيظهر محتوى هذا المصدر بعد تفعيل محوله.')));
-                    })),
+                    ...installed.map((plugin) {
+                      final source = SourceRegistry.sourceForPlugin(plugin);
+                      return ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.extension_outlined, color: AppTheme.primaryColor), title: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white)), subtitle: Text(source == null ? 'مثبت — لا يوجد محول أصلي بعد' : 'اضغط لعرض أعمال المصدر', style: const TextStyle(color: Colors.white54, fontSize: 11)), onTap: source == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => sourceContentPage(source))));
+                    }),
                   ]),
                 );
               },
@@ -78,7 +82,7 @@ class _SourceTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => source.id == 'fasel_hd' ? const FaselExploreScreen() : source.id == 'drama_slayer' ? const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما') : SourceContentScreen(source: source)),
+        MaterialPageRoute(builder: (_) => sourceContentPage(source)),
       ),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -273,7 +277,7 @@ class SourceSummary extends StatelessWidget {
             itemCount: sources.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) => InkWell(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SourceContentScreen(source: sources[index]))),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => sourceContentPage(sources[index]))),
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: 156,

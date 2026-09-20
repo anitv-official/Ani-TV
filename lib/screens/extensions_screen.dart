@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/remote_plugin.dart';
 import '../services/remote_repository_service.dart';
+import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
+import 'fasel_explore_screen.dart';
+import 'sources_screen.dart';
 
 class ExtensionsScreen extends StatefulWidget {
   final bool embedded;
@@ -74,6 +77,16 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     }
   }
 
+  void _openPlugin(RemotePlugin plugin) {
+    final source = SourceRegistry.sourceForPlugin(plugin);
+    if (source == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تثبيت الإضافة، لكن لا يوجد محول أصلي لها داخل AniTV حتى الآن.')));
+      return;
+    }
+    final page = source.id == 'fasel_hd' ? const FaselExploreScreen() : SourceContentScreen(source: source);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
+
   Future<void> _showPluginDetails(RemotePlugin plugin) async {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
     await showModalBottomSheet<void>(
@@ -143,7 +156,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
     return GestureDetector(
       onLongPress: () => _showPluginDetails(plugin),
-      child: ListTile(contentPadding: EdgeInsets.zero, leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${installed ? 'مثبت وجاهز للاستخدام' : 'اضغط مطولاً لعرض التفاصيل'}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
+      child: ListTile(contentPadding: EdgeInsets.zero, onTap: installed ? () => _openPlugin(plugin) : () => _showPluginDetails(plugin), leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${installed ? 'مثبت — اضغط لفتح المصدر' : 'اضغط لعرض التفاصيل والتثبيت'}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
     );
   }
 }

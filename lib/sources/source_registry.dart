@@ -7,6 +7,7 @@ import 'mangatime_source.dart';
 import 'faselhd_source.dart';
 import 'source_base.dart';
 import 'youtube_source.dart';
+import '../models/remote_plugin.dart';
 
 /// Internal API catalog.
 ///
@@ -65,6 +66,17 @@ class SourceRegistry {
     for (final source in _allSources) {
       if (source.handles(url)) return source;
     }
+    return null;
+  }
+
+  /// Returns the native adapter that can open an installed repository plugin.
+  /// Cloudstream files are metadata/install artifacts; they are not executed
+  /// as Dart code. Only adapters that have been implemented natively are
+  /// exposed here.
+  static ContentSource? sourceForPlugin(RemotePlugin plugin) {
+    final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
+    if (identity.contains('fasel')) return _repoFaselHd;
+    if (identity.contains('youtube')) return _youtube;
     return null;
   }
 
