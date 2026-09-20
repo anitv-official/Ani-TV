@@ -13,7 +13,7 @@ import 'downloads_screen.dart';
 import 'sources_screen.dart';
 import 'profile_screen.dart';
 import 'about_screen.dart';
-import 'community_screen.dart';
+import 'extensions_screen.dart';
 import 'novel_explore_screen.dart';
 import 'fasel_explore_screen.dart';
 
@@ -117,14 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
         return const DownloadsScreen(embedded: true);
       case AppSection.sources:
         return const SourcesScreen(embedded: true);
+      case AppSection.extensions:
+        return const ExtensionsScreen(embedded: true);
       case AppSection.account:
         return ProfileScreen(embedded: true);
       case AppSection.settings:
         return const ProfileScreen(embedded: true, settingsOnly: true);
       case AppSection.about:
         return const AboutScreen(embedded: true);
-      case AppSection.community:
-        return const CommunityScreen();
     }
   }
 
