@@ -4,7 +4,7 @@
 
 ## المرحلة الحالية
 
-توجد قناة `com.anitv.app/cloudstream` وخدمة Flutter مقابلة لها. ينفذ المحرك حاليًا:
+توجد قناة `com.anitv.app/cloudstream` وخدمة Flutter مقابلة لها، ويعتمد Android على artifact `com.github.recloudstream.cloudstream:library-android:4.8.0`. ينفذ المحرك حاليًا:
 
 - فحص حجم ملف الإضافة قبل التعامل معه.
 - قراءة `manifest.json` من أرشيف CS3.
@@ -12,6 +12,7 @@
 - حساب SHA-256 مرة أخرى بعد التنزيل.
 - جعل الملف للقراءة فقط قبل تحميله.
 - تحميل صنف الإضافة عبر `DexClassLoader` داخل `codeCacheDir` مع عزل مسار الـ Dex المحسّن.
+- تسجيل مزودي الإضافة في `APIHolder` ثم تنفيذ `providers` و`search` و`load` و`loadLinks`.
 - إرجاع حالة التحميل إلى Flutter بدل إسقاط التطبيق عند غياب توافق CloudStream.
 
 العمليات المتاحة عبر MethodChannel هي `engineInfo` و`listInstalledPlugins` و`inspectPlugin` و`loadPlugin`.
@@ -20,6 +21,6 @@
 
 ملف CS3 يحتوي كودًا تنفيذيًا، وليس بيانات JSON. لذلك لا يقوم التطبيق بتشغيله لمجرد تنزيله؛ يتم فحصه أولًا، ولا يُسمح إلا بأرشيف ZIP صغير يحتوي Manifest صالحًا. إذا كان ملف الإضافة صحيحًا لكن CloudStream API غير موجودة داخل التطبيق، يعيد المحرك حالة `runtime: unavailable` بدل تنفيذ كود غير متوافق.
 
-## الخطوة التالية
+## التحقق
 
-لتحويل إثبات Faselhd إلى تشغيل كامل، يجب تضمين نسخة متوافقة ومثبتة من CloudStream `library` وواجهات `MainAPI` و`BasePlugin` و`ExtractorLink` مع جميع تبعيات HTTP/HTML/Kotlin المطابقة لإصدار الإضافات في الريبو. لا ينبغي دمج هذا الجزء عشوائيًا؛ يجب تثبيت نسخة API، ثم اختبار `search` و`load` و`loadLinks` على Faselhd قبل تشغيل أي إضافة أخرى.
+يجب أن يثبت GitHub Actions أن artifact يمكنه تجميع مكتبة CloudStream مع AniTV. بعد التثبيت على جهاز Android، يجب تحميل إضافة Faselhd ثم استدعاء `providers` للتأكد من تسجيلها قبل تجربة `search` و`load` و`loadLinks`.
