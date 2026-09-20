@@ -72,6 +72,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     });
     _currentUrl = widget.url;
     _filterPixelDrainUrls();
+    _currentUrl = _normalizeEmbeddedUrl(_currentUrl);
     _initializePlayer();
   }
 
@@ -513,12 +514,40 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
     return const {
       'youtube.com', 'youtu.be', 'm.youtube.com',
+      'youtube-nocookie.com',
+      'animewitcher.com', 'anime3rb.com',
+      'wecima.show', 'wecima.tube', 'wecima.video', 'wecima.mov',
+      'kormoz.com', 'kormozi.com', 'kormozy.com',
       'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
       'streamwish.fun', 'streamwish.com', 'topcinemaa.com', 'topcinemaa.cc', 'topcinemaa.co',
       'web2.topcinemaa.com', 'vidtube.one', 'down.vidtube.one', 'vidtube.pro',
       'vidtube.cam', 'img.cdn-video.xyz', 'updown.icu', 'topcinema.media',
       'uqload.cx', 'uqload.io',
     }.contains(host);
+  }
+
+  /// YouTube watch pages are not video streams and may redirect outside the
+  /// app. Use the privacy-enhanced embedded player endpoint instead.
+  String _normalizeEmbeddedUrl(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    final host = uri.host.toLowerCase().replaceFirst('www.', '');
+    String? videoId;
+    if (host == 'youtu.be') {
+      videoId = uri.pathSegments.isEmpty ? null : uri.pathSegments.first;
+    } else if (host == 'youtube.com' || host == 'm.youtube.com') {
+      videoId = uri.queryParameters['v'];
+      if (videoId == null && uri.pathSegments.length >= 2 && uri.pathSegments.first == 'shorts') {
+        videoId = uri.pathSegments[1];
+      }
+    }
+    if (videoId == null || videoId.isEmpty) return url;
+    return Uri.https('www.youtube-nocookie.com', '/embed/${Uri.encodeComponent(videoId)}', {
+      'autoplay': '1',
+      'playsinline': '1',
+      'rel': '0',
+      'modestbranding': '1',
+    }).toString();
   }
 
   static const String _browserUserAgent =
