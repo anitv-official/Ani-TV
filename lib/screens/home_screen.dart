@@ -6,6 +6,9 @@ import '../services/app_version_service.dart';
 import '../widgets/app_navigation_drawer.dart';
 import '../widgets/app_section.dart';
 import '../widgets/ui/app_fixed_header.dart';
+import '../sources/source_registry.dart';
+import '../models/remote_plugin.dart';
+import '../services/remote_repository_service.dart';
 import 'home_content.dart';
 import 'explore_screen.dart';
 import 'favorites_screen.dart';
@@ -42,8 +45,23 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkForAppUpdate();
+    _ensureBuiltInYoutube();
     if (widget.showOfflineNotice) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showOfflineNotice());
+    }
+  }
+
+  Future<void> _ensureBuiltInYoutube() async {
+    try {
+      final repositories = await remoteRepositoryService.loadSavedRepositories();
+      if (repositories.isEmpty) {
+        final repository = await remoteRepositoryService.fetchRepository(defaultRepositoryUrl);
+        await remoteRepositoryService.saveRepository(repository);
+      }
+      await remoteRepositoryService.ensureBuiltIn('YouTube');
+    } catch (_) {
+      // The native source remains available from the menu; persistence retries
+      // on the next startup or when the extensions screen opens.
     }
   }
 
@@ -109,6 +127,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
       case AppSection.movies:
         return const FaselExploreScreen(embedded: true);
+      case AppSection.youtube:
+        return SourceContentScreen(source: SourceRegistry.visibleSources.firstWhere((source) => source.id == 'youtube'));
       case AppSection.novels:
         return const NovelExploreScreen(embedded: true);
       case AppSection.favorites:

@@ -17,8 +17,9 @@ class RemotePlugin {
   final int fileSize;
   final List<String> tvTypes;
   final String localPath;
+  final bool isBuiltIn;
 
-  const RemotePlugin({required this.name, required this.internalName, required this.description, required this.downloadUrl, required this.iconUrl, required this.language, required this.repositoryUrl, required this.fileHash, required this.version, required this.fileSize, required this.tvTypes, this.localPath = ''});
+  const RemotePlugin({required this.name, required this.internalName, required this.description, required this.downloadUrl, required this.iconUrl, required this.language, required this.repositoryUrl, required this.fileHash, required this.version, required this.fileSize, required this.tvTypes, this.localPath = '', this.isBuiltIn = false});
 
   factory RemotePlugin.fromJson(Map<String, dynamic> json) => RemotePlugin(
     name: (json['name'] ?? json['internalName'] ?? 'إضافة بدون اسم').toString(),
@@ -33,10 +34,12 @@ class RemotePlugin {
     fileSize: int.tryParse('${json['fileSize'] ?? 0}') ?? 0,
     tvTypes: json['tvTypes'] is List ? (json['tvTypes'] as List).map((e) => e.toString()).toList() : const [],
     localPath: (json['localPath'] ?? '').toString(),
+    isBuiltIn: json['isBuiltIn'] == true,
   );
 
-  Map<String, dynamic> toJson() => {'name': name, 'internalName': internalName, 'description': description, 'url': downloadUrl, 'iconUrl': iconUrl, 'language': language, 'repositoryUrl': repositoryUrl, 'fileHash': fileHash, 'version': version, 'fileSize': fileSize, 'tvTypes': tvTypes, 'localPath': localPath};
-  RemotePlugin withLocalPath(String path) => RemotePlugin(name: name, internalName: internalName, description: description, downloadUrl: downloadUrl, iconUrl: iconUrl, language: language, repositoryUrl: repositoryUrl, fileHash: fileHash, version: version, fileSize: fileSize, tvTypes: tvTypes, localPath: path);
+  Map<String, dynamic> toJson() => {'name': name, 'internalName': internalName, 'description': description, 'url': downloadUrl, 'iconUrl': iconUrl, 'language': language, 'repositoryUrl': repositoryUrl, 'fileHash': fileHash, 'version': version, 'fileSize': fileSize, 'tvTypes': tvTypes, 'localPath': localPath, 'isBuiltIn': isBuiltIn};
+  RemotePlugin withLocalPath(String path) => RemotePlugin(name: name, internalName: internalName, description: description, downloadUrl: downloadUrl, iconUrl: iconUrl, language: language, repositoryUrl: repositoryUrl, fileHash: fileHash, version: version, fileSize: fileSize, tvTypes: tvTypes, localPath: path, isBuiltIn: isBuiltIn);
+  RemotePlugin withBuiltIn() => RemotePlugin(name: name, internalName: internalName, description: description, downloadUrl: downloadUrl, iconUrl: iconUrl, language: language, repositoryUrl: repositoryUrl, fileHash: fileHash, version: version, fileSize: fileSize, tvTypes: tvTypes, localPath: localPath, isBuiltIn: true);
   String get stableId => '$repositoryUrl|$internalName|$downloadUrl';
   bool get isCloudstream => downloadUrl.toLowerCase().endsWith('.cs3');
 }

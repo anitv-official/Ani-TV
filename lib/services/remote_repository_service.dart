@@ -72,6 +72,7 @@ class RemoteRepositoryService {
   }
 
   Future<void> setInstalled(RemotePlugin plugin, bool installed) async {
+    if (!installed && plugin.isBuiltIn) return;
     final current = (await installedPlugins()).where((item) => item.stableId != plugin.stableId).toList();
     if (installed) current.add(plugin);
     final preferences = await SharedPreferences.getInstance();
@@ -98,11 +99,35 @@ class RemoteRepositoryService {
   }
 
   Future<void> uninstallPlugin(RemotePlugin plugin) async {
+    if (plugin.isBuiltIn) return;
     if (plugin.localPath.isNotEmpty) {
       final file = File(plugin.localPath);
       if (file.existsSync()) await file.delete();
     }
     await setInstalled(plugin, false);
+  }
+
+  Future<RemotePlugin?> ensureBuiltIn(String internalName) async {
+    final installed = await installedPlugins();
+    RemotePlugin? existing;
+    for (final plugin in installed) {
+      if (plugin.internalName.toLowerCase() == internalName.toLowerCase()) {
+        existing = plugin;
+        break;
+      }
+    }
+    if (existing != null && existing.isBuiltIn) return existing;
+    final repositories = await loadSavedRepositories();
+    for (final repository in repositories) {
+      for (final plugin in repository.plugins) {
+        if (plugin.internalName.toLowerCase() == internalName.toLowerCase() || plugin.name.toLowerCase() == internalName.toLowerCase()) {
+          final builtIn = plugin.withBuiltIn();
+          await setInstalled(builtIn, true);
+          return builtIn;
+        }
+      }
+    }
+    return null;
   }
 
   Future<dynamic> _getJson(String url) async {
