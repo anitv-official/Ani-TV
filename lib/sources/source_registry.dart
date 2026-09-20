@@ -19,6 +19,8 @@ class SourceRegistry {
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
   static final _youtube = YoutubeSource();
+  // Native adapter mapped to the Faselhd entry from the installed repository.
+  static final _repoFaselHd = FaselHdSource();
 
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
@@ -28,9 +30,12 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    FaselHdSource(),
     _youtube,
   ];
+
+  static List<ContentSource> get _repositorySources => [_repoFaselHd];
+  static List<ContentSource> get _allSources => [..._apis, ..._repositorySources];
+  static List<ContentSource> get _repositoryMovieSources => _repositorySources.where((s) => s.kind == 'movie').toList(growable: false);
 
   static List<ContentSource> get _animeApis =>
       _apis.where((s) => s.kind == 'anime').toList(growable: false);
@@ -47,7 +52,7 @@ class SourceRegistry {
   /// Sources that have a complete user-facing adapter and can be opened from
   /// the Sources screen. Other adapters remain internal until their UI flow
   /// and playback contracts are verified.
-  static List<ContentSource> get visibleSources => List.unmodifiable(_apis);
+  static List<ContentSource> get visibleSources => List.unmodifiable(_allSources);
 
   /// Compatibility getters for tests/services. The UI uses [all], which is
   /// intentionally empty so API adapters are never shown as sources.
@@ -57,7 +62,7 @@ class SourceRegistry {
   static List<ContentSource> get movieSources => _movieApis;
 
   static ContentSource? sourceFor(String url) {
-    for (final source in _apis) {
+    for (final source in _allSources) {
       if (source.handles(url)) return source;
     }
     return null;
@@ -75,11 +80,11 @@ class SourceRegistry {
   }
 
   static Future<List<Map<String, dynamic>>> searchAll(String query) {
-    return _merge(_apis.map((source) => _retry(() => source.search(query))));
+    return _merge(_allSources.map((source) => _retry(() => source.search(query))));
   }
 
   static Future<List<Map<String, dynamic>>> searchMovies(String query) {
-    return _merge(_movieApis.map((source) => _retry(() => source.search(query))));
+    return _merge([..._repositoryMovieSources].map((source) => _retry(() => source.search(query))));
   }
 
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) {
@@ -96,12 +101,12 @@ class SourceRegistry {
 
   static Future<List<Map<String, dynamic>>> latestMovies({int page = 1}) {
     return _cached('movie:$page', () =>
-        _merge(_movieApis.map((source) => _retry(() => source.latest(page: page)))));
+        _merge(_repositoryMovieSources.map((source) => _retry(() => source.latest(page: page)))));
   }
 
   static Future<List<Map<String, dynamic>>> latestFromSource(
       String sourceId, {int page = 1}) async {
-    final source = _apis.firstWhere((entry) => entry.id == sourceId);
+    final source = _allSources.firstWhere((entry) => entry.id == sourceId);
     return _retry(() => source.latest(page: page));
   }
 

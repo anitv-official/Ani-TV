@@ -16,4 +16,9 @@ void main() {
     expect(source.handles('https://hrrejhp.com/egybestanto/public/api/series/15030/0'), isTrue);
     expect(source.handles('https://hrrejhp.com/egybestanto/public/api/episode/1/0'), isTrue);
   });
+
+  test('movie catalog is backed by the repository-mapped FaselHD adapter', () {
+    expect(SourceRegistry.movieSources.whereType<FaselHdSource>(), isEmpty);
+    expect(SourceRegistry.visibleSources.whereType<FaselHdSource>(), hasLength(1));
+  });
 }
