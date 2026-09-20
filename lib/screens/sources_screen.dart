@@ -12,6 +12,8 @@ import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'fasel_explore_screen.dart';
+import 'video_player_screen.dart';
+import 'explore_screen.dart';
 
 class SourcesScreen extends StatelessWidget {
   final bool embedded;
@@ -39,7 +41,12 @@ class SourcesScreen extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const Text('مصادر إضافية مثبتة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 6),
-                    ...installed.map((plugin) => ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.extension_outlined, color: AppTheme.primaryColor), title: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white)), subtitle: Text('تم تنزيل ${pluginFileLabel(plugin)} • المحرك غير مفعل بعد', style: const TextStyle(color: Colors.white54, fontSize: 11)))),
+                    ...installed.map((plugin) => ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.extension_outlined, color: AppTheme.primaryColor), title: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white)), subtitle: Text('اضغط لعرض أعمال المصدر', style: const TextStyle(color: Colors.white54, fontSize: 11)), onTap: () {
+                      final id = plugin.internalName.toLowerCase();
+                      if (id.contains('youtube')) Navigator.push(context, MaterialPageRoute(builder: (_) => SourceContentScreen(source: SourceRegistry.visibleSources.firstWhere((source) => source.id == 'youtube'))));
+                      else if (id.contains('fasel')) Navigator.push(context, MaterialPageRoute(builder: (_) => const FaselExploreScreen()));
+                      else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سيظهر محتوى هذا المصدر بعد تفعيل محوله.')));
+                    })),
                   ]),
                 );
               },
@@ -71,29 +78,27 @@ class _SourceTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => source.id == 'fasel_hd' ? const FaselExploreScreen() : SourceContentScreen(source: source)),
+        MaterialPageRoute(builder: (_) => source.id == 'fasel_hd' ? const FaselExploreScreen() : source.id == 'drama_slayer' ? const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما') : SourceContentScreen(source: source)),
       ),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
+          color: source.id == 'youtube' ? const Color(0xFF2A1114) : AppTheme.surfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.borderColor),
+          border: Border.all(color: source.id == 'youtube' ? const Color(0xFFE62117) : AppTheme.borderColor),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppTheme.primaryColor.withOpacity(.18),
-              child: Icon(isVideo ? Icons.movie_outlined : Icons.menu_book_outlined,
-                  color: AppTheme.primaryColor),
+              backgroundColor: source.id == 'youtube' ? const Color(0xFFE62117).withOpacity(.2) : AppTheme.primaryColor.withOpacity(.18),
+              child: Icon(source.id == 'youtube' ? Icons.play_arrow_rounded : (isVideo ? Icons.movie_outlined : Icons.menu_book_outlined), color: source.id == 'youtube' ? const Color(0xFFFF3B30) : AppTheme.primaryColor),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(source.name,
-                      style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                  Text(source.name, style: TextStyle(color: source.id == 'youtube' ? const Color(0xFFFF3B30) : Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(source.kind == 'drama' ? 'أفلام ومسلسلات' : (isVideo ? 'أنمي' : 'مانجا'), style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 4),
@@ -226,11 +231,13 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
                 return ContentCard(
                   title: item['title']?.toString(),
                   imageUrl: item['image_url']?.toString(),
-                  badge: widget.source.kind == 'drama' ? 'دراما' : (isVideo ? 'أنمي' : item['type']?.toString()),
+                  badge: widget.source.id == 'youtube' ? 'YouTube' : (widget.source.kind == 'drama' ? 'دراما' : (isVideo ? 'أنمي' : item['type']?.toString())),
                   onTap: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => isVideo
-                        ? AnimeDetailsScreen(url: item['url'].toString())
-                        : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()),
+                    builder: (_) => widget.source.id == 'youtube'
+                        ? VideoPlayerScreen(url: item['url'].toString(), title: item['title']?.toString() ?? 'YouTube', episodeId: item['url'].toString())
+                        : isVideo
+                            ? AnimeDetailsScreen(url: item['url'].toString())
+                            : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()),
                   )),
                 );
               },
@@ -286,7 +293,7 @@ class SourceSummary extends StatelessWidget {
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text(sources[index].name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
                     const SizedBox(height: 4),
-                    Text(sources[index].kind == 'drama' ? 'أفلام ومسلسلات' : (sources[index].kind == 'anime' ? 'أنمي' : 'مانجا'), style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
+                    Text(sources[index].id == 'youtube' ? 'فيديوهات YouTube' : (sources[index].kind == 'drama' ? 'أفلام ومسلسلات' : (sources[index].kind == 'anime' ? 'أنمي' : 'مانجا')), style: TextStyle(color: sources[index].id == 'youtube' ? const Color(0xFFFF3B30) : AppTheme.textSecondaryColor, fontSize: 11)),
                   ])),
                 ]),
               ),

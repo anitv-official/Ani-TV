@@ -74,6 +74,33 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     }
   }
 
+  Future<void> _showPluginDetails(RemotePlugin plugin) async {
+    final installed = _installed.any((item) => item.stableId == plugin.stableId);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            if (plugin.iconUrl.isNotEmpty) CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)) else const CircleAvatar(child: Icon(Icons.extension_outlined)),
+            const SizedBox(width: 12),
+            Expanded(child: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800))),
+            IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close)),
+          ]),
+          const SizedBox(height: 14),
+          Text(pluginDescription(plugin), style: const TextStyle(color: AppTheme.textSecondaryColor, height: 1.5)),
+          const SizedBox(height: 12),
+          Text('الإصدار ${plugin.version} • ${pluginLanguageLabel(plugin.language)} • ${pluginArchiveLabel(plugin)}', style: const TextStyle(color: AppTheme.primaryColor)),
+          if (plugin.fileHash.isNotEmpty) ...[const SizedBox(height: 6), Text('التحقق: ${pluginHashLabel(plugin)}', style: const TextStyle(color: Colors.white54, fontSize: 12))],
+          const SizedBox(height: 18),
+          SizedBox(width: double.infinity, child: (installed ? OutlinedButton.icon : ElevatedButton.icon)(onPressed: () { Navigator.pop(sheetContext); _toggle(plugin); }, icon: Icon(installed ? Icons.delete_outline : Icons.download), label: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
+        ]),
+      )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final body = RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -94,7 +121,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     SizedBox(height: 8),
     Text(extensionRepositoryInfo, style: TextStyle(color: AppTheme.textSecondaryColor)),
     SizedBox(height: 8),
-    Text(extensionPhaseTwoLabel, style: TextStyle(color: AppTheme.primaryColor, height: 1.4)),
+    Text('مصادر موثوقة قابلة للتثبيت والتحقق قبل الاستخدام.', style: TextStyle(color: AppTheme.primaryColor, height: 1.4)),
   ])));
 
   Widget _addForm() => Card(child: Padding(padding: const EdgeInsets.all(12), child: Row(children: [
@@ -114,6 +141,9 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 
   Widget _pluginTile(RemotePlugin plugin) {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
-    return ListTile(contentPadding: EdgeInsets.zero, leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${pluginPhaseLabel(plugin)}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel)));
+    return GestureDetector(
+      onLongPress: () => _showPluginDetails(plugin),
+      child: ListTile(contentPadding: EdgeInsets.zero, leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${installed ? 'مثبت وجاهز للاستخدام' : 'اضغط مطولاً لعرض التفاصيل'}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
+    );
   }
 }

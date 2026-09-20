@@ -6,6 +6,7 @@ import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
 import 'faselhd_source.dart';
 import 'source_base.dart';
+import 'youtube_source.dart';
 
 /// Internal API catalog.
 ///
@@ -17,6 +18,7 @@ class SourceRegistry {
   static const int _maxAttempts = 3;
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
+  static final _youtube = YoutubeSource();
 
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
@@ -27,6 +29,7 @@ class SourceRegistry {
     MangaTimeSource(),
     MangaMelloSource(),
     FaselHdSource(),
+    _youtube,
   ];
 
   static List<ContentSource> get _animeApis =>
@@ -44,7 +47,7 @@ class SourceRegistry {
   /// Sources that have a complete user-facing adapter and can be opened from
   /// the Sources screen. Other adapters remain internal until their UI flow
   /// and playback contracts are verified.
-  static final List<ContentSource> visibleSources = [FaselHdSource()];
+  static List<ContentSource> get visibleSources => List.unmodifiable(_apis);
 
   /// Compatibility getters for tests/services. The UI uses [all], which is
   /// intentionally empty so API adapters are never shown as sources.

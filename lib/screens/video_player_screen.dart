@@ -512,6 +512,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isAllowedEmbeddedPlayer(String url) {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
     return const {
+      'youtube.com', 'youtu.be', 'm.youtube.com',
       'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
       'streamwish.fun', 'streamwish.com', 'topcinemaa.com', 'topcinemaa.cc', 'topcinemaa.co',
       'web2.topcinemaa.com', 'vidtube.one', 'down.vidtube.one', 'vidtube.pro',
