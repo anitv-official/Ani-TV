@@ -15,6 +15,8 @@ abstract class ContentSource {
 
   Future<List<Map<String, dynamic>>> latest({int page = 1});
 
+  Future<List<Map<String, dynamic>>> nextPage({String query = '', int page = 2}) => latest(page: page);
+
   Future<Map<String, dynamic>> details(String url);
 
   Future<Map<String, dynamic>?> streams(String url) async => null;

@@ -19,6 +19,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final String episodeId;
   final List<Map<String, String>> directStreamUrls;
   final Map<String, String> headers;
+  final bool allowWebView;
 
   VideoPlayerScreen({
     required this.url,
@@ -26,6 +27,7 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.episodeId,
     this.directStreamUrls = const [],
     this.headers = const {},
+    this.allowWebView = true,
   });
 
   @override
@@ -477,6 +479,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             message: 'Failed to initialize video player: $e',
             onRetry: () => _initializePlayer(),
             onDismiss: () {
+              if (!widget.allowWebView) {
+                Navigator.of(context).pop();
+                return;
+              }
               _isDirectVideo = false;
               _initializeWebView();
             },
@@ -503,7 +509,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
     final lower = url.toLowerCase();
     if (url.startsWith('/') || RegExp(r'\.(?:mp4|m3u8|mov|mkv|avi|webm)(?:\?|$)').hasMatch(lower) ||
-        lower.contains('pixeldrain.com/api/file')) {
+        lower.contains('pixeldrain.com/api/file') || lower.contains('pipedproxy') || lower.contains('/videoplayback')) {
       return true;
     }
     return false;

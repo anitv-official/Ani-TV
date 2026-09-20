@@ -12,6 +12,7 @@ import android.app.PendingIntent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import com.anitv.app.cloudstream.CloudStreamEngine
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.anitv.app/installer"
@@ -55,8 +56,9 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
                 else -> result.notImplemented()
-            }
+                }
         }
+        CloudStreamEngine(this).register(flutterEngine.dartExecutor.binaryMessenger)
     }
     
     override fun onNewIntent(intent: Intent) {

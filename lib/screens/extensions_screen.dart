@@ -30,12 +30,13 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final repositories = await _service.loadSavedRepositories();
-      final installed = await _service.installedPlugins();
       if (repositories.isEmpty) {
         final repository = await _service.fetchRepository(defaultRepositoryUrl);
         await _service.saveRepository(repository);
         repositories.add(repository);
       }
+      await _service.ensureBuiltIn('YouTube');
+      final installed = await _service.installedPlugins();
       if (mounted) setState(() { _repositories = repositories; _installed = installed; _loading = false; });
     } catch (_) {
       if (mounted) setState(() { _loading = false; _error = extensionLoadError; });
@@ -64,6 +65,10 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 
   Future<void> _toggle(RemotePlugin plugin) async {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
+    if (installed && plugin.isBuiltIn) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مصدر YouTube مدمج ولا يمكن حذفه.')));
+      return;
+    }
     setState(() { _loading = true; _error = null; });
     try {
       if (installed) {
@@ -156,7 +161,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
     return GestureDetector(
       onLongPress: () => _showPluginDetails(plugin),
-      child: ListTile(contentPadding: EdgeInsets.zero, onTap: installed ? () => _openPlugin(plugin) : () => _showPluginDetails(plugin), leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${installed ? 'مثبت — اضغط لفتح المصدر' : 'اضغط لعرض التفاصيل والتثبيت'}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
+      child: ListTile(contentPadding: EdgeInsets.zero, onTap: installed ? () => _openPlugin(plugin) : () => _showPluginDetails(plugin), leading: plugin.iconUrl.isEmpty ? const CircleAvatar(child: Icon(Icons.extension_outlined)) : CircleAvatar(backgroundImage: NetworkImage(plugin.iconUrl)), title: Text(displayPluginName(plugin), maxLines: 1, overflow: TextOverflow.ellipsis), subtitle: Text('${pluginSummary(plugin)}\n${installed ? (plugin.isBuiltIn ? 'مدمج — اضغط لفتح المصدر' : 'مثبت — اضغط لفتح المصدر') : 'اضغط لعرض التفاصيل والتثبيت'}', maxLines: 2, overflow: TextOverflow.ellipsis), isThreeLine: true, trailing: plugin.isBuiltIn && installed ? const Icon(Icons.lock_outline, color: AppTheme.primaryColor) : TextButton(onPressed: () => _toggle(plugin), child: Text(installed ? extensionUninstallLabel : extensionInstallLabel))),
     );
   }
 }

@@ -31,9 +31,9 @@ void main() {
     expect(SourceRegistry.sourceForPlugin(plugin), isA<YoutubeSource>());
   });
 
-  test('YouTube videos expose a playable WebView URL', () async {
-    final result = await YoutubeSource().streams('https://www.youtube.com/watch?v=abc123');
-    expect(result?['stream_url'], 'https://www.youtube.com/watch?v=abc123');
-    expect((result?['direct_stream_urls'] as List).single['type'], 'youtube');
+  test('YouTube details preserve the video URL for native extraction', () async {
+    final result = await YoutubeSource().details('https://www.youtube.com/watch?v=abc123');
+    expect(result['url'], 'https://www.youtube.com/watch?v=abc123');
+    expect(result['source_id'], 'youtube');
   });
 }
