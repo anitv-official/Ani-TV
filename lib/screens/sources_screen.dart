@@ -11,6 +11,7 @@ import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
+import 'fasel_explore_screen.dart';
 
 class SourcesScreen extends StatelessWidget {
   final bool embedded;
@@ -18,7 +19,7 @@ class SourcesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sources = SourceRegistry.all;
+    final sources = SourceRegistry.visibleSources;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       endDrawer: embedded ? null : const AppNavigationDrawer(),
@@ -70,7 +71,7 @@ class _SourceTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => SourceContentScreen(source: source)),
+        MaterialPageRoute(builder: (_) => source.id == 'fasel_hd' ? const FaselExploreScreen() : SourceContentScreen(source: source)),
       ),
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -249,7 +250,7 @@ class SourceSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sources = SourceRegistry.all;
+    final sources = SourceRegistry.visibleSources;
     if (sources.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),

@@ -41,6 +41,11 @@ class SourceRegistry {
   /// Kept for backwards compatibility. API adapters must not appear as sources.
   static const List<ContentSource> all = <ContentSource>[];
 
+  /// Sources that have a complete user-facing adapter and can be opened from
+  /// the Sources screen. Other adapters remain internal until their UI flow
+  /// and playback contracts are verified.
+  static final List<ContentSource> visibleSources = [FaselHdSource()];
+
   /// Compatibility getters for tests/services. The UI uses [all], which is
   /// intentionally empty so API adapters are never shown as sources.
   static List<ContentSource> get animeSources => _animeApis;
