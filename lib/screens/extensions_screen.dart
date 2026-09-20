@@ -61,8 +61,17 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
 
   Future<void> _toggle(RemotePlugin plugin) async {
     final installed = _installed.any((item) => item.stableId == plugin.stableId);
-    await _service.setInstalled(plugin, !installed);
-    await _load();
+    setState(() { _loading = true; _error = null; });
+    try {
+      if (installed) {
+        await _service.uninstallPlugin(_installed.firstWhere((item) => item.stableId == plugin.stableId));
+      } else {
+        await _service.installPlugin(plugin);
+      }
+      await _load();
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = 'تعذر تثبيت الإضافة أو فشل التحقق من SHA-256.'; });
+    }
   }
 
   @override
@@ -85,7 +94,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     SizedBox(height: 8),
     Text(extensionRepositoryInfo, style: TextStyle(color: AppTheme.textSecondaryColor)),
     SizedBox(height: 8),
-    Text(extensionInstallDisclaimer, style: TextStyle(color: AppTheme.primaryColor, height: 1.4)),
+    Text(extensionPhaseTwoLabel, style: TextStyle(color: AppTheme.primaryColor, height: 1.4)),
   ])));
 
   Widget _addForm() => Card(child: Padding(padding: const EdgeInsets.all(12), child: Row(children: [

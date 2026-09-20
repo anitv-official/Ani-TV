@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/remote_plugin.dart';
 
@@ -73,6 +76,33 @@ class RemoteRepositoryService {
     if (installed) current.add(plugin);
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(installedPluginsStorageKey, installedPluginsJson(current));
+  }
+
+  Future<RemotePlugin> installPlugin(RemotePlugin plugin) async {
+    if (!plugin.isCloudstream) throw Exception('Unsupported extension archive');
+    final response = await http.get(Uri.parse(plugin.downloadUrl)).timeout(_timeout);
+    if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('HTTP ${response.statusCode}');
+    final digest = sha256.convert(response.bodyBytes).toString();
+    final expected = plugin.fileHash.replaceFirst(RegExp(r'^sha256-', caseSensitive: false), '').toLowerCase();
+    if (expected.isNotEmpty && digest != expected) throw Exception('Checksum mismatch');
+    final root = await getApplicationDocumentsDirectory();
+    final directory = Directory('${root.path}/AniTV/Extensions')..createSync(recursive: true);
+    final safeName = plugin.internalName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
+    final file = File('${directory.path}/${safeName.isEmpty ? 'extension' : safeName}.cs3');
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+    final installed = plugin.withLocalPath(file.path);
+    final current = (await installedPlugins()).where((item) => item.stableId != plugin.stableId).toList()..add(installed);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(installedPluginsStorageKey, installedPluginsJson(current));
+    return installed;
+  }
+
+  Future<void> uninstallPlugin(RemotePlugin plugin) async {
+    if (plugin.localPath.isNotEmpty) {
+      final file = File(plugin.localPath);
+      if (file.existsSync()) await file.delete();
+    }
+    await setInstalled(plugin, false);
   }
 
   Future<dynamic> _getJson(String url) async {

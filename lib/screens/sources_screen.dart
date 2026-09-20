@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../sources/source_base.dart';
 import '../sources/source_registry.dart';
+import '../models/remote_plugin.dart';
+import '../services/remote_repository_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
@@ -24,6 +26,23 @@ class SourcesScreen extends StatelessWidget {
         child: Column(
           children: [
             if (!embedded) const AppFixedHeader(title: 'مصادر المحتوى'),
+            FutureBuilder<List<RemotePlugin>>(
+              future: remoteRepositoryService.installedPlugins(),
+              builder: (context, snapshot) {
+                final installed = snapshot.data ?? const <RemotePlugin>[];
+                if (installed.isEmpty) return const SizedBox.shrink();
+                return Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderColor)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('مصادر إضافية مثبتة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    ...installed.map((plugin) => ListTile(contentPadding: EdgeInsets.zero, dense: true, leading: const Icon(Icons.extension_outlined, color: AppTheme.primaryColor), title: Text(displayPluginName(plugin), style: const TextStyle(color: Colors.white)), subtitle: Text('تم تنزيل ${pluginFileLabel(plugin)} • المحرك غير مفعل بعد', style: const TextStyle(color: Colors.white54, fontSize: 11)))),
+                  ]),
+                );
+              },
+            ),
             Expanded(child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: sources.length,
