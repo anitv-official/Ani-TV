@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'source_base.dart';
+import 'web_catalog_source.dart';
 
 /// FaselHD source. The API domain is refreshed from the public config file
 /// used by the Android client, with a known working fallback.
@@ -10,12 +11,20 @@ class FaselHdSource extends ContentSource {
   static const _userAgent = 'okhttp/4.10.0';
   final http.Client _client = http.Client();
   final Map<String, Map<String, dynamic>> _cache = {};
+  final WebCatalogSource _htmlFallback = WebCatalogSource(
+    sourceId: 'fasel_hd',
+    sourceName: 'FaselHD',
+    sourceKind: 'movie',
+    sourceHosts: const ['fasselhd.com', 'faselhd.club', 'faselhd.com'],
+    baseUrl: 'https://fasselhd.com/',
+    searchParam: 's',
+  );
   String _base = _fallbackApi;
 
   @override String get id => 'fasel_hd';
   @override String get name => 'FaselHD';
   @override String get kind => 'movie';
-  @override List<String> get hosts => const ['kahitdgku.com', 'abcdef.flech.tn', 'hrrejhp.com', 'fashd.com'];
+  @override List<String> get hosts => const ['kahitdgku.com', 'abcdef.flech.tn', 'hrrejhp.com', 'fashd.com', 'fasselhd.com', 'faselhd.club', 'faselhd.com'];
 
   Future<void> _refreshBase() async {
     try {
@@ -27,25 +36,32 @@ class FaselHdSource extends ContentSource {
   }
 
   @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    await _refreshBase();
-    final movies = await _get('movies/latestadded/0?page=$page');
-    final series = await _get('series/latestadded/0?page=$page');
-    return [..._items(movies['data']), ..._items(series['data'])];
+    try {
+      await _refreshBase();
+      final movies = await _get('movies/latestadded/0?page=$page');
+      final series = await _get('series/latestadded/0?page=$page');
+      final result = [..._items(movies['data']), ..._items(series['data'])];
+      if (result.isNotEmpty) return result;
+    } catch (_) {}
+    return _htmlItems(await _htmlFallback.latest(page: page));
   }
 
   @override Future<List<Map<String, dynamic>>> search(String query) async {
-    await _refreshBase();
-    final response = await _get('search/${Uri.encodeComponent(query.trim())}/0');
-    final raw = response['search'] ?? response['data'] ?? response['results'] ?? response['items'];
-    final result = _items(raw);
-    if (result.isNotEmpty) return result;
-    final home = await _get('media/homecontent/0');
-    final q = query.trim().toLowerCase();
-    return _items(home['latest'] ?? home['data']).where((x) =>
-      q.isEmpty || x['title'].toString().toLowerCase().contains(q)).toList();
+    try {
+      await _refreshBase();
+      final response = await _get('search/${Uri.encodeComponent(query.trim())}/0');
+      final raw = response['search'] ?? response['data'] ?? response['results'] ?? response['items'];
+      final result = _items(raw);
+      if (result.isNotEmpty) return result;
+    } catch (_) {}
+    return _htmlItems(await _htmlFallback.search(query));
   }
 
   @override Future<Map<String, dynamic>> details(String url) async {
+    if (_htmlFallback.handles(url)) {
+      return _withNativeIdentity(await _htmlFallback.details(url));
+    }
+    try {
     await _refreshBase();
     final parsed = _parse(url);
     final path = parsed.type == 'series' ? 'series/showplayer/${parsed.id}/0' : 'media/detail/${parsed.id}/0';
@@ -53,9 +69,16 @@ class FaselHdSource extends ContentSource {
     final result = _normalize(raw, parsed.type, parsed.id);
     _cache[url] = result;
     return result;
+    } catch (_) {
+      return _withNativeIdentity(await _htmlFallback.details(url));
+    }
   }
 
   @override Future<Map<String, dynamic>?> streams(String url) async {
+    if (_htmlFallback.handles(url)) {
+      return _withNativeIdentity(await _htmlFallback.streams(url) ?? {});
+    }
+    try {
     await _refreshBase();
     final parsed = _parse(url);
     final cached = _cache[url];
@@ -85,7 +108,21 @@ class FaselHdSource extends ContentSource {
     for (final x in links) unique[x['url'] as String] = x;
     if (unique.isEmpty) return null;
     return {'stream_url': unique.values.first['url'], 'direct_stream_urls': unique.values.toList(), 'servers': unique.values.toList(), 'title': 'مصادر FaselHD'};
+    } catch (_) {
+      return _withNativeIdentity(await _htmlFallback.streams(url) ?? {});
+    }
   }
+
+  List<Map<String, dynamic>> _htmlItems(List<Map<String, dynamic>> items) => items
+      .map((value) => {...value, 'source': name, 'source_id': id, 'category': 'movie'})
+      .toList();
+
+  Map<String, dynamic> _withNativeIdentity(Map<String, dynamic> value) => {
+        ...value,
+        'source': name,
+        'source_id': id,
+        'category': 'movie',
+      };
 
   List<Map<String, dynamic>> _items(dynamic raw) {
     if (raw is! List) return [];

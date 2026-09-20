@@ -7,12 +7,13 @@ import 'mangatime_source.dart';
 import 'faselhd_source.dart';
 import 'source_base.dart';
 import 'youtube_source.dart';
+import 'web_catalog_source.dart';
 import '../models/remote_plugin.dart';
 
 /// Internal API catalog.
 ///
-/// These adapters are implementation details, not user-facing "sources".
-/// HTML/scraping-only adapters are intentionally not registered here.
+/// These adapters share a stable ContentSource contract so they can be used
+/// by the user-facing Sources screen and by the repository integration.
 class SourceRegistry {
   static const Duration _requestTimeout = Duration(seconds: 35);
   static const Duration _cacheDuration = Duration(minutes: 3);
@@ -20,6 +21,10 @@ class SourceRegistry {
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
   static final _youtube = YoutubeSource();
+  static final _animeWitcher = AnimeWitcherSource();
+  static final _anime3rb = Anime3rbSource();
+  static final _wecima = WecimaSource();
+  static final _kormoz = KormozSource();
   // Native adapter mapped to the Faselhd entry from the installed repository.
   static final _repoFaselHd = FaselHdSource();
 
@@ -32,6 +37,10 @@ class SourceRegistry {
     MangaTimeSource(),
     MangaMelloSource(),
     _youtube,
+    _animeWitcher,
+    _anime3rb,
+    _wecima,
+    _kormoz,
   ];
 
   static List<ContentSource> get _repositorySources => [_repoFaselHd];
@@ -77,6 +86,10 @@ class SourceRegistry {
     final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
     if (identity.contains('fasel')) return _repoFaselHd;
     if (identity.contains('youtube')) return _youtube;
+    if (identity.contains('witcher') || identity.contains('ويتشر')) return _animeWitcher;
+    if (identity.contains('anime3rb') || identity.contains('anime 3rb') || identity.contains('انمي عرب')) return _anime3rb;
+    if (identity.contains('wecima') || identity.contains('وى سيما') || identity.contains('وي سيما')) return _wecima;
+    if (identity.contains('kormoz') || identity.contains('kormoze') || identity.contains('قرمزي') || identity.contains('كرمزي')) return _kormoz;
     return null;
   }
 
@@ -170,6 +183,17 @@ class SourceRegistry {
       'vidtube.one',
       'down.vidtube.one',
       'updown.icu',
+      'animewitcher.com',
+      'anime3rb.com',
+      'wecima.show',
+      'wecima.tube',
+      'wecima.video',
+      'wecima.mov',
+      'kormoz.com',
+      'kormozi.com',
+      'kormozy.com',
+      'fasselhd.com',
+      'faselhd.club',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     return media || embeddedPlayer || source.kind != 'movie';
   }
