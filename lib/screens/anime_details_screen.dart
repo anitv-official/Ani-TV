@@ -211,19 +211,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<void> _downloadAnimeEpisode(Map<String, dynamic> link, Map<String, dynamic> episode) async {
-    if (!context.read<AppStateProvider>().isLoggedIn) {
-      ToastUtils.show('سجّل الدخول لاستخدام التنزيلات', backgroundColor: Colors.orange);
-      return;
-    }
-    final url = link['url']?.toString() ?? '';
-    if (url.isEmpty) return;
-    try {
-      final anime = await _animeDetailsFuture;
-      final sent = await DownloadService.sendToAdm(url, title: '${anime['title'] ?? 'أنمي'} - ${episode['title'] ?? 'حلقة'}');
-      if (mounted) ToastUtils.show(sent ? 'تم إرسال الرابط إلى ADM' : 'لم يتم العثور على تطبيق ADM. ثبّته أولًا ثم أعد المحاولة.', backgroundColor: sent ? AppTheme.accentColor : Color(0xFF1976D2));
-    } catch (error) {
-      if (mounted) ToastUtils.show('تعذر تنزيل الحلقة: $error', backgroundColor: Color(0xFF1976D2));
-    }
+    await _downloadAnimeEpisodeInternal(link, episode);
   }
 
   Future<bool> _downloadAnimeEpisodeInternal(Map<String, dynamic> link, Map<String, dynamic> episode) async {
