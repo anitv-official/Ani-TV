@@ -19,6 +19,7 @@ class VideoPlayerScreen extends StatefulWidget {
   final String episodeId;
   final List<Map<String, String>> directStreamUrls;
   final Map<String, String> headers;
+  final List<String> allowedHosts;
   final bool allowWebView;
 
   VideoPlayerScreen({
@@ -27,6 +28,7 @@ class VideoPlayerScreen extends StatefulWidget {
     required this.episodeId,
     this.directStreamUrls = const [],
     this.headers = const {},
+    this.allowedHosts = const [],
     this.allowWebView = true,
   });
 
@@ -517,6 +519,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   bool _isAllowedEmbeddedPlayer(String url) {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
+    if (host != null && widget.allowedHosts.contains(host)) return true;
     return const {
       'animewitcher.com', 'anime3rb.com',
       'wecima.show', 'wecima.tube', 'wecima.video', 'wecima.mov',

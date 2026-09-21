@@ -533,6 +533,9 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                   .toList() ?? [],
               headers: (episodeData['headers'] as Map?)
                   ?.map((key, value) => MapEntry(key.toString(), value.toString())) ?? {},
+              allowedHosts: (episodeData['allowed_hosts'] as List?)
+                  ?.map((host) => host.toString().toLowerCase().replaceFirst('www.', ''))
+                  .toList() ?? [],
             ),
           ),
         );

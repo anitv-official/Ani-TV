@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
 import '../extension_base.dart';
 import '../../sources/source_base.dart';
@@ -7,6 +9,10 @@ import 'extension_http.dart';
 class EgyDeadExtension extends AniExtension {
   static const _base = 'https://tv10.egydead.live/';
   static const _host = 'tv10.egydead.live';
+  static const _userAgent = ExtensionHttp.userAgent;
+
+  final http.Client _client = http.Client();
+  final Map<String, String> _cookies = {};
 
   @override String get id => 'egydead';
   @override String get name => 'EgyDead';
@@ -15,12 +21,62 @@ class EgyDeadExtension extends AniExtension {
   @override String get contentLabel => 'أفلام ومسلسلات';
   @override String get iconUrl => 'https://tv10.egydead.live/favicon.ico';
   @override ExtensionStatus get status => ExtensionStatus.limited;
-  @override String get statusMessage => 'يتطلب استخراج السيرفرات أو WebView عند Cloudflare';
+  @override String get statusMessage => 'روابط مباشرة وEmbed مع جلسة Cookies';
+
+  Map<String, String> _headers({String? referer, bool post = false}) => {
+        'User-Agent': _userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        if (referer != null) 'Referer': referer,
+        if (_cookies.isNotEmpty) 'Cookie': _cookies.entries.map((e) => '${e.key}=${e.value}').join('; '),
+        if (post) 'X-Requested-With': 'XMLHttpRequest',
+        if (post) 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      };
+
+  Future<http.Response> _get(String url, {String? referer}) async {
+    final response = await _client.get(Uri.parse(url), headers: _headers(referer: referer)).timeout(const Duration(seconds: 25));
+    _saveCookies(response);
+    return response;
+  }
+
+  Future<http.Response> _post(String url, {required String referer}) async {
+    final response = await _client.post(Uri.parse(url), headers: _headers(referer: referer, post: true), body: 'View=1').timeout(const Duration(seconds: 25));
+    _saveCookies(response);
+    return response;
+  }
+
+  void _saveCookies(http.Response response) {
+    final values = response.headers['set-cookie'];
+    if (values == null) return;
+    for (final value in values.split(RegExp(r', (?=[^;,]+=)'))) {
+      final pair = value.split(';').first.split('=');
+      if (pair.length >= 2) _cookies[pair.first.trim()] = pair.sublist(1).join('=').trim();
+    }
+  }
+
+  Future<dom.Document?> _document(String url, {String? referer}) async {
+    try {
+      final response = await _get(url, referer: referer);
+      if (response.statusCode < 200 || response.statusCode >= 400) return null;
+      return html_parser.parse(utf8.decode(response.bodyBytes, allowMalformed: true));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _resolve(String raw, String base) => Uri.parse(base).resolve(raw.trim()).toString();
 
   @override
   Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    final html = await ExtensionHttp.getText(_base);
-    return _catalog(html);
+    final document = await _document(_base);
+    if (document == null) return [];
+    final elements = <dom.Element>[
+      ...document.querySelectorAll('div.pin-posts-list li.movieItem'),
+      ...document.querySelectorAll('section.main-section li.movieItem'),
+      ...document.querySelectorAll('ul.posts-list li.movieItem'),
+    ];
+    return _itemsFromElements(elements);
   }
 
   @override
@@ -28,84 +84,164 @@ class EgyDeadExtension extends AniExtension {
     final value = query.trim();
     if (value.isEmpty) return latest();
     final url = Uri.parse(_base).replace(queryParameters: {'s': value}).toString();
-    return _catalog(await ExtensionHttp.getText(url));
+    final document = await _document(url);
+    return document == null ? [] : _itemsFromElements(document.querySelectorAll('ul.posts-list li.movieItem'));
   }
 
-  List<Map<String, dynamic>> _catalog(String html) {
+  List<Map<String, dynamic>> _itemsFromElements(Iterable<dom.Element> elements) {
     final output = <Map<String, dynamic>>[];
     final seen = <String>{};
-    final cards = RegExp(r'''<li[^>]*class=["'][^"']*movieItem[^"']*["'][^>]*>(.*?)</li>''', caseSensitive: false, dotAll: true);
-    for (final match in cards.allMatches(html)) {
-      final body = match.group(1) ?? '';
-      final anchor = RegExp(r'''<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)</a>''', caseSensitive: false, dotAll: true).firstMatch(body);
-      if (anchor == null) continue;
-      final url = Uri.parse(_base).resolve(anchor.group(1)!).toString();
-      if (!seen.add(url)) continue;
-      final image = RegExp(r'''(?:data-src|data-lazy-src|src)=["']([^"']+)''', caseSensitive: false).firstMatch(body)?.group(1) ?? '';
-      final title = ExtensionHttp.text(anchor.group(2) ?? '');
-      if (title.length < 2) continue;
-      output.add(item(title: title, url: url, image: Uri.parse(_base).resolve(image).toString(), type: url.contains('/film/') ? 'movie' : 'series'));
-      if (output.length >= 60) break;
+    for (final element in elements) {
+      final anchor = element.querySelector('a');
+      final href = anchor?.attributes['href'];
+      if (href == null || href.isEmpty) continue;
+      final url = _resolve(href, _base);
+      if (!handles(url) || !seen.add(url)) continue;
+      final title = _clean(anchor?.attributes['title'] ?? element.querySelector('h1.BottomTitle')?.text ?? element.querySelector('h3')?.text ?? anchor?.text ?? '');
+      if (title.length < 2 || _isNavigation(title)) continue;
+      final image = element.querySelector('img')?.attributes['data-src'] ?? element.querySelector('img')?.attributes['src'] ?? '';
+      output.add(item(title: title, url: url, image: image.isEmpty ? '' : _resolve(image, _base), type: url.contains('/film/') ? 'movie' : 'series'));
+      if (output.length == 60) break;
     }
     return output;
   }
 
   @override
   Future<Map<String, dynamic>> details(String url) async {
-    final html = await ExtensionHttp.getText(url, referer: _base);
-    final title = HtmlMeta.first(html, ['og:title', 'title']) ?? name;
-    final poster = HtmlMeta.meta(html, 'og:image') ?? '';
-    final description = HtmlMeta.meta(html, 'og:description') ?? HtmlMeta.firstBlock(html, ['singleStory']) ?? '';
-    final episodes = <Map<String, dynamic>>[];
-    final links = ExtensionHttp.anchors(html, url);
-    for (final link in links) {
-      final lower = link['url']!.toLowerCase();
-      final text = link['title'] ?? '';
-      if (!lower.contains('/episode/') && !RegExp(r'(الحلقة|حلقة|episode|ep\.?\s*\d+)', caseSensitive: false).hasMatch(text)) continue;
-      episodes.add({'title': text.isEmpty ? 'حلقة ${episodes.length + 1}' : text, 'number': SourceUtils.episodeNumber(text) ?? episodes.length + 1, 'url': link['url']});
-    }
-    if (episodes.isEmpty) episodes.add({'title': 'تشغيل', 'number': 1, 'url': url});
-    return {...item(title: ExtensionHttp.text(title), url: url, image: poster, type: url.contains('/film/') ? 'movie' : 'series', description: ExtensionHttp.text(description)), 'episodes': episodes, 'total_episodes': episodes.length};
+    final document = await _document(url, referer: _base);
+    if (document == null) throw Exception('تعذر تحميل تفاصيل EgyDead');
+    final title = _clean(_meta(document, 'og:title') ?? document.querySelector('h1')?.text ?? name);
+    final poster = _meta(document, 'og:image') ?? '';
+    final description = _clean(_meta(document, 'og:description') ?? document.querySelector('div.singleStory')?.text ?? '');
+    final isMovie = url.contains('/film/');
+    final episodes = isMovie ? [_episode(url, title, 1)] : await _loadSeriesEpisodes(document, url);
+    return {
+      ...item(title: title, url: url, image: poster, type: isMovie ? 'movie' : 'series', description: description),
+      'episodes': episodes,
+      'total_episodes': episodes.length,
+    };
   }
+
+  Future<List<Map<String, dynamic>>> _loadSeriesEpisodes(dom.Document document, String url) async {
+    final seasonUrls = <String>{};
+    for (final anchor in document.querySelectorAll('div.seasons-list a, div.seasons a, div.seasons-list li a')) {
+      final href = anchor.attributes['href'];
+      if (href == null) continue;
+      final resolved = _resolve(href, url);
+      if (resolved.contains('/season/')) seasonUrls.add(resolved);
+    }
+    final pages = <String, dom.Document>{url: document};
+    for (final seasonUrl in seasonUrls) {
+      final seasonDoc = await _document(seasonUrl, referer: url);
+      if (seasonDoc != null) pages[seasonUrl] = seasonDoc;
+    }
+    final episodes = <Map<String, dynamic>>[];
+    for (final entry in pages.entries) episodes.addAll(_episodesFromDocument(entry.value, entry.key));
+    if (episodes.isEmpty && url.contains('/episode/')) episodes.add(_episode(url, _clean(_meta(document, 'og:title') ?? 'الحلقة'), _episodeNumber(url) ?? 1));
+    final seen = <String>{};
+    final unique = episodes.where((episode) => seen.add(episode['url'].toString())).toList();
+    unique.sort((a, b) {
+      final season = (a['season'] as int? ?? 1).compareTo(b['season'] as int? ?? 1);
+      return season == 0 ? (a['number'] as int).compareTo(b['number'] as int) : season;
+    });
+    return unique;
+  }
+
+  List<Map<String, dynamic>> _episodesFromDocument(dom.Document document, String pageUrl) {
+    final containers = <dom.Element>[
+      ...document.querySelectorAll('div.EpsList'),
+      ...document.querySelectorAll('div.episodes-list'),
+      ...document.querySelectorAll('ul.episodes'),
+    ];
+    if (containers.isEmpty && pageUrl.contains('/season/')) return [];
+    final container = containers.isNotEmpty ? containers.first : document.body;
+    if (container == null) return [];
+    final output = <Map<String, dynamic>>[];
+    for (final node in container.querySelectorAll('li, a')) {
+      final anchor = node.localName == 'a' ? node : node.querySelector('a');
+      if (anchor == null) continue;
+      final href = anchor.attributes['href'];
+      if (href == null) continue;
+      final resolved = _resolve(href, pageUrl);
+      if (!resolved.contains('/episode/') || resolved.contains('/season/') || resolved.contains('/film/')) continue;
+      final title = _clean(anchor.attributes['title'] ?? anchor.text);
+      final number = _episodeNumber(title) ?? _episodeNumber(resolved) ?? output.length + 1;
+      output.add(_episode(resolved, title.isEmpty ? 'الحلقة $number' : title, number, season: _seasonNumber(title) ?? _seasonNumber(pageUrl) ?? 1));
+    }
+    return output;
+  }
+
+  Map<String, dynamic> _episode(String url, String title, int number, {int season = 1}) => {
+        'id': '${season}_$number',
+        'title': title.isEmpty ? 'الحلقة $number' : title,
+        'number': number,
+        'season': season,
+        'url': url,
+      };
 
   @override
   Future<Map<String, dynamic>?> streams(String url) async {
-    final headers = ExtensionHttp.headers(referer: url);
+    await _get(url, referer: url); // establish cookies before the watch request
     final watchUrl = Uri.parse(url).queryParameters.containsKey('view') ? url : '$url${url.contains('?') ? '&' : '?'}view=watch';
-    String html = '';
+    http.Response response;
     try {
-      final response = await http.post(Uri.parse(watchUrl), headers: {...headers, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}, body: 'View=1').timeout(const Duration(seconds: 20));
-      html = utf8.decode(response.bodyBytes, allowMalformed: true);
+      response = await _post(watchUrl, referer: url);
     } catch (_) {
-      html = await ExtensionHttp.getText(watchUrl, referer: url);
+      response = await _get(watchUrl, referer: url);
     }
-    final links = <Map<String, String>>[];
-    final media = RegExp(r'''https?://[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]+)?''', caseSensitive: false).allMatches(html).map((m) => m.group(0)!.replaceAll('&amp;', '&'));
-    for (final link in media) links.add({'url': link, 'quality': link.contains('hls') || link.endsWith('.m3u8') ? 'Auto' : 'Direct', 'name': 'EgyDead', 'label': 'EgyDead'});
-    final embeds = RegExp(r'''(?:data-link|iframe[^>]+src|href)=["']([^"']+)["']''', caseSensitive: false).allMatches(html).map((m) => Uri.parse(watchUrl).resolve(m.group(1)!).toString());
-    for (final link in embeds) {
-      if (link.contains('javascript:') || links.any((e) => e['url'] == link)) continue;
-      if (RegExp(r'(m3u8|mp4|player|embed|stream|vid)', caseSensitive: false).hasMatch(link)) links.add({'url': link, 'quality': 'Auto', 'name': 'EgyDead', 'label': 'Server'});
+    if (response.statusCode < 200 || response.statusCode >= 400) return null;
+    final html = utf8.decode(response.bodyBytes, allowMalformed: true);
+    final candidates = <_Candidate>[];
+    void add(String? raw, String? server) {
+      if (raw == null || raw.trim().isEmpty) return;
+      final value = raw.trim().replaceAll('&amp;', '&');
+      if (value.startsWith('#') || value.toLowerCase().startsWith('javascript:')) return;
+      final resolved = _resolve(value, watchUrl);
+      if (RegExp(r'(facebook|twitter|telegram|login|register|doubleclick|googlesyndication|adsystem)', caseSensitive: false).hasMatch(resolved)) return;
+      if (!handles(resolved) && !resolved.startsWith('http')) return;
+      if (candidates.any((candidate) => candidate.url == resolved)) return;
+      candidates.add(_Candidate(resolved, server?.trim().isEmpty == true ? null : server?.trim()));
     }
-    if (links.isEmpty) return null;
-    return {'stream_url': links.first['url'], 'direct_stream_urls': links, 'headers': headers};
+    final document = html_parser.parse(html);
+    for (final selector in ['ul.donwload-servers-list li', 'ul.download-servers-list li', 'div.donwload-servers-list li', 'ul.serversList li', 'ul.servers-list li', 'div.serversList li', 'div.servers-list li']) {
+      for (final li in document.querySelectorAll(selector)) {
+        add(li.attributes['data-link'] ?? li.querySelector('[data-link]')?.attributes['data-link'] ?? li.querySelector('button[data-link]')?.attributes['data-link'] ?? li.querySelector('a.ser-link')?.attributes['href'] ?? li.querySelector('a')?.attributes['href'], li.querySelector('p')?.text ?? li.querySelector('.ser-name')?.text ?? li.querySelector('span.ser-name')?.text ?? li.attributes['data-name'] ?? li.attributes['data-provider']);
+      }
+    }
+    for (final element in document.querySelectorAll('[data-link]')) add(element.attributes['data-link'], element.attributes['data-name'] ?? element.attributes['data-provider']);
+    for (final iframe in document.querySelectorAll('iframe[src]')) add(iframe.attributes['src'], 'Embed');
+    for (final anchor in document.querySelectorAll('a')) {
+      final href = anchor.attributes['href'];
+      if (href != null && RegExp(r'(player|embed|download|drive|mp4|m3u8)', caseSensitive: false).hasMatch(href)) add(href, anchor.attributes['title'] ?? anchor.text);
+    }
+    for (final match in RegExp(r'''https?://[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]+)?''', caseSensitive: false).allMatches(html)) add(match.group(0), 'Direct');
+    if (candidates.isEmpty) return null;
+    final direct = candidates.where((candidate) => _isDirect(candidate.url)).map((candidate) => _link(candidate, direct: true)).toList();
+    final embeds = candidates.where((candidate) => !_isDirect(candidate.url)).map((candidate) => _link(candidate, direct: false)).toList();
+    final links = [...direct, ...embeds];
+    final allowedHosts = candidates.map((candidate) => Uri.tryParse(candidate.url)?.host.toLowerCase().replaceFirst('www.', '')).whereType<String>().where((host) => host.isNotEmpty).toSet().toList();
+    return {'stream_url': links.first['url'], 'direct_stream_urls': links, 'headers': _headers(referer: url), 'allowed_hosts': allowedHosts};
   }
+
+  Map<String, String> _link(_Candidate candidate, {required bool direct}) => {
+        'url': candidate.url,
+        'quality': direct ? (_quality(candidate.url) == 0 ? 'Auto' : '${_quality(candidate.url)}p') : 'Auto',
+        'name': candidate.server ?? 'EgyDead',
+        'label': direct ? 'Direct' : 'Embed',
+        'type': direct ? 'video' : 'embed',
+      };
+
+  bool _isDirect(String url) => RegExp(r'\.(?:m3u8|mp4)(?:[?#].*)?$', caseSensitive: false).hasMatch(url);
+  int _quality(String url) => int.tryParse(RegExp(r'(\d{3,4})p', caseSensitive: false).firstMatch(url)?.group(1) ?? '') ?? 0;
+  String? _meta(dom.Document document, String property) => document.querySelector('meta[property="$property"]')?.attributes['content'] ?? document.querySelector('meta[name="$property"]')?.attributes['content'];
+  String _clean(String value) => value.replaceAll(RegExp(r'\s+'), ' ').trim();
+  bool _isNavigation(String value) => RegExp(r'^(home|search|login|register|تسجيل الدخول|دخول|الرئيسية|بحث|facebook|twitter|youtube|telegram)$', caseSensitive: false).hasMatch(value.trim());
+  int? _episodeNumber(String value) => int.tryParse(RegExp(r'(?:الحلقة|حلقة|episode|ep)[\s:_\-.]*(\d+)', caseSensitive: false).firstMatch(value)?.group(1) ?? RegExp(r's\d+[\s._-]*e(\d+)', caseSensitive: false).firstMatch(value)?.group(1) ?? RegExp(r'(?:^|[^a-z])(\d{1,3})(?:[^a-z]|$)', caseSensitive: false).firstMatch(value)?.group(1) ?? '');
+  int? _seasonNumber(String value) => int.tryParse(RegExp(r'(?:الموسم|season|s)[\s:_\-.]*(\d+)', caseSensitive: false).firstMatch(value)?.group(1) ?? '');
 }
 
-class HtmlMeta {
-  static String? meta(String html, String property) => RegExp('<meta[^>]+(?:property|name)=["\\\']$property["\\\'][^>]+content=["\\\']([^"\\\']+)', caseSensitive: false).firstMatch(html)?.group(1);
-  static String? first(String html, List<String> names) {
-    for (final name in names) {
-      final value = meta(html, name);
-      if (value != null && value.isNotEmpty) return value;
-    }
-    return null;
-  }
-  static String? firstBlock(String html, List<String> classes) {
-    for (final className in classes) {
-      final match = RegExp('<[^>]+class=["\\\'][^"\\\']*$className[^"\\\']*["\\\'][^>]*>(.*?)</', caseSensitive: false, dotAll: true).firstMatch(html);
-      if (match != null) return match.group(1);
-    }
-    return null;
-  }
+class _Candidate {
+  final String url;
+  final String? server;
+  const _Candidate(this.url, this.server);
 }

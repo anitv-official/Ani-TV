@@ -116,7 +116,7 @@ class SourceRegistry {
     if (result == null) return null;
     final links = (result['direct_stream_urls'] as List?)
             ?.whereType<Map>()
-            .where((link) => _validPlayableLink(link['url']?.toString() ?? '', source))
+            .where((link) => _validPlayableLink(link, source))
             .toList() ??
         [];
     // Never pass third-party player pages to the app. They commonly contain
@@ -126,7 +126,8 @@ class SourceRegistry {
     return {...result, 'direct_stream_urls': links};
   }
 
-  static bool _validPlayableLink(String value, ContentSource source) {
+  static bool _validPlayableLink(Map link, ContentSource source) {
+    final value = link['url']?.toString() ?? '';
     final uri = Uri.tryParse(value);
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https') || uri.host.isEmpty) {
       return false;
@@ -163,7 +164,8 @@ class SourceRegistry {
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
-    return media || embeddedPlayer || extractorCandidate || source.kind != 'movie';
+    final providerEmbed = source.id == 'egydead' && link['type']?.toString() == 'embed';
+    return media || embeddedPlayer || extractorCandidate || providerEmbed;
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {
