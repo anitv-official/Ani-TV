@@ -62,9 +62,10 @@ class AnimeWitcherExtension extends AniExtension {
       final json = await ExtensionHttp.getJson('$_firestoreBase/Settings/constants');
       final fields = (json as Map)['fields'] as Map?;
       final settings = fields?['search_settings'];
-      final searchFields = settings is Map ? settings['mapValue']?['fields'] as Map? : null;
-      final app = _value(searchFields?['app_id'] ?? searchFields?['app_id_v4']);
-      final key = _value(searchFields?['api_key'] ?? searchFields?['browse_api_key']);
+      final mapValue = settings is Map ? settings['mapValue'] : null;
+      final searchFields = mapValue is Map ? mapValue['fields'] : null;
+      final app = searchFields is Map ? _value(searchFields['app_id'] ?? searchFields['app_id_v4']) : '';
+      final key = searchFields is Map ? _value(searchFields['api_key'] ?? searchFields['browse_api_key']) : '';
       if (app.isNotEmpty) _algoliaAppId = app;
       if (key.isNotEmpty) _algoliaApiKey = key;
     } catch (_) {}
