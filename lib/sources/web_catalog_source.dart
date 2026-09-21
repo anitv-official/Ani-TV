@@ -209,7 +209,7 @@ class WecimaSource extends WebCatalogSource {
 class KormozSource extends WebCatalogSource {
   KormozSource() : super(
     sourceId: 'kormoz', sourceName: 'كُرْمُزِي (Kormoz)', sourceKind: 'movie',
-    sourceHosts: const ['qrmzi.tv', 'kormoz.com', 'kormozi.com', 'kormozy.com', 'krmzi.org'],
+    sourceHosts: const ['kormoz.com', 'kormozi.com', 'kormozy.com'],
     baseUrl: 'https://www.qrmzi.tv/', searchParam: 's',
   );
 }
