@@ -10,7 +10,6 @@ import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'youtube_watch_screen.dart';
 import 'comic_details_screen.dart';
-import 'video_player_screen.dart';
 import 'explore_screen.dart';
 
 Widget sourceContentPage(ContentSource source) {
