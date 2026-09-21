@@ -62,6 +62,9 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   bool _loading = false;
   String? _error;
   bool _autoTransitionScheduled = false;
+  bool _pageMode = false;
+  bool _reverseDirection = false;
+  bool _showPageNumber = true;
 
   // Navigasi chapter
   String? _nextChapterUrl;
@@ -92,6 +95,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     
     _scrollController = ScrollController(); // Init scroll controller
     _scrollController.addListener(_handleEndOfChapter);
+    _pageController = PageController();
     
     _transformationController = TransformationController();
     _animationController = AnimationController(
@@ -230,9 +234,16 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   Future<void> _loadPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final lastPage = prefs.getInt('page_${widget.chapterId ?? widget.url ?? widget.chapterId ?? 'current'}') ?? 0;
       setState(() {
         _isDarkMode = prefs.getBool('manga_dark_mode') ?? true;
+        _pageMode = prefs.getBool('manga_page_mode') ?? false;
+        _reverseDirection = prefs.getBool('manga_reverse_direction') ?? false;
+        _showPageNumber = prefs.getBool('manga_show_page_number') ?? true;
+        _currentPage = lastPage;
       });
+      if (_pageMode && _pageController.hasClients && lastPage > 0) _pageController.jumpToPage(lastPage);
     } catch (e) {
       _showErrorDialog('Failed to load preferences', e.toString());
     }
@@ -242,6 +253,9 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('manga_dark_mode', _isDarkMode);
+      await prefs.setBool('manga_page_mode', _pageMode);
+      await prefs.setBool('manga_reverse_direction', _reverseDirection);
+      await prefs.setBool('manga_show_page_number', _showPageNumber);
     } catch (e) {
       _showErrorDialog('Failed to save preferences', e.toString());
     }
@@ -250,9 +264,11 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   Future<void> _loadLastPage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastPage = prefs.getInt('page_${widget.chapterId}') ?? 0;
-      _pageController = PageController(initialPage: lastPage);
-      setState(() => _currentPage = lastPage);
+      final lastPage = prefs.getInt('page_${widget.chapterId ?? _chapterId}') ?? 0;
+      if (!mounted) return;
+      final safePage = lastPage.clamp(0, (_pages.length - 1).clamp(0, _pages.length)).toInt();
+      setState(() => _currentPage = safePage);
+      if (_pageController.hasClients && _pageMode && safePage > 0) _pageController.jumpToPage(safePage);
     } catch (e) {
       _showErrorDialog('Failed to load last page', e.toString());
       _pageController = PageController(initialPage: 0);
@@ -262,7 +278,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
   Future<void> _saveCurrentPage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('page_${widget.chapterId}', _currentPage);
+      await prefs.setInt('page_${widget.chapterId ?? _chapterId}', _currentPage);
     } catch (e) {
       _showErrorDialog('Failed to save current page', e.toString());
     }
@@ -278,6 +294,17 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
     final double height = constraints.maxHeight;
     final double tapY = details.localPosition.dy;
     final double relativeY = tapY / height;
+
+    if (_pageMode) {
+      if (relativeY < 0.35) {
+        if (_currentPage > 0) _pageController.previousPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+      } else if (relativeY > 0.65) {
+        if (_currentPage < _pages.length - 1) _pageController.nextPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
+      } else {
+        _toggleMenu();
+      }
+      return;
+    }
 
     // Top 25%: Scroll Up
     if (relativeY < 0.25) {
@@ -385,8 +412,8 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                   textAlign: TextAlign.center),
               SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                  child: Text('رجوع'),
+                onPressed: widget.url != null ? () => _fetchChapterImages(widget.url!) : () => Navigator.of(context).pop(),
+                  child: Text(widget.url != null ? 'إعادة المحاولة' : 'رجوع'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -408,6 +435,21 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
           return Stack(
             children: [
               _buildReader(constraints),
+              if (_pageMode && _showPageNumber && _pages.isNotEmpty)
+                Positioned(
+                  bottom: 18,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(color: Colors.black.withOpacity(.62), borderRadius: BorderRadius.circular(18)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Text('${_currentPage + 1} / ${_pages.length}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ),
+                    ),
+                  ),
+                ),
               IgnorePointer(
                 ignoring: !_isMenuVisible,
                 child: AnimatedOpacity(
@@ -443,22 +485,23 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),
-              child: ListView.builder(
-                controller: _scrollController, // Attach controller
-                // Disable list scrolling when panning/zoomed
-                physics: _canPan ? NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  // Simpan halaman saat ini saat scrolling
-                  if (index == 0) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      // Avoid setState during build if possible, but basic scroll tracking logic kept
-                      // _currentPage = index; 
-                    });
-                  }
-                  return _buildImageView(_pages[index], index);
-                },
-              ),
+              child: _pageMode
+                  ? PageView.builder(
+                      controller: _pageController,
+                      reverse: _reverseDirection,
+                      itemCount: _pages.length,
+                      onPageChanged: (index) {
+                        setState(() => _currentPage = index);
+                        _saveCurrentPage();
+                      },
+                      itemBuilder: (context, index) => Center(child: _buildImageView(_pages[index], index)),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      physics: _canPan ? const NeverScrollableScrollPhysics() : const AlwaysScrollableScrollPhysics(),
+                      itemCount: _pages.length,
+                      itemBuilder: (context, index) => _buildImageView(_pages[index], index),
+                    ),
             ),
           ),
         ),
@@ -732,6 +775,30 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
                   },
                   tooltip: _isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن',
                 ),
+                IconButton(
+                  icon: Icon(_pageMode ? Icons.view_day_rounded : Icons.chrome_reader_mode_rounded, color: Colors.white),
+                  tooltip: _pageMode ? 'وضع التمرير' : 'وضع الصفحات',
+                  onPressed: () {
+                    setState(() => _pageMode = !_pageMode);
+                    _savePreferences();
+                  },
+                ),
+                IconButton(
+                  icon: Icon(_reverseDirection ? Icons.format_textdirection_l_to_r : Icons.format_textdirection_r_to_l, color: Colors.white),
+                  tooltip: 'اتجاه القراءة',
+                  onPressed: () {
+                    setState(() => _reverseDirection = !_reverseDirection);
+                    _savePreferences();
+                  },
+                ),
+                IconButton(
+                  icon: Icon(_showPageNumber ? Icons.pin_drop_rounded : Icons.pin_drop_outlined, color: Colors.white),
+                  tooltip: 'إظهار رقم الصفحة',
+                  onPressed: () {
+                    setState(() => _showPageNumber = !_showPageNumber);
+                    _savePreferences();
+                  },
+                ),
               ],
             ),
           ),
@@ -781,6 +848,7 @@ class _MangaReaderScreenState extends State<MangaReaderScreen> with SingleTicker
 
   @override
   void dispose() {
+    _pageController.dispose();
     _scrollController.dispose();
     _transformationController.dispose();
     _animationController.dispose();

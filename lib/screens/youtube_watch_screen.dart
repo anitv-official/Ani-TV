@@ -43,6 +43,7 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() { _loading = true; _error = ''; });
     try {
       final streams = await SourceRegistry.streams(widget.url);
       final streamUrl = streams?['stream_url']?.toString() ?? '';
@@ -173,7 +174,16 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
           if (_loading)
             const AspectRatio(aspectRatio: 16 / 9, child: Center(child: CircularProgressIndicator()))
           else if (_error.isNotEmpty)
-            AspectRatio(aspectRatio: 16 / 9, child: Center(child: Text(_error, style: const TextStyle(color: Colors.white))))
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.cloud_off_rounded, color: Colors.white70, size: 42),
+                const SizedBox(height: 10),
+                Text(_error, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh_rounded), label: const Text('إعادة المحاولة')),
+              ])),
+            )
           else if (chewie != null)
             AspectRatio(aspectRatio: _videoController?.value.aspectRatio ?? 16 / 9, child: Chewie(controller: chewie)),
           if (_changingQuality) const LinearProgressIndicator(minHeight: 2),

@@ -340,9 +340,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           autoPlay: true,
           looping: false,
           allowPlaybackSpeedChanging: true,
-          allowFullScreen: false,
+          allowFullScreen: true,
           showControls: true,
-          fullScreenByDefault: true,
+          fullScreenByDefault: false,
           customControls: CustomControls(
             backgroundColor: Colors.black.withOpacity(0.5),
             iconColor: Colors.white,
@@ -371,18 +371,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             qualityOptions: _pixelDrainUrls,
             selectedQuality: _selectedQuality,
             onQualityChanged: _changeVideoQuality,
-            onNextEpisode: () {
-               // Placeholder for next episode logic
-               // To implement this, we need to pass the full episode list to this screen
-               // For now, show a toast or log
-               print('Next Episode clicked');
-               // ToastUtils.show('Next Episode not available in this demo');
-            },
-            onShowEpisodes: () {
-               // Placeholder for episodes list
-               print('Show Episodes clicked');
-               // ToastUtils.show('Episodes list not available in this demo');
-            },
           ),
           placeholder: Center(
             child: CircularProgressIndicator(

@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -95,6 +96,7 @@ class _MaterialControlsState extends State<MaterialControls>
   Timer? _hideTimer;
   Timer? _initTimer;
   bool _subtitleOn = false;
+  bool _speedRestored = false;
   Timer? _showAfterExpandCollapseTimer;
   bool _dragging = false;
   bool _displayTapped = false;
@@ -685,6 +687,7 @@ class _MaterialControlsState extends State<MaterialControls>
         duration: const Duration(milliseconds: 300),
       );
     }
+    _restorePlaybackSpeed();
 
     _initTimer?.cancel();
     _initTimer = Timer(const Duration(milliseconds: 200), () {
@@ -695,6 +698,16 @@ class _MaterialControlsState extends State<MaterialControls>
         });
       }
     });
+  }
+
+  Future<void> _restorePlaybackSpeed() async {
+    if (_speedRestored || controller == null) return;
+    _speedRestored = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final speed = (prefs.getDouble('video_playback_speed') ?? 1.0).clamp(0.5, 2.0).toDouble();
+      if (mounted && controller != null) await controller!.setPlaybackSpeed(speed);
+    } catch (_) {}
   }
 
   void _updateSystemUI() {
@@ -807,21 +820,14 @@ class _MaterialControlsState extends State<MaterialControls>
                   });
                 },
               ),
-              _buildActionIcon(
-                'الحلقات', 
-                'assets/icons/episode.svg', 
-                widget.onShowEpisodes,
-              ),
-              _buildActionIcon(
-                'الجودة',
-                'assets/icons/playback.svg',
-                _showQualityDialog,
-              ),
-              _buildActionIcon(
-                'Next Ep.', 
-                'assets/icons/next.svg', 
-                widget.onNextEpisode,
-              ),
+              if (widget.onShowEpisodes != null)
+                _buildActionIcon('الحلقات', 'assets/icons/episode.svg', widget.onShowEpisodes),
+              if (widget.qualityOptions.isNotEmpty)
+                _buildActionIcon('الجودة', 'assets/icons/playback.svg', _showQualityDialog),
+              if (chewieController?.subtitle != null)
+                _buildActionIcon('الترجمة', 'assets/icons/subtitle.svg', () => setState(() => _subtitleOn = !_subtitleOn)),
+              if (widget.onNextEpisode != null)
+                _buildActionIcon('التالي', 'assets/icons/next.svg', widget.onNextEpisode),
                ],
              ),
           ),
@@ -962,17 +968,17 @@ class _MaterialControlsState extends State<MaterialControls>
                   shrinkWrap: true,
                   children: [
                     _buildSpeedOption(
-                        '0.25x', 'Sangat Lambat', 0.25, currentSpeed == 0.25),
-                    _buildSpeedOption(
                         '0.5x', 'Lambat', 0.5, currentSpeed == 0.5),
                     _buildSpeedOption(
                         '0.75x', 'Agak Lambat', 0.75, currentSpeed == 0.75),
                     _buildSpeedOption(
-                        'Normal', 'Kecepatan Normal', 1.0, currentSpeed == 1.0),
+                        '1x', 'السرعة الطبيعية', 1.0, currentSpeed == 1.0),
                     _buildSpeedOption(
                         '1.25x', 'Agak Cepat', 1.25, currentSpeed == 1.25),
                     _buildSpeedOption(
                         '1.5x', 'Cepat', 1.5, currentSpeed == 1.5),
+                    _buildSpeedOption(
+                        '1.75x', 'سريع جداً', 1.75, currentSpeed == 1.75),
                     _buildSpeedOption(
                         '2x', 'Sangat Cepat', 2.0, currentSpeed == 2.0),
                   ],
@@ -996,6 +1002,7 @@ class _MaterialControlsState extends State<MaterialControls>
     return InkWell(
       onTap: () {
         chewieController?.videoPlayerController.setPlaybackSpeed(value);
+        SharedPreferences.getInstance().then((prefs) => prefs.setDouble('video_playback_speed', value));
         Navigator.pop(context);
       },
       child: Container(
