@@ -8,6 +8,7 @@ import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'firebase_auth_service.dart';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -397,8 +398,9 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
-  if (error is GoogleAuthException) {
-    return error.code == 'CANCELLED'
+  if (error is GoogleAuthException || error is FirebaseGoogleAuthException) {
+    final code = error is GoogleAuthException ? error.code : (error as FirebaseGoogleAuthException).code;
+    return code == 'CANCELLED'
         ? 'تم إلغاء تسجيل الدخول باستخدام Google.'
         : 'تعذر تسجيل الدخول باستخدام Google. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
   }

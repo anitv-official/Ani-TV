@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state_provider.dart';
+import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_branding.dart';
 import 'login_screen.dart';
@@ -32,9 +35,19 @@ class AuthChoiceScreen extends StatelessWidget {
               label: const Text('المتابعة كزائر', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15)),
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(onPressed: null, icon: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)), label: const Text('التسجيل باستخدام Google — قريبًا'), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), side: const BorderSide(color: AppTheme.borderColor), disabledForegroundColor: AppTheme.textSecondaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)))),
-            const SizedBox(height: 14),
-            const Text('تسجيل Google غير متاح حاليًا وسيتم تفعيله قريبًا.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textMutedColor, fontSize: 12)),
+            OutlinedButton.icon(
+              onPressed: () async {
+                try {
+                  await context.read<AppStateProvider>().loginWithGoogle();
+                  if (context.mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+                } catch (error) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
+                }
+              },
+              icon: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+              label: const Text('التسجيل باستخدام Google'),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), side: const BorderSide(color: AppTheme.borderColor), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+            ),
           ],
         ),
       ),

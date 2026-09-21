@@ -12,7 +12,12 @@
           "package_name": "com.anitv.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "552497307402-or4eil283jsmk7ltpcd6l7t2egr0sn2j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCQAdEPTRZhVkpDZwXKlBzx2MhSS4_bgMk"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "552497307402-or4eil283jsmk7ltpcd6l7t2egr0sn2j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
