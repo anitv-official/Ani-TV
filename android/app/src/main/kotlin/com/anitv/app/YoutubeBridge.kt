@@ -91,17 +91,17 @@ object YoutubeBridge {
         val info = StreamInfo.getInfo(ServiceList.YouTube, url)
         val progressive = info.videoStreams
             .asSequence()
-            .filter { it.isUrl && !it.isVideoOnly && it.url.isNotBlank() }
+            .filter { it.isUrl && !it.isVideoOnly && it.url.orEmpty().isNotBlank() }
             .sortedWith(
-                compareByDescending<VideoStream> { resolutionHeight(it.resolution) }
+                compareByDescending<VideoStream> { resolutionHeight(it.resolution.orEmpty()) }
                     .thenByDescending { it.bitrate },
             )
-            .distinctBy { "${it.resolution}|${it.url}" }
+            .distinctBy { "${it.resolution.orEmpty()}|${it.url.orEmpty()}" }
             .map { stream ->
                 val format = stream.format?.suffix.orEmpty()
                 mapOf(
-                    "url" to stream.url,
-                    "quality" to stream.resolution.ifBlank { "تلقائي" },
+                    "url" to stream.url.orEmpty(),
+                    "quality" to stream.resolution.orEmpty().ifBlank { "تلقائي" },
                     "format" to format,
                 )
             }
@@ -134,15 +134,15 @@ object YoutubeBridge {
     private fun mapRelated(items: List<InfoItem>): List<Map<String, Any>> =
         items.filterIsInstance<StreamInfoItem>().map(::mapStreamItem)
 
-    private fun mapStreamItem(item: StreamInfoItem): Map<String, Any> = mapOf(
-        "url" to item.url,
-        "title" to item.name,
+    private fun mapStreamItem(item: StreamInfoItem): Map<String, Any> = mapOf<String, Any>(
+        "url" to item.url.orEmpty(),
+        "title" to item.name.orEmpty(),
         "thumbnail" to bestThumbnail(item.thumbnails),
-        "uploader" to item.uploaderName,
-        "uploaded" to item.textualUploadDate,
-        "description" to item.shortDescription,
-        "duration" to item.duration,
-        "views" to item.viewCount,
+        "uploader" to item.uploaderName.orEmpty(),
+        "uploaded" to item.textualUploadDate.orEmpty(),
+        "description" to item.shortDescription.orEmpty(),
+        "duration" to (item.duration ?: 0L),
+        "views" to (item.viewCount ?: 0L),
     )
 
     private fun bestThumbnail(images: List<Image>): String = images
@@ -181,7 +181,7 @@ object YoutubeBridge {
                 }
 
                 val code = connection.responseCode
-                if (code == HttpURLConnection.HTTP_TOO_MANY_REQUESTS) {
+                if (code == 429) {
                     throw ReCaptchaException("YouTube requested CAPTCHA", request.url())
                 }
                 val bodyStream = if (code >= 400) connection.errorStream else connection.inputStream
