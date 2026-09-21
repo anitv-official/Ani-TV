@@ -8,7 +8,7 @@ class FirebaseAuthService {
   FirebaseAuthService._();
 
   static final FirebaseAuthService instance = FirebaseAuthService._();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? get currentUser => Firebase.apps.isEmpty ? null : _auth.currentUser;
