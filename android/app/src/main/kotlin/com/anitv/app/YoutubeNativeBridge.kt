@@ -145,7 +145,7 @@ object YoutubeNativeBridge {
         return MuxedInfo(url, stream.height ?: 0, (stream.height ?: 0).toString())
     }
 
-    private fun range(start: Long?, end: Long?): String? = if (start != null && end != null) "$start-$end" else null
+    private fun range(start: Int?, end: Int?): String? = if (start != null && end != null) "$start-$end" else null
     private fun mimeFromUrl(url: String, audio: Boolean): String {
         val decoded = runCatching { URLDecoder.decode(url, "UTF-8") }.getOrDefault(url)
         return if (decoded.contains("webm", true)) if (audio) "audio/webm" else "video/webm" else if (audio) "audio/mp4" else "video/mp4"
