@@ -4,8 +4,9 @@ import 'package:anitv/sources/youtube_source.dart';
 import 'package:anitv/models/remote_plugin.dart';
 
 void main() {
-  test('YouTube is exposed with YouTube hosts and video kind', () {
-    final source = SourceRegistry.visibleSources.whereType<YoutubeSource>().single;
+  test('YouTube remains available internally but is hidden from source lists', () {
+    final source = SourceRegistry.youtube as YoutubeSource;
+    expect(SourceRegistry.visibleSources.any((entry) => entry.id == 'youtube'), isFalse);
     expect(source.id, 'youtube');
     expect(source.kind, 'youtube');
     expect(source.handles('https://www.youtube.com/watch?v=abc123'), isTrue);
@@ -31,7 +32,7 @@ void main() {
     expect(SourceRegistry.sourceForPlugin(plugin), isA<YoutubeSource>());
   });
 
-  test('YouTube details preserve the video URL for native extraction', () async {
+  test('YouTube details preserve the video URL for in-app playback', () async {
     final result = await YoutubeSource().details('https://www.youtube.com/watch?v=abc123');
     expect(result['url'], 'https://www.youtube.com/watch?v=abc123');
     expect(result['source_id'], 'youtube');
