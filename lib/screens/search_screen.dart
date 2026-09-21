@@ -10,7 +10,6 @@ import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
-import 'fasel_explore_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
 import '../widgets/ui/app_search_bar.dart';
@@ -174,9 +173,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     try {
       final animeResults = await ApiService.searchAnime(query);
       final comicResults = await ApiService.searchComics(query);
-      final movieResults = await SourceRegistry.searchMovies(query);
-
-      final allResults = [...animeResults, ...comicResults, ...movieResults];
+      final allResults = [...animeResults, ...comicResults];
 
       if (mounted) {
         setState(() {
@@ -652,8 +649,6 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       targetScreen = AnimeDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);
-    } else if (category == 'movie' || item['source_id'] == 'fasel_hd') {
-      targetScreen = FaselDetailsScreen(url: item['url']);
     }
 
     return ContentCard(

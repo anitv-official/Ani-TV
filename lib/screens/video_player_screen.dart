@@ -521,7 +521,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       'animewitcher.com', 'anime3rb.com',
       'wecima.show', 'wecima.tube', 'wecima.video', 'wecima.mov',
       'kormoz.com', 'kormozi.com', 'kormozy.com',
-      'fasselhd.com', 'faselhd.club', 'faselhd.com',
       'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
       'streamwish.fun', 'streamwish.com', 'topcinemaa.com', 'topcinemaa.cc', 'topcinemaa.co',
       'web2.topcinemaa.com', 'vidtube.one', 'down.vidtube.one', 'vidtube.pro',

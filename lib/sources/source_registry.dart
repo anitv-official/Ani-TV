@@ -4,7 +4,6 @@ import 'drama_source.dart';
 import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
-import 'faselhd_source.dart';
 import 'source_base.dart';
 import 'web_catalog_source.dart';
 
@@ -22,9 +21,6 @@ class SourceRegistry {
   static final _anime3rb = Anime3rbSource();
   static final _wecima = WecimaSource();
   static final _kormoz = KormozSource();
-  // Native adapter mapped to the Faselhd entry from the installed repository.
-  static final _repoFaselHd = FaselHdSource();
-
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
     AnimeSlayerSource(),
@@ -39,9 +35,8 @@ class SourceRegistry {
     _kormoz,
   ];
 
-  static List<ContentSource> get _repositorySources => [_repoFaselHd];
+  static List<ContentSource> get _repositorySources => const [];
   static List<ContentSource> get _allSources => [..._apis, ..._repositorySources];
-  static List<ContentSource> get _repositoryMovieSources => _repositorySources.where((s) => s.kind == 'movie').toList(growable: false);
 
   static List<ContentSource> get _animeApis =>
       _apis.where((s) => s.kind == 'anime').toList(growable: false);
@@ -88,9 +83,6 @@ class SourceRegistry {
     return _merge(_allSources.map((source) => _retry(() => source.search(query))));
   }
 
-  static Future<List<Map<String, dynamic>>> searchMovies(String query) {
-    return _merge([..._repositoryMovieSources].map((source) => _retry(() => source.search(query))));
-  }
 
   static Future<List<Map<String, dynamic>>> latestAnime({int page = 1}) {
     return _cached('anime:$page', () => _merge([
@@ -104,10 +96,6 @@ class SourceRegistry {
         _merge(_mangaApis.map((source) => _retry(() => source.latest(page: page)))));
   }
 
-  static Future<List<Map<String, dynamic>>> latestMovies({int page = 1}) {
-    return _cached('movie:$page', () =>
-        _merge(_repositoryMovieSources.map((source) => _retry(() => source.latest(page: page)))));
-  }
 
   static Future<List<Map<String, dynamic>>> latestFromSource(
       String sourceId, {int page = 1}) async {
@@ -172,8 +160,6 @@ class SourceRegistry {
       'kormoz.com',
       'kormozi.com',
       'kormozy.com',
-      'fasselhd.com',
-      'faselhd.club',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);

@@ -18,7 +18,6 @@
 | `swat` | Manga Swat | Manga | latest, search, details, chapters, chapter images | `swat://series/{id}/{slug}` و`swat://chapter/{id}` |
 | `mangatime` | MangaTime | Manga | latest, search, details, chapters, chapter images | `mangatime://series?slug={slug}` و`mangatime://chapter?id={chapterId}&number={number}` |
 | `manga_mello` | MangaMello | Manga | latest, search, details, chapters, chapter images | `mellomello://manga/{id}` و`mellomello://chapter/{mangaId}/{chapterId}` |
-| `fasel_hd` | FaselHD | Movie/Series | latest movies, latest series, search, details, episodes, streams | `{apiBase}movie/{id}/0`, `{apiBase}series/{id}/0`, `{apiBase}episode/{id}/0` |
 
 طبقة `SourceRegistry` تدمج نتائج المصادر، تعيد المحاولة ثلاث مرات بمهلة 35 ثانية، وتخزن أحدث النتائج ثلاث دقائق. يجب أن يفشل مصدر واحد بدون إخفاء نتائج المصادر الأخرى.
 
@@ -224,7 +223,6 @@ inf={GET google.php result}&json={"episode_id":"{episodeId}"}
 
 استعمل `episode_urls[*].episode_server_name` و`episode_urls[*].episode_url`. لا تعرض HTML player pages على أنها ملفات فيديو مباشرة.
 
-## 5. FaselHD API
 
 ### Dynamic API base
 
@@ -238,7 +236,6 @@ Accept: application/json
 يبحث التطبيق عن `backupApiUrlNoureddine` ثم `backupApiUrlhadr`. إذا تعذر الإعداد يستخدم fallback التالي:
 
 ```text
-https://kahitdgku.com/faselhd15/public/api/
 ```
 
 User-Agent:
@@ -520,7 +517,6 @@ Scheduled server scan
 
 - النطاقات الخارجية قد تتغير أو تحجب أو تتطلب headers إضافية.
 - Anime Slayer وDrama يستخدمان قيم client credentials مضمنة في العميل الحالي؛ الأفضل نقل الطلبات الحساسة إلى backend.
-- FaselHD يغير API base عبر `api_urls.json`؛ لا تثبت fallback واحدًا إلى الأبد.
 - ليست كل مصادر المانجا توفر نفس شكل pagination أو نفس أسماء حقول الصور.
 - Appwrite Provider ID وTopic ID لا يمكن استنتاجهما من Project ID؛ يجب أخذهما من Appwrite Console.
 - Supabase لا يستطيع إرسال FCM وحده دون إعداد server-side credentials. في البنية الحالية، Appwrite Messaging هو قناة الإرسال وSupabase هو طبقة history/deduplication.
@@ -534,5 +530,4 @@ Scheduled server scan
 [5]: https://appswat.com/v2/api/v2 "Manga Swat API base"
 [6]: https://mangatime.org/api/trpc "MangaTime tRPC API"
 [7]: https://api.mangamello.com/nx/v3n "MangaMello API base"
-[8]: https://abcdefegh.watchit.tn/api_urls.json "FaselHD dynamic API configuration"
 [9]: https://supabase.com/docs/guides/database/postgres/row-level-security "Supabase Row Level Security documentation"

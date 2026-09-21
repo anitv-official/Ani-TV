@@ -11,7 +11,7 @@ import 'screens/email_verification_screen.dart';
 import 'screens/anime_details_screen.dart';
 import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
-import 'screens/fasel_explore_screen.dart';
+import 'screens/empty_movies_screen.dart';
 import 'theme/app_theme.dart';
 import 'l10n/app_strings.dart';
 import 'providers/app_state_provider.dart';
@@ -189,8 +189,8 @@ class _MyAppState extends State<MyApp> {
       final navigator = appNavigatorKey.currentState;
       if (navigator != null) {
         final Widget destination = switch (type) {
-          'movie' || 'series' || 'drama' => FaselDetailsScreen(url: sourceUrl),
-          'anime' || 'episode' => uri.queryParameters['source']?.toLowerCase() == 'faselhd' ? FaselDetailsScreen(url: sourceUrl) : AnimeDetailsScreen(url: sourceUrl),
+          'movie' || 'series' || 'drama' => const EmptyMoviesScreen(),
+          'anime' || 'episode' => AnimeDetailsScreen(url: sourceUrl),
           'manga' => ComicDetailsScreen(url: sourceUrl),
           'chapter' => MangaReaderScreen(url: sourceUrl),
           _ => AnimeDetailsScreen(url: sourceUrl),

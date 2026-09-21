@@ -9,12 +9,10 @@ import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
-import 'fasel_explore_screen.dart';
 import 'video_player_screen.dart';
 import 'explore_screen.dart';
 
 Widget sourceContentPage(ContentSource source) {
-  if (source.id == 'fasel_hd') return const FaselExploreScreen();
   if (source.id == 'drama_slayer') return const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
   return SourceContentScreen(source: source);
 }

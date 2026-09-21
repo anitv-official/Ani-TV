@@ -1,7 +1,6 @@
 const crypto = require('node:crypto');
 const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
-const faselhd = require('./adapters/faselhd');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
 const FAVORITES_COLLECTION_ID = '6aa58e3a003b23556872';
@@ -91,7 +90,6 @@ const sourceAdapter = (favorite) => {
   const source = String(favorite.source || '').trim().toLowerCase();
   const itemId = String(favorite.itemId || '').trim();
   if (anime4up.supports(source, itemId)) return anime4up;
-  if (faselhd.supports(source, itemId)) return faselhd;
   return null;
 };
 

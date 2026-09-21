@@ -53,7 +53,7 @@ Pass the secret only through this header; never place it in the body or logs:
 x-anitv-favorite-scan-secret: <value configured in Appwrite>
 ```
 
-`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. The adapters currently support Anime4Up and FaselHD URL Favorites; unsupported sources are reported and do not stop the scan.
+`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. The adapters currently support Anime4Up; unsupported sources are reported and do not stop the scan.
 
 ### مستخدم محدد
 
