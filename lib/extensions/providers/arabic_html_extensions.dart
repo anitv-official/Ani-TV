@@ -65,7 +65,7 @@ abstract class ArabicHtmlExtension extends AniExtension {
       final title = clean(attr(anchor, 'title').isNotEmpty ? attr(anchor, 'title') : card.querySelector('h1,h2,h3,h4,.title,.h1,.h4,.h5')?.text ?? anchor.text);
       if (title.length < 2 || _navigation(title)) continue;
       final kind = url.contains('/movie/') || url.contains('/movies/') ? 'movie' : url.contains('/series/') ? 'series' : 'series';
-      results.add(item(title: title, url: url, image: image(card.querySelector('img'), pageUrl), type: kind));
+      results.add(item(title: title, url: url, image: image(card.querySelector('img, .imgSer, .imgBg, .posterThumb'), pageUrl), type: kind));
       if (results.length >= 60) break;
     }
     return results;
@@ -131,7 +131,7 @@ class KrmzyExtension extends ArabicHtmlExtension {
   @override Future<Map<String, dynamic>> details(String url) async {
     final doc = await document(url) ?? html_parser.parse('');
     final title = clean(doc.querySelector('div.info h1, h1')?.text ?? name);
-    final poster = image(doc.querySelector('div.cover img, .imgSer img, .imgBg img'), url);
+    final poster = image(doc.querySelector('div.cover img, div.cover .img, .imgSer, .imgBg'), url);
     final eps = episodesFrom(doc.querySelectorAll('article.postEp, .episodes a, a[href*="/episode/"]'), url, imageUrl: poster);
     return {...item(title: title, url: url, image: poster, type: url.contains('/movies/') ? 'movie' : 'series'), 'episodes': url.contains('/movies/') ? <Map<String, dynamic>>[] : eps, 'total_episodes': eps.length};
   }
@@ -165,6 +165,9 @@ class AflaamExtension extends ArabicHtmlExtension {
     }
     eps.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     final type = url.contains('/series/') ? 'series' : 'movie';
+    if (type == 'movie' && eps.isEmpty) {
+      eps.add(episode(url, title, 1, imageUrl: poster));
+    }
     return {...item(title: title, url: url, image: poster, type: type, description: clean(doc.querySelector('#movie-tab-2 p, .synopsis')?.text ?? '')), 'episodes': eps, 'total_episodes': eps.length};
   }
 
@@ -211,6 +214,9 @@ class AkwamExtension extends ArabicHtmlExtension {
       eps.add(episode(abs(href, url), raw, number, imageUrl: image(a.querySelector('img'), url)));
     }
     eps.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
+    if (eps.isEmpty && !url.contains('/series/')) {
+      eps.add(episode(url, title, 1, imageUrl: poster));
+    }
     return {...item(title: title, url: url, image: poster, type: eps.isEmpty ? 'movie' : 'series'), 'episodes': eps, 'total_episodes': eps.length};
   }
 

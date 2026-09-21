@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import '../extension_base.dart';
 import 'extension_http.dart';
 
@@ -7,6 +8,7 @@ class YouTubeExtension extends AniExtension {
   static const _base = 'https://www.youtube.com';
   static const _clientVersion = '2.20240101.00.00';
   final http.Client _client = http.Client();
+  final YoutubeExplode _extractor = YoutubeExplode();
 
   @override String get id => 'youtube';
   @override String get name => 'YouTube';
@@ -70,11 +72,17 @@ class YouTubeExtension extends AniExtension {
             final metadata = lockup['metadata']?['lockupMetadataViewModel'];
             add(lockup['contentId'].toString(), text(metadata?['title']), thumb(lockup['contentImage']?['collectionThumbnailViewModel']?['primaryThumbnail']?['thumbnailViewModel']?['image']), text(metadata?['secondaryTitle']), '');
           }
+          final reel = node['reelItemRenderer'];
+          if (reel is Map) {
+            final endpoint = reel['onTap']?['innertubeCommand']?['reelWatchEndpoint'];
+            final id = endpoint?['videoId']?.toString() ?? reel['videoId']?.toString() ?? '';
+            add(id, text(reel['headline'] ?? reel['overlayMetadata']?['primaryText']), thumb(reel['thumbnail'] ?? reel['thumbnailViewModel']?['image']), text(reel['viewCountText']), 'Shorts');
+          }
           for (final value in node.values) walk(value);
         } else if (node is List) { for (final value in node) walk(value); }
       }
       walk(root);
-      return videos.take(60).toList(growable: false);
+      return videos.take(120).toList(growable: false);
     } catch (_) { return []; }
   }
 
@@ -118,17 +126,19 @@ class YouTubeExtension extends AniExtension {
   @override Future<Map<String, dynamic>?> streams(String url) async {
     try {
       final id = _videoId(url);
-      final root = await _player(id);
-      final streaming = root['streamingData'] as Map?;
-      final formats = <Map<String, dynamic>>[];
-      for (final key in ['formats', 'adaptiveFormats']) {
-        final list = streaming?[key];
-        if (list is List) for (final value in list.whereType<Map>()) if (value['url'] is String) formats.add(Map<String, dynamic>.from(value));
+      final manifest = await _extractor.videos.streamsClient.getManifest(id);
+      final links = <Map<String, String>>[];
+      final seen = <String>{};
+      for (final info in manifest.muxed) {
+        final value = info.url.toString();
+        if (value.isEmpty || !seen.add(value)) continue;
+        links.add({'url': value, 'quality': info.qualityLabel, 'name': 'YouTube Native', 'label': 'Muxed', 'type': 'video'});
       }
-      final links = formats.map((format) {
-        final quality = format['qualityLabel']?.toString() ?? '${format['height'] ?? 'Auto'}p';
-        return <String, String>{'url': format['url'].toString(), 'quality': quality, 'name': 'YouTube Native', 'label': format['mimeType']?.toString() ?? quality, 'type': 'video'};
-      }).toList();
+      for (final info in manifest.videoOnly) {
+        final value = info.url.toString();
+        if (value.isEmpty || !seen.add(value)) continue;
+        links.add({'url': value, 'quality': info.qualityLabel, 'name': 'YouTube Native', 'label': 'Video', 'type': 'video'});
+      }
       links.sort((a, b) => _quality(b['quality']).compareTo(_quality(a['quality'])));
       if (links.isEmpty) return null;
       return {'stream_url': links.first['url'], 'direct_stream_urls': links, 'headers': {'User-Agent': ExtensionHttp.userAgent, 'Referer': _base}, 'allowed_hosts': ['googlevideo.com']};

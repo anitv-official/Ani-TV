@@ -211,8 +211,9 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
             child: ContentGrid(
               key: const PageStorageKey<String>('source-content-grid'),
               controller: _scrollController,
+              columns: widget.source.id == 'youtube' ? 1 : null,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              childAspectRatio: widget.source.id == 'youtube' ? 1.22 : 0.66,
+              childAspectRatio: widget.source.id == 'youtube' ? 1.35 : 0.66,
               itemCount: items.length + (_loadingMore ? 1 : 0),
               itemBuilder: (context, index) {
                 if (index >= items.length) {

@@ -52,6 +52,7 @@ dependencies:
   chewie: ^1.10.0
   webview_flutter: ^4.10.0
   webview_flutter_android: ^4.3.2
+  youtube_explode_dart: ^2.3.5
   flutter_svg: ^2.0.9
   lottie: ^3.0.0
 
