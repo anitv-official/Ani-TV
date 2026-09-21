@@ -34,7 +34,11 @@ class YouTubeExtension extends AniExtension {
   }
 
   @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
-    try { return _videosFromPage(await _page('$_base/feed/trending')); } catch (_) { return []; }
+    try {
+      final trending = _videosFromPage(await _page('$_base/feed/trending'));
+      if (trending.isNotEmpty) return trending;
+      return _videosFromPage(await _page('$_base/results?search_query=anime'));
+    } catch (_) { return []; }
   }
 
   @override Future<List<Map<String, dynamic>>> search(String query) async {
@@ -133,11 +137,6 @@ class YouTubeExtension extends AniExtension {
         final value = info.url.toString();
         if (value.isEmpty || !seen.add(value)) continue;
         links.add({'url': value, 'quality': info.qualityLabel, 'name': 'YouTube Native', 'label': 'Muxed', 'type': 'video'});
-      }
-      for (final info in manifest.videoOnly) {
-        final value = info.url.toString();
-        if (value.isEmpty || !seen.add(value)) continue;
-        links.add({'url': value, 'quality': info.qualityLabel, 'name': 'YouTube Native', 'label': 'Video', 'type': 'video'});
       }
       links.sort((a, b) => _quality(b['quality']).compareTo(_quality(a['quality'])));
       if (links.isEmpty) return null;

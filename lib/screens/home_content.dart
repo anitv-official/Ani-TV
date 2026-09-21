@@ -34,6 +34,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
   List<dynamic> latestAnime = [];
   List<dynamic> latestComics = [];
   List<dynamic> latestDrama = [];
+  List<dynamic> latestYouTube = [];
   bool isLoading = true;
   bool _hasError = false;
   int _currentCarouselIndex = 0;
@@ -123,10 +124,12 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         _safeLatest('anime_slayer'),
         _safeLatest('drama_slayer'),
         _safeLatest('mangatime'),
+        _safeLatest('youtube'),
       ]);
       final movies = loaded[0] as List<dynamic>;
       final drama = loaded[1] as List<dynamic>;
       final comics = loaded[2] as List<dynamic>;
+      final youtube = loaded[3] as List<dynamic>;
 
       if (mounted) {
         setState(() {
@@ -137,6 +140,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
           latestAnime = movies;
           latestDrama = drama;
           latestComics = comics;
+          latestYouTube = youtube;
           _animePage = 1;
           _comicPage = 1;
           isLoading = false;
@@ -234,6 +238,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
           _buildSectionHeader('أحدث المانجا', 'قصص جديدة بانتظارك'),
           _buildHorizontal(latestComics, isAnime: false),
         ],
+        if (latestYouTube.isNotEmpty) ...[
+          _buildSectionHeader('أحدث YouTube', 'فيديوهات جديدة من YouTube'),
+          _buildYouTubeHorizontal(latestYouTube),
+        ],
         _buildSectionHeader('كل المحتوى', 'تصفح أحدث الإضافات'),
         ContentGrid(
           shrinkWrap: true,
@@ -282,6 +290,22 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
           imageUrl: (item['image_url'] ?? item['image'])?.toString(),
           badge: item['source']?.toString(),
           onTap: () => _openItem(item, isAnime: isAnime),
+        );
+      },
+    );
+  }
+
+  Widget _buildYouTubeHorizontal(List<dynamic> items) {
+    final visible = items.take(12).toList();
+    return HorizontalContentList(
+      height: 222,
+      itemWidth: 240,
+      itemCount: visible.length,
+      itemBuilder: (context, index) {
+        final item = visible[index];
+        return YouTubeCard(
+          item: item,
+          onTap: () => _openItem(item, isAnime: true),
         );
       },
     );

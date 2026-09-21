@@ -15,7 +15,6 @@ import 'sources_screen.dart';
 import 'profile_screen.dart';
 import 'about_screen.dart';
 import 'novel_explore_screen.dart';
-import 'empty_movies_screen.dart';
 import 'extensions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -109,7 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
       case AppSection.drama:
         return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
       case AppSection.movies:
-        return const EmptyMoviesScreen(embedded: true);
+        return const ExploreScreen(
+          embedded: true,
+          sourceId: 'aflaam',
+          title: 'لائحة الأفلام والمسلسلات',
+        );
       case AppSection.novels:
         return const NovelExploreScreen(embedded: true);
       case AppSection.extensions:
