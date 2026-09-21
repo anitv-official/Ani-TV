@@ -44,7 +44,9 @@ class AnimeWitcherExtension extends AniExtension {
 
   Future<Map<String, dynamic>> _queryAlgolia(String index, String query, {required int page, required int hits}) async {
     final uri = Uri.parse('https://$_algoliaAppId-dsn.algolia.net/1/indexes/$index/query');
-    final params = Uri.encodeQueryComponent('query=$query&hitsPerPage=$hits&page=${page < 0 ? 0 : page - (index == 'recent' && page > 0 ? 1 : 0)}');
+    // Algolia expects the JSON `params` value as a query-string, not as a
+    // percent-encoded query-string. Encoding the whole value returns HTTP 400.
+    final params = 'query=${Uri.encodeQueryComponent(query)}&hitsPerPage=$hits&page=${page < 0 ? 0 : page - (index == 'recent' && page > 0 ? 1 : 0)}';
     Future<http.Response> request() => http.post(uri, headers: _algoliaHeaders, body: jsonEncode({'params': params})).timeout(const Duration(seconds: 20));
     var response = await request();
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -59,8 +61,10 @@ class AnimeWitcherExtension extends AniExtension {
     try {
       final json = await ExtensionHttp.getJson('$_firestoreBase/Settings/constants');
       final fields = (json as Map)['fields'] as Map?;
-      final app = _value(fields?['algolia_app_id'] ?? fields?['algoliaAppId']);
-      final key = _value(fields?['algolia_api_key'] ?? fields?['algoliaApiKey']);
+      final settings = fields?['search_settings'];
+      final searchFields = settings is Map ? settings['mapValue']?['fields'] as Map? : null;
+      final app = _value(searchFields?['app_id'] ?? searchFields?['app_id_v4']);
+      final key = _value(searchFields?['api_key'] ?? searchFields?['browse_api_key']);
       if (app.isNotEmpty) _algoliaAppId = app;
       if (key.isNotEmpty) _algoliaApiKey = key;
     } catch (_) {}
