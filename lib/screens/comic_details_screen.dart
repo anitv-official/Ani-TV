@@ -15,6 +15,7 @@ import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/detail_ui.dart';
+import '../sources/source_registry.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
   final String url;
@@ -36,6 +37,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   bool _chaptersAscending = false;
   bool _isDownloadingAll = false;
   final TextEditingController _chapterSearchController = TextEditingController();
+  bool _showChapters = false;
+  bool _relatedLoaded = false;
+  List<Map<String, dynamic>> _relatedItems = [];
 
   @override
   void initState() {
@@ -146,12 +150,26 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         _comicData = data;
         _isLoading = false;
       });
+      _loadRelated(data);
     } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadRelated(Map<String, dynamic> comic) async {
+    if (_relatedLoaded) return;
+    _relatedLoaded = true;
+    try {
+      final source = SourceRegistry.sourceFor(widget.url);
+      final title = comic['title']?.toString().trim() ?? '';
+      if (source == null || title.isEmpty) return;
+      final items = await source.search(title);
+      if (!mounted) return;
+      setState(() => _relatedItems = items.where((item) => item['url']?.toString() != widget.url).take(12).toList());
+    } catch (_) {}
   }
 
   Future<bool> _downloadChapter(Map<String, dynamic> chapter) async {
@@ -272,8 +290,14 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                                   _buildInfo(context, _comicData!),
                                   const SizedBox(height: 12),
                                   _buildActionButtons(context, _comicData!),
-                                  const SizedBox(height: 18),
-                                  _buildChaptersList(context, _comicData!),
+                                  if (_showChapters) ...[
+                                    const SizedBox(height: 18),
+                                    _buildChaptersList(context, _comicData!),
+                                  ],
+                                  if (_relatedItems.isNotEmpty) ...[
+                                    const SizedBox(height: 20),
+                                    RelatedContentRail(items: _relatedItems, onTap: (item) => Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString())))),
+                                  ],
                                   const SizedBox(height: 24),
                                 ],
                               ),
@@ -339,7 +363,7 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       children: [
         Text(
           comic['title'] ?? 'بدون عنوان',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1.2),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.2),
         ),
         const SizedBox(height: 8),
         Row(children: [
@@ -371,25 +395,9 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
           children: [
             Expanded(
               child: PrimaryButton(
-                label: 'اقرأ',
-                icon: Icons.menu_book_rounded,
-                onPressed: () {
-                   final chapters = comic['chapters'] as List<dynamic>? ?? [];
-                   if (chapters.isNotEmpty) {
-                      final firstChapter = chapters.last;
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MangaReaderScreen(
-                            url: firstChapter['url'],
-                            comicImageUrl: comic['image_url'],
-                            title: firstChapter['title'],
-                            chapterId: '1',
-                          ),
-                        ),
-                      );
-                   }
-                },
+                label: 'الفصول',
+                icon: Icons.format_list_bulleted_rounded,
+                onPressed: () => setState(() => _showChapters = !_showChapters),
               ),
             ),
             const SizedBox(width: 12),
@@ -769,6 +777,8 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
         ],
         _buildInfoRow('الكاتب', widget.comic['author']),
         _buildInfoRow('الرسام', widget.comic['illustrator']),
+        _buildInfoRow('الناشر', widget.comic['publisher'] ?? widget.comic['publishers']),
+        _buildInfoRow('الفنان', widget.comic['artist'] ?? widget.comic['artists']),
         _buildInfoRow('الجمهور', widget.comic['demographic']),
         _buildInfoRow('النوع', widget.comic['type']),
         _buildInfoRow('الحالة', widget.comic['status']),
@@ -779,6 +789,8 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
 
   Widget _buildInfoRow(String label, dynamic value) {
     if (value == null || value.toString().isEmpty) return const SizedBox.shrink();
+    final display = value is List ? value.map((item) => item is Map ? (item['name'] ?? item['title'] ?? item).toString() : item.toString()).join('، ') : value is Map ? value.values.join('، ') : value.toString();
+    if (display.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: Text.rich(
@@ -786,7 +798,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           style: const TextStyle(fontSize: 12, height: 1.4),
           children: [
             TextSpan(text: '$label: ', style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.bold)),
-            TextSpan(text: value.toString(), style: const TextStyle(color: Colors.white)),
+            TextSpan(text: display, style: const TextStyle(color: Colors.white)),
           ],
         ),
         softWrap: true,

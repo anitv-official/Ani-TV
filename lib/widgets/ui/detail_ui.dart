@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import 'poster_image.dart';
 
 class DetailStatsCard extends StatelessWidget {
   final List<DetailStat> stats;
@@ -8,8 +9,8 @@ class DetailStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 14, bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
+      margin: const EdgeInsets.only(top: 10, bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.elevatedColor.withOpacity(.82),
         borderRadius: BorderRadius.circular(22),
@@ -85,6 +86,58 @@ class DetailSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 9),
-        child: Text(title, style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 18, fontWeight: FontWeight.w800)),
+        child: Text(title, style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 16, fontWeight: FontWeight.w800)),
       );
+}
+
+class RelatedContentRail extends StatelessWidget {
+  final List<Map<String, dynamic>> items;
+  final ValueChanged<Map<String, dynamic>> onTap;
+
+  const RelatedContentRail({super.key, required this.items, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const DetailSectionTitle('مشابه ومقترح لك'),
+        SizedBox(
+          height: 212,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 8),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return SizedBox(
+                width: 126,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => onTap(item),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: PosterImage(
+                          url: item['image_url']?.toString(),
+                          borderRadius: BorderRadius.circular(14),
+                          width: 126,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(item['title']?.toString() ?? 'بدون عنوان', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }

@@ -16,6 +16,7 @@ import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/detail_ui.dart';
+import '../sources/source_registry.dart';
 
 class AnimeDetailsScreen extends StatefulWidget {
   final String url;
@@ -30,6 +31,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   bool _isEpisodeSearching = false;
   final TextEditingController _episodeSearchController = TextEditingController();
   String _episodeSearchQuery = '';
+  bool _relatedLoaded = false;
+  List<Map<String, dynamic>> _relatedItems = [];
 
   @override
   void initState() {
@@ -48,6 +51,23 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
   Future<dynamic> _loadDetails() => ApiService.fetchAnimeDetails(widget.url);
 
+  bool _isMovie(Map<String, dynamic> anime) {
+    final type = anime['type']?.toString().toLowerCase() ?? '';
+    final category = anime['category']?.toString().toLowerCase() ?? '';
+    return type.contains('movie') || type.contains('film') || category.contains('movie') || anime['is_movie'] == true;
+  }
+
+  Future<void> _loadRelated(Map<String, dynamic> anime) async {
+    try {
+      final source = SourceRegistry.sourceFor(widget.url);
+      final title = anime['title']?.toString().trim() ?? '';
+      if (source == null || title.isEmpty) return;
+      final items = await source.search(title);
+      if (!mounted) return;
+      setState(() => _relatedItems = items.where((item) => item['url']?.toString() != widget.url).take(12).toList());
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,6 +84,12 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
           }
 
           final anime = snapshot.data!;
+          if (!_relatedLoaded) {
+            _relatedLoaded = true;
+            _loadRelated(anime);
+          }
+          final episodes = anime['episodes'] as List<dynamic>? ?? const [];
+          final isMovie = _isMovie(anime);
           return SafeArea(
             child: SingleChildScrollView(
               child: Column(
@@ -78,9 +104,14 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                         _buildInfo(context, anime),
                         const SizedBox(height: 10),
                         _buildActionButtons(context, anime),
-                        const SizedBox(height: 16),
-                        _buildEpisodesList(context, anime),
-                        const SizedBox(height: 22),
+                        if (!isMovie) const SizedBox(height: 14),
+                        if (!isMovie)
+                          Text('${episodes.length} حلقة متاحة — افتح قائمة الحلقات للاختيار والتنزيل', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+                        if (_relatedItems.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          RelatedContentRail(items: _relatedItems, onTap: (item) => Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'].toString())))),
+                        ],
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
@@ -145,7 +176,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       children: [
         Text(
           anime['title'] ?? 'بدون عنوان',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1.2),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.2),
         ),
         const SizedBox(height: 8),
         Row(children: [
@@ -220,32 +251,35 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Future<bool> _downloadEpisodeFromButton(BuildContext context, Map<String, dynamic> episode) async {
-    if (context.mounted) ToastUtils.show('تنزيل الأفلام والأنمي والدراما قريبًا', backgroundColor: AppTheme.primaryColor);
-    return false;
+    await _showDownloadBottomSheet(context, episode);
+    return true;
   }
 
   Widget _buildActionButtons(BuildContext context, Map<String, dynamic> anime) {
+    final isMovie = _isMovie(anime);
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: PrimaryButton(
-                label: 'تشغيل',
-                icon: Icons.play_arrow_rounded,
+                label: isMovie ? 'مشاهدة الفيلم' : 'قائمة الحلقات',
+                icon: isMovie ? Icons.play_arrow_rounded : Icons.format_list_bulleted_rounded,
                 onPressed: () {
-                   if (anime['episodes'] != null && (anime['episodes'] as List).isNotEmpty) {
-                      _showStreamBottomSheet(context, anime['episodes'][0], anime);
-                   }
+                  final episodes = anime['episodes'] as List<dynamic>? ?? const [];
+                  if (episodes.isEmpty) {
+                    final directUrl = (anime['stream_url'] ?? anime['video_url'] ?? '').toString().trim();
+                    if (directUrl.isEmpty) {
+                      ToastUtils.show('لا توجد وصلة تشغيل متاحة لهذا الفيلم', backgroundColor: Colors.orange);
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: directUrl, title: anime['title']?.toString() ?? 'فيلم', episodeId: widget.url)));
+                    }
+                  } else if (isMovie) {
+                    _showStreamBottomSheet(context, Map<String, dynamic>.from(episodes.first as Map), anime);
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => EpisodeListScreen(anime: anime, onPlay: (episode) => _showStreamBottomSheet(context, episode, anime), onDownload: (episode) => _showDownloadBottomSheet(context, episode))));
+                  }
                 },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: SecondaryButton(
-                label: 'التنزيل قريبًا',
-                icon: Icons.download_rounded,
-                onPressed: () => ToastUtils.show('تنزيل الأفلام والأنمي والدراما قريبًا', backgroundColor: AppTheme.primaryColor),
               ),
             ),
           ],
@@ -623,6 +657,61 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
 
 }
 
+class EpisodeListScreen extends StatefulWidget {
+  final Map<String, dynamic> anime;
+  final ValueChanged<Map<String, dynamic>> onPlay;
+  final ValueChanged<Map<String, dynamic>> onDownload;
+
+  const EpisodeListScreen({super.key, required this.anime, required this.onPlay, required this.onDownload});
+
+  @override
+  State<EpisodeListScreen> createState() => _EpisodeListScreenState();
+}
+
+class _EpisodeListScreenState extends State<EpisodeListScreen> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final episodes = (widget.anime['episodes'] as List<dynamic>? ?? const []).whereType<Map>().map((item) => Map<String, dynamic>.from(item)).where((episode) => episode['title']?.toString().toLowerCase().contains(_query.toLowerCase()) ?? true).toList();
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(title: Text('حلقات ${widget.anime['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis)),
+      body: Column(
+        children: [
+          Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: TextField(controller: _search, onChanged: (value) => setState(() => _query = value), style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'ابحث عن حلقة...', prefixIcon: Icon(Icons.search_rounded)))),
+          Expanded(
+            child: episodes.isEmpty
+                ? const EmptyState(icon: Icons.video_library_outlined, title: 'لا توجد حلقات')
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                    itemCount: episodes.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final episode = episodes[index];
+                      return EpisodeTile(
+                        title: episode['title']?.toString() ?? 'حلقة ${index + 1}',
+                        subtitle: episode['duration']?.toString(),
+                        imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(),
+                        onTap: () => widget.onPlay(episode),
+                        onDownload: () => widget.onDownload(episode),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FavoriteIconAction extends StatefulWidget {
   final Map<String, dynamic> anime;
   final String url;
@@ -763,8 +852,11 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildInfoRow('الاستوديو', widget.anime['studio']),
-        _buildInfoRow('المنتج', widget.anime['producer']),
+        _buildInfoRow('الاستوديو', widget.anime['studio'] ?? widget.anime['studios']),
+        _buildInfoRow('المنتج', widget.anime['producer'] ?? widget.anime['producers']),
+        _buildInfoRow('المؤلف', widget.anime['author'] ?? widget.anime['authors'] ?? widget.anime['writer']),
+        _buildInfoRow('الشخصيات', widget.anime['characters']),
+        _buildInfoRow('مؤدو الأصوات', widget.anime['voice_actors'] ?? widget.anime['voiceActors'] ?? widget.anime['cast']),
         _buildInfoRow('الحالة', widget.anime['status']),
         _buildInfoRow('النوع', widget.anime['type']),
         _buildInfoRow('المدة', widget.anime['duration']),
@@ -775,6 +867,8 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
 
   Widget _buildInfoRow(String label, dynamic value) {
     if (value == null || value.toString().isEmpty) return const SizedBox.shrink();
+    final display = value is List ? value.map((item) => item is Map ? (item['name'] ?? item['title'] ?? item['character'] ?? item['actor'] ?? item).toString() : item.toString()).join('، ') : value is Map ? value.values.join('، ') : value.toString();
+    if (display.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: RichText(
@@ -782,7 +876,7 @@ class _ExpandableDetailsState extends State<_ExpandableDetails> {
           style: const TextStyle(fontSize: 12, height: 1.4),
           children: [
             TextSpan(text: '$label: ', style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.bold)),
-            TextSpan(text: value.toString(), style: const TextStyle(color: Colors.white)),
+            TextSpan(text: display, style: const TextStyle(color: Colors.white)),
           ],
         ),
       ),
