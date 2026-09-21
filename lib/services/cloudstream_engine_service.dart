@@ -20,4 +20,19 @@ class CloudStreamEngineService {
     final raw = await _channel.invokeMethod('loadPlugin', {'path': path});
     return Map<String, dynamic>.from(raw as Map);
   }
+
+  static Future<List<Map<String, dynamic>>> search(String provider, String query) async {
+    final raw = await _channel.invokeMethod<List<dynamic>>('search', {'provider': provider, 'query': query}) ?? const [];
+    return raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  }
+
+  static Future<Map<String, dynamic>> load(String provider, String url) async {
+    final raw = await _channel.invokeMethod('load', {'provider': provider, 'url': url});
+    return Map<String, dynamic>.from(raw as Map);
+  }
+
+  static Future<List<Map<String, dynamic>>> loadLinks(String provider, String data) async {
+    final raw = await _channel.invokeMethod<List<dynamic>>('loadLinks', {'provider': provider, 'data': data}) ?? const [];
+    return raw.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  }
 }

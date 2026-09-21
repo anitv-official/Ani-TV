@@ -23,6 +23,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/toast_utils.dart';
 import 'services/fcm_service.dart';
 import 'services/download_service.dart';
+import 'services/remote_repository_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -69,6 +70,15 @@ void main() async {
   // Firebase/FCM is optional infrastructure and must never prevent the app
   // shell from rendering when a device is offline or its push setup is stale.
   unawaited(_initializePushServices());
+  unawaited(_initializeBuiltInSources());
+}
+
+Future<void> _initializeBuiltInSources() async {
+  try {
+    await remoteRepositoryService.ensureBuiltInReady('Egydead');
+  } catch (error) {
+    debugPrint('Egydead startup skipped: $error');
+  }
 }
 
 Future<void> _initializePushServices() async {

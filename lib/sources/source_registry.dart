@@ -5,6 +5,7 @@ import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
 import 'faselhd_source.dart';
+import 'egydead_source.dart';
 import 'source_base.dart';
 import 'youtube_source.dart';
 import 'web_catalog_source.dart';
@@ -27,6 +28,7 @@ class SourceRegistry {
   static final _kormoz = KormozSource();
   // Native adapter mapped to the Faselhd entry from the installed repository.
   static final _repoFaselHd = FaselHdSource();
+  static final _repoEgydead = EgydeadSource();
 
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
@@ -43,7 +45,7 @@ class SourceRegistry {
     _kormoz,
   ];
 
-  static List<ContentSource> get _repositorySources => [_repoFaselHd];
+  static List<ContentSource> get _repositorySources => [_repoFaselHd, _repoEgydead];
   static List<ContentSource> get _allSources => [..._apis, ..._repositorySources];
   static List<ContentSource> get _repositoryMovieSources => _repositorySources.where((s) => s.kind == 'movie').toList(growable: false);
 
@@ -93,6 +95,7 @@ class SourceRegistry {
   static ContentSource? sourceForPlugin(RemotePlugin plugin) {
     final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
     if (identity.contains('fasel')) return _repoFaselHd;
+    if (identity.contains('egydead') || identity.contains('ايجي ديد')) return _repoEgydead;
     if (identity.contains('youtube')) return _youtube;
     if (identity.contains('witcher') || identity.contains('ويتشر')) return _animeWitcher;
     if (identity.contains('anime3rb') || identity.contains('anime 3rb') || identity.contains('انمي عرب')) return _anime3rb;
@@ -203,7 +206,9 @@ class SourceRegistry {
       'fasselhd.com',
       'faselhd.club',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
-    return media || embeddedPlayer || source.kind != 'movie';
+    final extractorCandidate = source.id == 'egydead' &&
+        RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
+    return media || embeddedPlayer || extractorCandidate || source.kind != 'movie';
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

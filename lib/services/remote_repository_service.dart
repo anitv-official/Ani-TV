@@ -137,6 +137,58 @@ class RemoteRepositoryService {
     return null;
   }
 
+  /// Downloads, verifies, persists, and loads a trusted built-in CloudStream
+  /// adapter. It is intentionally limited to an explicit internal name.
+  Future<RemotePlugin?> ensureBuiltInReady(String internalName) async {
+    RemotePlugin? installed = (await installedPlugins()).cast<RemotePlugin?>().firstWhere(
+      (item) => item?.internalName.toLowerCase() == internalName.toLowerCase(),
+      orElse: () => null,
+    );
+    if (installed != null && installed.localPath.isNotEmpty && File(installed.localPath).existsSync()) {
+      final loaded = await CloudStreamEngineService.loadPlugin(installed.localPath);
+      if (loaded['loaded'] == false) throw Exception('Egydead plugin could not be loaded');
+      return installed;
+    }
+
+    var repositories = await loadSavedRepositories();
+    if (repositories.isEmpty) {
+      try {
+        final repository = await fetchRepository(defaultRepositoryUrl);
+        await saveRepository(repository);
+        repositories = [repository];
+      } catch (_) {
+        return null;
+      }
+    }
+    RemotePlugin? catalogPlugin;
+    for (final repository in repositories) {
+      for (final plugin in repository.plugins) {
+        if (plugin.internalName.toLowerCase() == internalName.toLowerCase() || plugin.name.toLowerCase() == internalName.toLowerCase()) {
+          catalogPlugin = plugin;
+          break;
+        }
+      }
+      if (catalogPlugin != null) break;
+    }
+    if (catalogPlugin == null) {
+      try {
+        final repository = await fetchRepository(defaultRepositoryUrl);
+        await saveRepository(repository);
+        catalogPlugin = repository.plugins.firstWhere(
+          (plugin) => plugin.internalName.toLowerCase() == internalName.toLowerCase() || plugin.name.toLowerCase() == internalName.toLowerCase(),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+    final downloaded = await installPlugin(catalogPlugin);
+    final builtIn = downloaded.withBuiltIn();
+    await setInstalled(builtIn, true);
+    final loaded = await CloudStreamEngineService.loadPlugin(builtIn.localPath);
+    if (loaded['loaded'] == false) throw Exception('Egydead plugin could not be loaded');
+    return builtIn;
+  }
+
   Future<dynamic> _getJson(String url) async {
     final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'}).timeout(_timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) throw Exception('HTTP ${response.statusCode}');
