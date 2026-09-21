@@ -282,7 +282,25 @@ class _YouTubeCatalogSectionState extends State<YouTubeCatalogSection> {
   @override Widget build(BuildContext context) {
     if (loading) return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
     return Column(children: [
-      ContentGrid(shrinkWrap: true, columns: 1, childAspectRatio: 1.35, physics: const NeverScrollableScrollPhysics(), itemCount: items.length, itemBuilder: (context, index) => YouTubeCard(item: items[index], onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => YouTubeWatchScreen(url: items[index]['url'].toString(), title: items[index]['title']?.toString() ?? 'YouTube')))),
+      ContentGrid(
+        shrinkWrap: true,
+        columns: 1,
+        childAspectRatio: 1.35,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: items.length,
+        itemBuilder: (context, index) => YouTubeCard(
+          item: items[index],
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => YouTubeWatchScreen(
+                url: items[index]['url'].toString(),
+                title: items[index]['title']?.toString() ?? 'YouTube',
+              ),
+            ),
+          ),
+        ),
+      ),
       TextButton.icon(
         onPressed: (loadingMore || items.length >= allItems.length) ? null : () => _load(more: true),
         icon: loadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
