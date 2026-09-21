@@ -628,7 +628,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                  onTap: () {
                                    final selected = Map<String, dynamic>.from(link as Map);
                                    selected['headers'] = streams['headers'] ?? selected['headers'] ?? const {};
-                                   return _downloadAnimeEpisode(selected, episode);
+                                   _downloadAnimeEpisode(selected, episode);
                                  },
                                  trailing: IconButton(
                                    icon: const Icon(Icons.save_alt, color: Colors.white70),
@@ -636,7 +636,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                    onPressed: () {
                                      final selected = Map<String, dynamic>.from(link as Map);
                                      selected['headers'] = streams['headers'] ?? selected['headers'] ?? const {};
-                                     return _downloadAnimeEpisodeInternal(selected, episode);
+                                     _downloadAnimeEpisodeInternal(selected, episode);
                                    },
                                  ),
                                );
