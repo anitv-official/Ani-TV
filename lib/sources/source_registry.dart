@@ -18,7 +18,6 @@ class SourceRegistry {
   static const int _maxAttempts = 3;
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
-  static final _anime3rb = Anime3rbSource();
   static final _wecima = WecimaSource();
   static final _kormoz = KormozSource();
   static final List<ContentSource> _extensions = ExtensionCatalog.all;
@@ -30,7 +29,6 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    _anime3rb,
     _wecima,
     _kormoz,
   ];
@@ -168,11 +166,13 @@ class SourceRegistry {
       'firestream.site',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     final requestedEmbed = link['type']?.toString() == 'embed';
+    final providerVideo = const {'anime3rb', 'aflaam', 'akwam', 'faselhd'}.contains(source.id) &&
+        link['type']?.toString() == 'video';
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
     final providerEmbed =
         (source.id == 'egydead' || source.id == 'anime_witcher') && requestedEmbed;
-    return (!requestedEmbed && media) || embeddedPlayer || extractorCandidate || providerEmbed;
+    return providerVideo || (!requestedEmbed && media) || embeddedPlayer || extractorCandidate || providerEmbed;
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

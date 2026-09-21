@@ -531,8 +531,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
     if (host != null && widget.allowedHosts.contains(host)) return true;
     return const {
-      'animewitcher.com', 'anime3rb.com', 'pixeldrain.com', 'mediafire.com',
+      'animewitcher.com', 'anime3rb.com', 'video.vid3rb.com', 'pixeldrain.com', 'mediafire.com',
       'firestream.to', 'firestream.site', 'streamtape.com', 'streamtape.cc',
+      'krmzi.org', 'aflaam.com', 'ak.sv', 'akwam.ss', 'faselhdx.bid', 'fasel-hd.co', 'faselhd.co',
       'wecima.show', 'wecima.tube', 'wecima.video', 'wecima.mov',
       'kormoz.com', 'kormozi.com', 'kormozy.com',
       'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
