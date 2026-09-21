@@ -111,7 +111,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   Widget _taskCard(Map<String, dynamic> item) {
     final status = item['status']?.toString() ?? 'queued';
-    final progress = (item['progress'] is num ? (item['progress'] as num).toDouble() : 0).clamp(0, 1);
+    final progress = (item['progress'] is num ? (item['progress'] as num).toDouble() : 0.0).clamp(0.0, 1.0).toDouble();
     final bytes = (item['bytes'] is num ? (item['bytes'] as num).toInt() : 0);
     final total = (item['total'] is num ? (item['total'] as num).toInt() : 0);
     final isManga = item['kind'] == 'manga';
