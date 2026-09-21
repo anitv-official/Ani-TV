@@ -552,7 +552,6 @@ class _YoutubePlaybackScreenState extends State<YoutubePlaybackScreen> {
             .toList(growable: false);
         final video = playback.video;
         return VideoPlayerScreen(
-          key: ValueKey(video.url),
           url: streams.first['url']!,
           title: video.title,
           episodeId: video.url,
