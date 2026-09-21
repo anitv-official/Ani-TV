@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../extension_base.dart';
+import '../../sources/source_base.dart';
 import 'extension_http.dart';
 
 class EgyDeadExtension extends AniExtension {
@@ -79,7 +80,7 @@ class EgyDeadExtension extends AniExtension {
       html = await ExtensionHttp.getText(watchUrl, referer: url);
     }
     final links = <Map<String, String>>[];
-    final media = RegExp(r'https?://[^\s"\'<>]+\.(?:m3u8|mp4)(?:\?[^\s"\'<>]+)?', caseSensitive: false).allMatches(html).map((m) => m.group(0)!.replaceAll('&amp;', '&'));
+    final media = RegExp(r'''https?://[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]+)?''', caseSensitive: false).allMatches(html).map((m) => m.group(0)!.replaceAll('&amp;', '&'));
     for (final link in media) links.add({'url': link, 'quality': link.contains('hls') || link.endsWith('.m3u8') ? 'Auto' : 'Direct', 'name': 'EgyDead', 'label': 'EgyDead'});
     final embeds = RegExp(r'''(?:data-link|iframe[^>]+src|href)=["']([^"']+)["']''', caseSensitive: false).allMatches(html).map((m) => Uri.parse(watchUrl).resolve(m.group(1)!).toString());
     for (final link in embeds) {
