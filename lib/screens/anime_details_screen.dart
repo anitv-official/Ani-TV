@@ -701,7 +701,10 @@ class _EpisodeListScreenState extends State<EpisodeListScreen> {
                         subtitle: episode['duration']?.toString(),
                         imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(),
                         onTap: () => widget.onPlay(episode),
-                        onDownload: () => widget.onDownload(episode),
+                        onDownload: () async {
+                          await widget.onDownload(episode);
+                          return true;
+                        },
                       );
                     },
                   ),
