@@ -239,7 +239,7 @@ class DownloadService {
       final request = http.Request('GET', Uri.parse(item['url'].toString()));
       request.headers.addAll(headers);
       if (received > 0) request.headers['Range'] = 'bytes=$received-';
-      final response = await client.send(request);
+      final response = await client.send(request).timeout(const Duration(seconds: 30));
       if (response.statusCode == 416 && target.existsSync()) {
         await _complete(id, path);
         return;
@@ -253,7 +253,7 @@ class DownloadService {
       var lastBytes = received;
       await _update(id, {'total': total, 'bytes': received, 'progress': _progress(received, total)});
       await _notify('جارٍ التنزيل', item['episode']?.toString() ?? item['title']?.toString() ?? '', received, total, taskId: id);
-      await for (final chunk in response.stream) {
+      await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
         while (isPaused(id) && !isCancelled(id)) {
           await _update(id, {'status': 'paused', 'bytes': received, 'progress': _progress(received, total), 'speed': 0});
           await Future<void>.delayed(const Duration(milliseconds: 500));
@@ -344,9 +344,10 @@ class DownloadService {
     required String url,
     String coverUrl = '',
     String sourceId = '',
+    Map<String, String> headers = const {},
   }) async {
     final id = 'anime:${_safe(animeTitle)}/${_safe(episodeTitle)}';
-    await enqueueMediaDownload(taskId: id, kind: 'Anime', title: animeTitle, episode: episodeTitle, mediaUrl: url, coverUrl: coverUrl, sourceId: sourceId);
+    await enqueueMediaDownload(taskId: id, kind: 'Anime', title: animeTitle, episode: episodeTitle, mediaUrl: url, coverUrl: coverUrl, sourceId: sourceId, headers: headers);
     return waitFor(id);
   }
 

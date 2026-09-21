@@ -106,7 +106,36 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 
   Widget _section(String title, List<Map<String, dynamic>> items) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: const EdgeInsets.only(bottom: 9), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800))), ...items.map(_taskCard), const SizedBox(height: 12)]);
+    final mangaGroups = <String, List<Map<String, dynamic>>>{};
+    final standalone = <Map<String, dynamic>>[];
+    for (final item in items) {
+      if (item['kind'] == 'manga') {
+        (mangaGroups[item['title']?.toString() ?? 'مانجا'] ??= []).add(item);
+      } else {
+        standalone.add(item);
+      }
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(padding: const EdgeInsets.only(bottom: 9), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800))),
+      ...mangaGroups.entries.map((group) => _mangaGroup(group.key, group.value)),
+      ...standalone.map(_taskCard),
+      const SizedBox(height: 12),
+    ]);
+  }
+
+  Widget _mangaGroup(String title, List<Map<String, dynamic>> chapters) {
+    chapters.sort((a, b) => (a['chapter']?.toString() ?? '').compareTo(b['chapter']?.toString() ?? ''));
+    final cover = chapters.first['cover_url']?.toString();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
+      decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [PosterImage(url: cover, width: 46, height: 58, fallbackIcon: Icons.menu_book, borderRadius: BorderRadius.circular(8)), const SizedBox(width: 10), Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))), Text('${chapters.length} فصل', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12))]),
+        const SizedBox(height: 8),
+        ...chapters.map(_taskCard),
+      ]),
+    );
   }
 
   Widget _taskCard(Map<String, dynamic> item) {
@@ -130,7 +159,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           const SizedBox(height: 9),
           LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 5, borderRadius: BorderRadius.circular(5), color: AppTheme.primaryColor),
           const SizedBox(height: 5),
-          Row(children: [Text('${(progress * 100).round()}%', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (total > 0) Text('  ${_formatBytes(bytes)} / ${_formatBytes(total)}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), const Spacer(), if (status == 'paused') IconButton(onPressed: () => DownloadService.resumeTask(id), icon: const Icon(Icons.play_arrow_rounded, color: Colors.white)), if (status != 'paused') IconButton(onPressed: () => DownloadService.pauseTask(id), icon: const Icon(Icons.pause_rounded, color: Colors.white)), IconButton(onPressed: () => DownloadService.cancelTask(id), icon: const Icon(Icons.close_rounded, color: Colors.orange))]),
+          Row(children: [Text(total > 0 ? '${(progress * 100).round()}%' : _formatBytes(bytes), style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (total > 0) Text('  ${_formatBytes(bytes)} / ${_formatBytes(total)}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), const Spacer(), if (status == 'paused') IconButton(onPressed: () => DownloadService.resumeTask(id), icon: const Icon(Icons.play_arrow_rounded, color: Colors.white)), if (status != 'paused') IconButton(onPressed: () => DownloadService.pauseTask(id), icon: const Icon(Icons.pause_rounded, color: Colors.white)), IconButton(onPressed: () => DownloadService.cancelTask(id), icon: const Icon(Icons.close_rounded, color: Colors.orange))]),
         ],
         if (status == 'failed' || status == 'cancelled' || (status == 'completed' && !exists)) Row(children: [Expanded(child: Text(item['error']?.toString().isNotEmpty == true ? item['error'].toString() : 'الملف غير موجود أو فشل التنزيل', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.orange, fontSize: 11))), TextButton(onPressed: () => DownloadService.retry(id), child: const Text('إعادة المحاولة'))]),
         if (status == 'completed') Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(onPressed: () => DownloadService.delete(id), icon: const Icon(Icons.delete_outline, size: 18), label: const Text('حذف'))),

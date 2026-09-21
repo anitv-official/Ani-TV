@@ -222,6 +222,8 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     final url = link['url']?.toString() ?? '';
     if (url.isEmpty) return false;
     try {
+      final headers = <String, String>{};
+      (link['headers'] as Map?)?.forEach((key, value) => headers[key.toString()] = value.toString());
       final anime = await _animeDetailsFuture;
       await DownloadService.saveAnimeEpisode(
         animeTitle: anime['title']?.toString() ?? 'أنمي',
@@ -229,6 +231,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
         url: url,
         coverUrl: anime['image_url']?.toString() ?? '',
         sourceId: anime['source_id']?.toString() ?? '',
+        headers: headers,
       );
       if (mounted) ToastUtils.show('تم حفظ الحلقة في التنزيلات', backgroundColor: AppTheme.accentColor);
       return true;
@@ -559,12 +562,16 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       final streams = await ApiService.fetchEpisodeStreams(episode['url']);
       Navigator.pop(context); // Close loading
 
-      if (streams == null || streams['download_links'] == null) {
+      if (streams == null) {
         ToastUtils.show('لا توجد روابط تنزيل', backgroundColor: Colors.orange);
         return;
       }
 
-      final downloadLinks = streams['download_links'] as Map<String, dynamic>;
+      final legacyLinks = streams['download_links'];
+      final directLinks = streams['direct_stream_urls'];
+      final downloadLinks = legacyLinks is Map<String, dynamic>
+          ? legacyLinks
+          : <String, dynamic>{'مباشر': directLinks is List ? directLinks : <dynamic>[]};
 
       if (downloadLinks.isEmpty) {
         ToastUtils.show('لا توجد روابط تنزيل', backgroundColor: Colors.orange);
@@ -615,14 +622,22 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                                return ListTile(
                                  leading: const Icon(Icons.download, color: AppTheme.primaryColor),
                                  title: Text(
-                                   link['host'] ?? 'Unknown Host',
+                                   link['host'] ?? link['name'] ?? link['quality'] ?? 'رابط مباشر',
                                    style: TextStyle(color: Colors.grey[300]),
                                  ),
-                                 onTap: () => _downloadAnimeEpisode(Map<String, dynamic>.from(link as Map), episode),
+                                 onTap: () {
+                                   final selected = Map<String, dynamic>.from(link as Map);
+                                   selected['headers'] = streams['headers'] ?? selected['headers'] ?? const {};
+                                   return _downloadAnimeEpisode(selected, episode);
+                                 },
                                  trailing: IconButton(
                                    icon: const Icon(Icons.save_alt, color: Colors.white70),
                                    tooltip: 'تنزيل داخل التطبيق',
-                                   onPressed: () => _downloadAnimeEpisodeInternal(Map<String, dynamic>.from(link as Map), episode),
+                                   onPressed: () {
+                                     final selected = Map<String, dynamic>.from(link as Map);
+                                     selected['headers'] = streams['headers'] ?? selected['headers'] ?? const {};
+                                     return _downloadAnimeEpisodeInternal(selected, episode);
+                                   },
                                  ),
                                );
                              }).toList(),
