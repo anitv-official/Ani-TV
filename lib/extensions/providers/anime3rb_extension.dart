@@ -127,7 +127,7 @@ class Anime3rbExtension extends AniExtension {
     try {
       final response = await _get(url, referer: _base);
       final html = utf8.decode(response.bodyBytes, allowMalformed: true);
-      final player = RegExp(r'https?://video\.vid3rb\.com/player[^"\'\\ ]+', caseSensitive: false).firstMatch(html)?.group(0);
+      final player = RegExp(r'''https?://video\.vid3rb\.com/player[^"'\\ ]+''', caseSensitive: false).firstMatch(html)?.group(0);
       if (player == null) return null;
       final playerResponse = await _client.get(Uri.parse(player.replaceAll(r'\\/', '/').replaceAll('&amp;', '&')), headers: {..._headers(referer: _base), 'Referer': _base, 'Sec-Fetch-Dest': 'iframe'}).timeout(const Duration(seconds: 25));
       final playerHtml = utf8.decode(playerResponse.bodyBytes, allowMalformed: true);

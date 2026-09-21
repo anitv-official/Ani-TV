@@ -85,7 +85,7 @@ abstract class ArabicHtmlExtension extends AniExtension {
       if (!url.contains('/episode/') || !seen.add(url)) continue;
       final raw = clean(attr(a, 'title').isNotEmpty ? attr(a, 'title') : a.text);
       final number = SourceUtils.episodeNumber(raw) ?? result.length + 1;
-      result.add(episode(url, raw.isEmpty ? 'الحلقة $number' : raw, number, imageUrl: imageUrl));
+      result.add(episode(url, raw.isEmpty ? 'الحلقة $number' : raw, number, imageUrl: imageUrl ?? ''));
     }
     result.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     return result;
