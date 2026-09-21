@@ -105,7 +105,9 @@ class AnimeWitcherExtension extends AniExtension {
         if (found.isNotEmpty) hit = found.first;
       } catch (_) {}
     }
-    final path = (hit['doc_ref'] ?? hit['path'] ?? 'anime_list/$animeId').toString().replaceFirst('anime_list/', '');
+    final path = (hit['doc_ref'] ?? hit['path'] ?? 'anime_list/$animeId')
+        .toString()
+        .replaceFirst(RegExp(r'^/?anime_list/'), '');
     final episodes = await _episodes(path);
     final result = _hitToItem({...hit, 'name': hit['name'] ?? animeId, 'anime_id': animeId});
     result['episodes'] = episodes;
@@ -153,13 +155,63 @@ class AnimeWitcherExtension extends AniExtension {
           final quality = _value(fields['quality']);
           final name = _value(fields['name']);
           if (link.isEmpty || link.startsWith('<')) continue;
-          links.add({'url': link, 'quality': quality.isEmpty ? 'Auto' : quality, 'name': name.isEmpty ? 'Anime Witcher' : name, 'label': name});
+          final resolved = await _resolveServerLink(link);
+          links.add({
+            'url': resolved ?? link,
+            'quality': quality.isEmpty ? 'Auto' : quality,
+            'name': name.isEmpty ? 'Anime Witcher' : name,
+            'label': resolved == null ? (name.isEmpty ? 'Anime Witcher' : name) : 'Direct ${name.isEmpty ? '' : name}',
+            'type': resolved == null ? 'embed' : 'video',
+          });
         }
       }
       links.sort((a, b) => _quality(b['quality']).compareTo(_quality(a['quality'])));
       if (links.isEmpty) return null;
-      return {'stream_url': links.first['url'], 'direct_stream_urls': links, 'headers': {'Referer': _base, 'User-Agent': ExtensionHttp.userAgent}};
+      final playable = links.where((link) => link['type'] == 'video').toList();
+      final ordered = [...playable, ...links.where((link) => link['type'] != 'video')];
+      return {
+        'stream_url': ordered.first['url'],
+        'direct_stream_urls': ordered,
+        'headers': {'Referer': _base, 'User-Agent': ExtensionHttp.userAgent},
+        'allowed_hosts': ['animewitcher.com', 'pixeldrain.com', 'mediafire.com', 'firestream.to', 'streamtape.com'],
+      };
     } catch (_) { return null; }
+  }
+
+  Future<String?> _resolveServerLink(String link) async {
+    final uri = Uri.tryParse(link);
+    if (uri == null) return null;
+    final host = uri.host.toLowerCase().replaceFirst('www.', '');
+    if (host == 'pixeldrain.com' && uri.pathSegments.length >= 2 && uri.pathSegments.first == 'u') {
+      return 'https://pixeldrain.com/api/file/${uri.pathSegments[1]}?download';
+    }
+    if (host == 'streamtape.com' || host == 'streamtape.cc') {
+      try {
+        final response = await http.get(uri, headers: {'User-Agent': ExtensionHttp.userAgent}).timeout(const Duration(seconds: 12));
+        final html = utf8.decode(response.bodyBytes, allowMalformed: true);
+        final match = RegExp(r'(?:get_video\?id=|id=)([^"&<]+&expires=[^"&<]+&ip=[^"&<]+&token=[^"&<]+)').firstMatch(html);
+        if (match != null) return 'https://streamtape.com/get_video?${match.group(1)}&stream=1';
+      } catch (_) {}
+      return null;
+    }
+    if (host == 'firestream.to' || host == 'firestream.site') {
+      try {
+        final response = await http.get(uri, headers: {'User-Agent': ExtensionHttp.userAgent}).timeout(const Duration(seconds: 12));
+        final html = utf8.decode(response.bodyBytes, allowMalformed: true);
+        final match = RegExp(r'"downloadUrl"\s*:\s*"([^"]+)"').firstMatch(html);
+        if (match != null) return match.group(1)!.replaceAll(r'\/', '/');
+      } catch (_) {}
+      return null;
+    }
+    if (host == 'mediafire.com') {
+      try {
+        final response = await http.get(uri, headers: {'User-Agent': ExtensionHttp.userAgent}).timeout(const Duration(seconds: 12));
+        final html = utf8.decode(response.bodyBytes, allowMalformed: true);
+        final match = RegExp('https?://download[^"\\s]+\\.mp4').firstMatch(html);
+        if (match != null) return match.group(0)!.replaceAll('&amp;', '&');
+      } catch (_) {}
+    }
+    return null;
   }
 
   static int _quality(String? value) => int.tryParse((value ?? '').replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;

@@ -137,6 +137,7 @@ class SourceRegistry {
         lower.contains('pixeldrain.com/api/file');
     final embeddedPlayer = const {
       'streamtape.cc',
+      'streamtape.com',
       'luluvdo.com',
       'uqload.net',
       'uqload.cx',
@@ -161,11 +162,17 @@ class SourceRegistry {
       'kormoz.com',
       'kormozi.com',
       'kormozy.com',
+      'mediafire.com',
+      'pixeldrain.com',
+      'firestream.to',
+      'firestream.site',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
+    final requestedEmbed = link['type']?.toString() == 'embed';
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
-    final providerEmbed = source.id == 'egydead' && link['type']?.toString() == 'embed';
-    return media || embeddedPlayer || extractorCandidate || providerEmbed;
+    final providerEmbed =
+        (source.id == 'egydead' || source.id == 'anime_witcher') && requestedEmbed;
+    return (!requestedEmbed && media) || embeddedPlayer || extractorCandidate || providerEmbed;
   }
 
   static Future<Map<String, dynamic>?> chapterImages(String url) async {

@@ -510,6 +510,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     print('Checking if URL is direct video: $url');
 
     final lower = url.toLowerCase();
+    final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
+    final providerPage = const {
+      'mediafire.com',
+      'pixeldrain.com',
+      'firestream.to',
+      'firestream.site',
+      'streamtape.com',
+      'streamtape.cc',
+    }.contains(host) && !lower.contains('/api/file/');
+    if (providerPage) return false;
     if (url.startsWith('/') || RegExp(r'\.(?:mp4|m3u8|mov|mkv|avi|webm)(?:\?|$)').hasMatch(lower) ||
         lower.contains('pixeldrain.com/api/file') || lower.contains('pipedproxy') || lower.contains('/videoplayback')) {
       return true;
@@ -521,7 +531,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final host = Uri.tryParse(url)?.host.toLowerCase().replaceFirst('www.', '');
     if (host != null && widget.allowedHosts.contains(host)) return true;
     return const {
-      'animewitcher.com', 'anime3rb.com',
+      'animewitcher.com', 'anime3rb.com', 'pixeldrain.com', 'mediafire.com',
+      'firestream.to', 'firestream.site', 'streamtape.com', 'streamtape.cc',
       'wecima.show', 'wecima.tube', 'wecima.video', 'wecima.mov',
       'kormoz.com', 'kormozi.com', 'kormozy.com',
       'streamtape.cc', 'luluvdo.com', 'uqload.net', 'uqload.vc', 'streamwish.to',
