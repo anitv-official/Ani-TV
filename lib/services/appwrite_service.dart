@@ -402,7 +402,9 @@ String authErrorMessage(Object error, {required bool registering}) {
     final code = error is GoogleAuthException ? error.code : (error as FirebaseGoogleAuthException).code;
     return code == 'CANCELLED'
         ? 'تم إلغاء تسجيل الدخول باستخدام Google.'
-        : 'تعذر تسجيل الدخول باستخدام Google. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
+        : code.contains('DEVELOPER_ERROR') || code.contains('GOOGLE_10')
+            ? 'إعداد Google غير مكتمل للتطبيق (SHA-1 أو OAuth). أضف بصمة توقيع التطبيق في Firebase ثم جرّب مرة أخرى. ($code)'
+            : 'تعذر تسجيل الدخول باستخدام Google. رمز الخطأ: $code';
   }
   if (error is AccountCreatedButSessionUnavailableException) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';

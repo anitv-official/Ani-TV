@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 /// Google authentication is intentionally kept separate from Appwrite.
@@ -18,19 +19,25 @@ class FirebaseAuthService {
   }
 
   Future<User> signInWithGoogle() async {
-    await initialize();
-    final googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) throw const FirebaseGoogleAuthException('CANCELLED');
+    try {
+      await initialize();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) throw const FirebaseGoogleAuthException('CANCELLED');
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-    final result = await _auth.signInWithCredential(credential);
-    final user = result.user;
-    if (user == null) throw const FirebaseGoogleAuthException('NO_USER');
-    return user;
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final result = await _auth.signInWithCredential(credential);
+      final user = result.user;
+      if (user == null) throw const FirebaseGoogleAuthException('NO_USER');
+      return user;
+    } on FirebaseAuthException catch (error) {
+      throw FirebaseGoogleAuthException('FIREBASE_${error.code}');
+    } on PlatformException catch (error) {
+      throw FirebaseGoogleAuthException('GOOGLE_${error.code}_${error.message ?? ''}'.trim());
+    }
   }
 
   Future<void> signOut() async {
