@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
 import '../services/content_link_service.dart';
-import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
 import 'video_player_screen.dart';
@@ -35,10 +34,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    final source = SourceRegistry.sourceFor(widget.url);
-    _animeDetailsFuture = source?.kind == 'movie'
-        ? ApiService.fetchMovieDetails(widget.url)
-        : ApiService.fetchAnimeDetails(widget.url);
+    _animeDetailsFuture = ApiService.fetchAnimeDetails(widget.url);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Provider.of<AppStateProvider>(context, listen: false).initialize();
     });
@@ -50,12 +46,7 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     super.dispose();
   }
 
-  Future<dynamic> _loadDetails() {
-    final source = SourceRegistry.sourceFor(widget.url);
-    return source?.kind == 'movie'
-        ? ApiService.fetchMovieDetails(widget.url)
-        : ApiService.fetchAnimeDetails(widget.url);
-  }
+  Future<dynamic> _loadDetails() => ApiService.fetchAnimeDetails(widget.url);
 
   @override
   Widget build(BuildContext context) {
