@@ -145,6 +145,8 @@ class YouTubeCard extends StatelessWidget {
     final secondaryTextColor = textColor.withOpacity(.68);
     final views = item['rating']?.toString() ?? '';
     final duration = item['duration']?.toString() ?? '';
+    final channel = item['channel']?.toString() ?? item['author']?.toString() ?? '';
+    final description = item['description']?.toString() ?? '';
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -156,18 +158,19 @@ class YouTubeCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               child: PosterImage(url: item['image_url']?.toString(), borderRadius: BorderRadius.zero),
             ),
-            const PositionedDirectional(
+            PositionedDirectional(
               bottom: 8, end: 8,
               child: DecoratedBox(
                 decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.all(Radius.circular(5))),
-                child: Padding(padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4), child: Icon(Icons.play_arrow, color: Colors.white, size: 18)),
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4), child: Text(duration.isNotEmpty ? duration : 'تشغيل', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
               ),
             ),
           ])),
           const SizedBox(height: 8),
           Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: textColor, fontSize: 13, height: 1.25, fontWeight: FontWeight.w700)),
-          if (views.isNotEmpty || duration.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text([views, duration].where((e) => e.isNotEmpty).join('  •  '), maxLines: 1, overflow: TextOverflow.ellipsis,
+          if (channel.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text(channel, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: secondaryTextColor, fontSize: 11, fontWeight: FontWeight.w600))),
+          if (views.isNotEmpty || description.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text([views, description].where((e) => e.isNotEmpty).join('  •  '), maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: secondaryTextColor, fontSize: 11))),
         ]),
       ),

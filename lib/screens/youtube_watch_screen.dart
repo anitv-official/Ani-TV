@@ -18,7 +18,7 @@ class YouTubeWatchScreen extends StatefulWidget {
   State<YouTubeWatchScreen> createState() => _YouTubeWatchScreenState();
 }
 
-class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
+class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> with WidgetsBindingObserver {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   Map<String, dynamic>? _streams;
@@ -28,18 +28,29 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
   bool _loading = true;
   bool _changingQuality = false;
   String _error = '';
+  Map<String, dynamic>? _details;
+  Duration _savedPosition = Duration.zero;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _chewieController?.dispose();
     _videoController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _savedPosition = _videoController?.value.position ?? _savedPosition;
+    }
   }
 
   Future<void> _load() async {
@@ -62,7 +73,9 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
       _videoController = controller;
       _chewieController = _createChewieController(controller);
       setState(() => _loading = false);
+      if (_savedPosition > Duration.zero) await controller.seekTo(_savedPosition);
       _loadRelated();
+      _loadDetails();
     } catch (_) {
       if (mounted) setState(() { _loading = false; _error = 'تعذر تشغيل الفيديو حالياً.'; });
     }
@@ -160,6 +173,15 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
     }
   }
 
+  Future<void> _loadDetails() async {
+    try {
+      final details = await SourceRegistry.details(widget.url);
+      if (mounted && details != null) setState(() => _details = details);
+    } catch (_) {
+      // Metadata is optional; playback must remain usable when it is unavailable.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final chewie = _chewieController;
@@ -187,14 +209,8 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
           else if (chewie != null)
             AspectRatio(aspectRatio: _videoController?.value.aspectRatio ?? 16 / 9, child: Chewie(controller: chewie)),
           if (_changingQuality) const LinearProgressIndicator(minHeight: 2),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('فيديوهات مرتبطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-          ),
+          _buildVideoInfo(),
+          const Padding(padding: EdgeInsets.fromLTRB(16, 8, 16, 8), child: Text('فيديوهات مرتبطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
           ..._related.map((item) => ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 leading: SizedBox(width: 140, height: 80, child: PosterImage(url: item['image_url']?.toString(), borderRadius: BorderRadius.circular(8))),
@@ -204,6 +220,23 @@ class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
               )),
         ],
       ),
+    );
+  }
+
+  Widget _buildVideoInfo() {
+    final details = _details ?? const <String, dynamic>{};
+    final description = details['description']?.toString() ?? '';
+    final author = details['author']?.toString() ?? details['channel']?.toString() ?? '';
+    final views = details['view_count']?.toString() ?? '';
+    final published = details['published']?.toString() ?? '';
+    final metadata = [author, views, published].where((value) => value.isNotEmpty).join('  •  ');
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(details['title']?.toString() ?? widget.title, style: const TextStyle(color: Colors.white, fontSize: 18, height: 1.3, fontWeight: FontWeight.w800)),
+        if (metadata.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 7), child: Text(metadata, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 12))),
+        if (description.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, height: 1.45, fontSize: 13))),
+      ]),
     );
   }
 }

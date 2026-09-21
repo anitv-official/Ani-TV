@@ -119,9 +119,18 @@ class YouTubeExtension extends AniExtension {
     try {
       final player = await _player(id);
       final details = player['videoDetails'] as Map?;
+      final microformat = (player['microformat'] as Map?)?['playerMicroformatRenderer'] as Map?;
       final title = details?['title']?.toString() ?? id;
       final thumbs = details?['thumbnail'];
-      return {...item(title: title, url: url, image: _thumbnail(thumbs) ?? 'https://i.ytimg.com/vi/$id/hqdefault.jpg', type: 'video', description: details?['shortDescription']?.toString() ?? ''), 'episodes': [{'id': id, 'title': title, 'number': 1, 'url': url}], 'video_id': id};
+      return {
+        ...item(title: title, url: url, image: _thumbnail(thumbs) ?? 'https://i.ytimg.com/vi/$id/hqdefault.jpg', type: 'video', description: details?['shortDescription']?.toString() ?? ''),
+        'author': details?['author']?.toString() ?? '',
+        'view_count': details?['viewCount']?.toString() ?? '',
+        'published': microformat?['publishDate']?.toString() ?? '',
+        'duration': details?['lengthSeconds']?.toString() ?? '',
+        'episodes': [{'id': id, 'title': title, 'number': 1, 'url': url}],
+        'video_id': id,
+      };
     } catch (_) {
       return {...item(title: id, url: url, image: 'https://i.ytimg.com/vi/$id/hqdefault.jpg', type: 'video'), 'episodes': [{'id': id, 'title': id, 'number': 1, 'url': url}], 'video_id': id};
     }
