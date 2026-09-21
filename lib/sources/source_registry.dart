@@ -19,7 +19,6 @@ class SourceRegistry {
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
   static final _wecima = WecimaSource();
-  static final _kormoz = KormozSource();
   static final List<ContentSource> _extensions = ExtensionCatalog.all;
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
@@ -30,7 +29,6 @@ class SourceRegistry {
     MangaTimeSource(),
     MangaMelloSource(),
     _wecima,
-    _kormoz,
   ];
 
   static List<ContentSource> get _repositorySources => const [];

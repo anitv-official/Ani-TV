@@ -118,21 +118,21 @@ class KrmzyExtension extends ArabicHtmlExtension {
   @override String get id => 'krmzy';
   @override String get name => 'Krmzy';
   @override String get kind => 'drama';
-  @override List<String> get hosts => const ['krmzi.org', 'krmizi.onl'];
-  @override String get baseUrl => 'https://krmizi.onl/';
+  @override List<String> get hosts => const ['qrmzi.tv', 'krmzi.org', 'krmizi.onl'];
+  @override String get baseUrl => 'https://www.qrmzi.tv/';
   @override String get contentLabel => 'مسلسلات وأفلام';
   @override String get iconUrl => 'https://krmzi.org/favicon.ico';
   @override ExtensionStatus get status => ExtensionStatus.limited;
   @override String get statusMessage => 'HTML وEmbed مع حماية الموقع';
 
-  @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async => cards(await document('$baseUrl${page <= 1 ? 'series-list/' : 'series-list/page/$page/'}') ?? html_parser.parse(''), baseUrl, selector: 'article.postEp, div.block-post');
+  @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async => cards(await document('${baseUrl}${page <= 1 ? '' : '?page=$page'}') ?? html_parser.parse(''), baseUrl, selector: 'article.post, article.postEp, div.block-post, .item');
   @override Future<List<Map<String, dynamic>>> search(String query) async => cards(await document(Uri.parse(baseUrl).replace(queryParameters: {'s': query}).toString()) ?? html_parser.parse(''), baseUrl, selector: 'article.postEp, div.block-post');
 
   @override Future<Map<String, dynamic>> details(String url) async {
     final doc = await document(url) ?? html_parser.parse('');
-    final title = clean(doc.querySelector('div.info h1, h1')?.text ?? name);
+    final title = clean(doc.querySelector('div.info h1, h1, .title')?.text ?? name);
     final poster = image(doc.querySelector('div.cover img, div.cover .img, .imgSer, .imgBg'), url);
-    final eps = episodesFrom(doc.querySelectorAll('article.postEp, .episodes a, a[href*="/episode/"]'), url, imageUrl: poster);
+    final eps = episodesFrom(doc.querySelectorAll('article.postEp, article.post, .episodes a, .episodes-list a, .all-episodes a, a[href*="/episode/"]'), url, imageUrl: poster);
     return {...item(title: title, url: url, image: poster, type: url.contains('/movies/') ? 'movie' : 'series'), 'episodes': url.contains('/movies/') ? <Map<String, dynamic>>[] : eps, 'total_episodes': eps.length};
   }
 }
