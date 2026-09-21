@@ -13,6 +13,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import java.io.File
 import com.anitv.app.cloudstream.CloudStreamEngine
+import com.lagradost.cloudstream3.CommonActivity
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.anitv.app/installer"
@@ -58,6 +59,7 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
                 }
         }
+        CommonActivity.activity = this
         CloudStreamEngine(this).register(flutterEngine.dartExecutor.binaryMessenger)
         YoutubeNativeBridge.register(MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.anitv.app/youtube"))
     }
