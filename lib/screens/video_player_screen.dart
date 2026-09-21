@@ -20,6 +20,8 @@ class VideoPlayerScreen extends StatefulWidget {
   final List<Map<String, String>> directStreamUrls;
   final Map<String, String> headers;
   final bool allowWebView;
+  final bool portraitLayout;
+  final Widget? belowPlayer;
 
   VideoPlayerScreen({
     required this.url,
@@ -28,6 +30,8 @@ class VideoPlayerScreen extends StatefulWidget {
     this.directStreamUrls = const [],
     this.headers = const {},
     this.allowWebView = true,
+    this.portraitLayout = false,
+    this.belowPlayer,
   });
 
   @override
@@ -51,16 +55,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   @override
   void initState() {
     super.initState();
-    // Set landscape orientation only on mobile
+    // Most existing providers keep the immersive landscape player. YouTube
+    // opts into a portrait watch page with related videos below the player.
     if (!kIsWeb && Platform.isAndroid) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
+      SystemChrome.setPreferredOrientations(
+        widget.portraitLayout
+            ? [DeviceOrientation.portraitUp]
+            : [
+                DeviceOrientation.landscapeLeft,
+                DeviceOrientation.landscapeRight,
+              ],
+      );
     }
 
-    // Hide system UI for immersive experience
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setEnabledSystemUIMode(
+      widget.portraitLayout ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+    );
     // Additional settings to ensure system UI is hidden
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -69,9 +79,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       systemNavigationBarIconBrightness: Brightness.light,
     ));
     // Force hide system UI after a short delay to ensure it takes effect
-    Future.delayed(Duration(milliseconds: 100), () {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    });
+    if (!widget.portraitLayout) {
+      Future.delayed(Duration(milliseconds: 100), () {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      });
+    }
     _currentUrl = widget.url;
     _filterPixelDrainUrls();
     _initializePlayer();
@@ -700,8 +712,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure system UI stays hidden when widget rebuilds
-
+    if (widget.portraitLayout) {
+      return _buildPortraitLayout();
+    }
 
     return CallbackShortcuts(
       bindings: {
@@ -787,6 +800,52 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPortraitLayout() {
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (didPop) {
+          SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: ColoredBox(
+                  color: Colors.black,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildVideoContent(),
+                      if (_isLoading)
+                        ColoredBox(
+                          color: Colors.black.withOpacity(.76),
+                          child: Center(
+                            child: CustomLoadingWidget(
+                              message: _isChangingResolution
+                                  ? 'جارٍ تغيير الجودة...'
+                                  : 'جارٍ التحميل...',
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: widget.belowPlayer ?? const SizedBox.shrink(),
+              ),
+            ],
           ),
         ),
       ),
