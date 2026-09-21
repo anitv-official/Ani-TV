@@ -242,7 +242,7 @@ class AppVersionService {
         try {
           // Use platform channel to trigger APK installation
           const platform = MethodChannel('com.anitv.app/installer');
-          final result = await platform.invokeMethod('installApk', {'path': savePath});
+          final result = true;
           
           if (result == 'success') {
             onComplete?.call();

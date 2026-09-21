@@ -13,6 +13,7 @@ import 'screens/comic_details_screen.dart';
 import 'screens/manga_reader_screen.dart';
 import 'screens/fasel_explore_screen.dart';
 import 'theme/app_theme.dart';
+import 'l10n/app_strings.dart';
 import 'providers/app_state_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -23,7 +24,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/toast_utils.dart';
 import 'services/fcm_service.dart';
 import 'services/download_service.dart';
-import 'services/remote_repository_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -70,15 +70,6 @@ void main() async {
   // Firebase/FCM is optional infrastructure and must never prevent the app
   // shell from rendering when a device is offline or its push setup is stale.
   unawaited(_initializePushServices());
-  unawaited(_initializeBuiltInSources());
-}
-
-Future<void> _initializeBuiltInSources() async {
-  try {
-    await remoteRepositoryService.ensureBuiltInReady('Egydead');
-  } catch (error) {
-    debugPrint('Egydead startup skipped: $error');
-  }
 }
 
 Future<void> _initializePushServices() async {
@@ -218,6 +209,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return Consumer<AppStateProvider>(
       builder: (context, appStateProvider, child) {
+        AppTheme.setPalette(appStateProvider.palette);
         return MaterialApp(
           navigatorKey: appNavigatorKey,
           scaffoldMessengerKey: ToastUtils.scaffoldMessengerKey,
@@ -228,15 +220,15 @@ class _MyAppState extends State<MyApp> {
               appStateProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
           home: const SplashScreen(),
           debugShowCheckedModeBanner: false,
-          locale: const Locale('ar'),
-          supportedLocales: const [Locale('ar')],
+          locale: appLocale(appStateProvider.languageCode),
+          supportedLocales: const [Locale('ar'), Locale('en')],
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
           builder: (context, child) => Directionality(
-            textDirection: TextDirection.rtl,
+            textDirection: appStateProvider.languageCode == 'en' ? TextDirection.ltr : TextDirection.rtl,
             child: child ?? const SizedBox.shrink(),
           ),
         );

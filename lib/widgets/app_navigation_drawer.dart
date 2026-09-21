@@ -43,9 +43,7 @@ class AppNavigationDrawer extends StatelessWidget {
             _item(context, Icons.menu_book_outlined, 'لائحة المانجا', () => _select(context, AppSection.manga), selected: currentSection == AppSection.manga),
             _item(context, Icons.live_tv_rounded, 'لائحة الدراما', () => _select(context, AppSection.drama), selected: currentSection == AppSection.drama),
             _item(context, Icons.local_movies_rounded, 'لائحة الأفلام والمسلسلات', () => _select(context, AppSection.movies), selected: currentSection == AppSection.movies),
-            _item(context, Icons.smart_display_rounded, 'YouTube', () => _select(context, AppSection.youtube), selected: currentSection == AppSection.youtube),
             _item(context, Icons.auto_stories_rounded, 'لائحة الروايات', () => _select(context, AppSection.novels), selected: currentSection == AppSection.novels),
-            _item(context, Icons.extension_outlined, 'الإضافات', () => _select(context, AppSection.extensions), selected: currentSection == AppSection.extensions),
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
@@ -71,7 +69,7 @@ class AppNavigationDrawer extends StatelessWidget {
         tileColor: selected ? AppTheme.primaryColor.withOpacity(.14) : null,
         leading: Icon(icon, color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor),
         title: Text(label, style: TextStyle(color: selected ? AppTheme.textPrimaryColor : AppTheme.textSecondaryColor, fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
-        trailing: selected ? const Icon(Icons.chevron_left_rounded, color: AppTheme.primaryColor) : null,
+        trailing: selected ? Icon(Icons.chevron_left_rounded, color: AppTheme.primaryColor) : null,
       ),
     );
   }
@@ -98,11 +96,11 @@ class _ProfileHeader extends StatelessWidget {
         _Avatar(future: state.profileImageBytes),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name.isEmpty ? 'حساب AniTV' : name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 17, fontWeight: FontWeight.w800)),
+          Text(name.isEmpty ? 'حساب AniTV' : name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppTheme.textPrimaryColor, fontSize: 17, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
-          Text(state.isLoggedIn ? (username.isEmpty ? 'حساب متصل' : '@$username') : 'تسجيل الدخول لإدارة الحساب', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
+          Text(state.isLoggedIn ? (username.isEmpty ? 'حساب متصل' : '@$username') : 'تسجيل الدخول لإدارة الحساب', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)),
         ])),
-        const Icon(Icons.chevron_left_rounded, color: AppTheme.textMutedColor),
+        Icon(Icons.chevron_left_rounded, color: AppTheme.textMutedColor),
       ]),
     );
   }
@@ -114,7 +112,7 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = CircleAvatar(radius: 28, backgroundColor: AppTheme.primaryColor.withOpacity(.18), child: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryColor, size: 28));
+    final fallback = CircleAvatar(radius: 28, backgroundColor: AppTheme.primaryColor.withOpacity(.18), child: Icon(Icons.person_outline_rounded, color: AppTheme.primaryColor, size: 28));
     if (future == null) return fallback;
     return FutureBuilder<Uint8List>(future: future, builder: (_, snapshot) => snapshot.hasData ? CircleAvatar(radius: 28, backgroundImage: MemoryImage(snapshot.data!)) : fallback);
   }
@@ -131,5 +129,5 @@ class AppDrawerScaffold extends StatelessWidget {
   final Widget? bottomNavigationBar;
   const AppDrawerScaffold({super.key, required this.body, this.bottomNavigationBar});
   @override
-  Widget build(BuildContext context) => Scaffold(endDrawer: const AppNavigationDrawer(), backgroundColor: AppTheme.backgroundColor, body: body, bottomNavigationBar: bottomNavigationBar);
+  Widget build(BuildContext context) => Scaffold(endDrawer: AppNavigationDrawer(), backgroundColor: AppTheme.backgroundColor, body: body, bottomNavigationBar: bottomNavigationBar);
 }

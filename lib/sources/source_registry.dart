@@ -5,11 +5,8 @@ import 'manga_mello_source.dart';
 import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
 import 'faselhd_source.dart';
-import 'egydead_source.dart';
 import 'source_base.dart';
-import 'youtube_source.dart';
 import 'web_catalog_source.dart';
-import '../models/remote_plugin.dart';
 
 /// Internal API catalog.
 ///
@@ -21,14 +18,12 @@ class SourceRegistry {
   static const int _maxAttempts = 3;
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
-  static final _youtube = YoutubeSource();
   static final _animeWitcher = AnimeWitcherSource();
   static final _anime3rb = Anime3rbSource();
   static final _wecima = WecimaSource();
   static final _kormoz = KormozSource();
   // Native adapter mapped to the Faselhd entry from the installed repository.
   static final _repoFaselHd = FaselHdSource();
-  static final _repoEgydead = EgydeadSource();
 
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
@@ -38,14 +33,13 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    _youtube,
     _animeWitcher,
     _anime3rb,
     _wecima,
     _kormoz,
   ];
 
-  static List<ContentSource> get _repositorySources => [_repoFaselHd, _repoEgydead];
+  static List<ContentSource> get _repositorySources => [_repoFaselHd];
   static List<ContentSource> get _allSources => [..._apis, ..._repositorySources];
   static List<ContentSource> get _repositoryMovieSources => _repositorySources.where((s) => s.kind == 'movie').toList(growable: false);
 
@@ -64,16 +58,7 @@ class SourceRegistry {
   /// Sources that have a complete user-facing adapter and can be opened from
   /// the Sources screen. Other adapters remain internal until their UI flow
   /// and playback contracts are verified.
-  static List<ContentSource> get visibleSources => List.unmodifiable(_allSources.where((source) => source.id != 'youtube'));
-
-  /// YouTube is a built-in app section, not an installable source tile.
-  static ContentSource get youtube => _youtube;
-
-  static bool isHiddenFromExtensionLists(RemotePlugin plugin) {
-    final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
-    return identity.contains('youtube') || identity.contains('يوتيوب');
-  }
-
+  static List<ContentSource> get visibleSources => List.unmodifiable(_allSources);
   /// Compatibility getters for tests/services. The UI uses [all], which is
   /// intentionally empty so API adapters are never shown as sources.
   static List<ContentSource> get animeSources => _animeApis;
@@ -85,22 +70,6 @@ class SourceRegistry {
     for (final source in _allSources) {
       if (source.handles(url)) return source;
     }
-    return null;
-  }
-
-  /// Returns the native adapter that can open an installed repository plugin.
-  /// Cloudstream files are metadata/install artifacts; they are not executed
-  /// as Dart code. Only adapters that have been implemented natively are
-  /// exposed here.
-  static ContentSource? sourceForPlugin(RemotePlugin plugin) {
-    final identity = '${plugin.internalName} ${plugin.name}'.toLowerCase();
-    if (identity.contains('fasel')) return _repoFaselHd;
-    if (identity.contains('egydead') || identity.contains('ايجي ديد')) return _repoEgydead;
-    if (identity.contains('youtube')) return _youtube;
-    if (identity.contains('witcher') || identity.contains('ويتشر')) return _animeWitcher;
-    if (identity.contains('anime3rb') || identity.contains('anime 3rb') || identity.contains('انمي عرب')) return _anime3rb;
-    if (identity.contains('wecima') || identity.contains('وى سيما') || identity.contains('وي سيما')) return _wecima;
-    if (identity.contains('kormoz') || identity.contains('kormoze') || identity.contains('قرمزي') || identity.contains('كرمزي')) return _kormoz;
     return null;
   }
 

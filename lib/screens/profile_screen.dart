@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../l10n/app_strings.dart';
 import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
 import 'landing_screen.dart';
@@ -539,14 +540,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SettingSwitchTile(
                         icon: Icons.dark_mode_outlined,
                         title: 'الوضع الداكن',
-                        subtitle: 'واجهة داكنة مع لمسة زرقاء',
+                        subtitle: isDarkMode ? context.strings.darkModeOn : context.strings.lightModeOn,
                         value: isDarkMode,
                         onChanged: (val) async {
                           setState(() => isDarkMode = val);
                           await context.read<AppStateProvider>().updateUserData(isDarkMode: val);
                         },
                       ),
-                      const SettingTile(icon: Icons.language, title: 'اللغة', value: 'العربية'),
+                      SettingTile(icon: Icons.language, title: context.strings.language, value: context.read<AppStateProvider>().languageCode == 'en' ? context.strings.english : context.strings.arabic, onTap: () async {
+                        final state = context.read<AppStateProvider>();
+                        await state.updateUserData(languageCode: state.languageCode == 'ar' ? 'en' : 'ar');
+                        if (mounted) setState(() {});
+                      }),
+                      SettingTile(icon: Icons.palette_outlined, title: context.strings.themes, subtitle: context.read<AppStateProvider>().palette.label(context.strings), onTap: () async {
+                        final state = context.read<AppStateProvider>();
+                        await state.updateUserData(palette: AppPalette.values[(state.palette.index + 1) % AppPalette.values.length]);
+                        if (mounted) setState(() {});
+                      }),
                     ],
                   ),
                   if (widget.settingsOnly) const SizedBox(height: 18),

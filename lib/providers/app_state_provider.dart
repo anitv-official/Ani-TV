@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import '../services/appwrite_service.dart';
 import '../services/local_cache_service.dart';
+import '../l10n/app_strings.dart';
 import '../services/fcm_service.dart';
 
 class RegistrationResult {
@@ -31,6 +32,8 @@ class AppStateProvider extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool _emailVerified = false;
   bool _isDarkMode = true;
+  String _languageCode = 'ar';
+  AppPalette _palette = AppPalette.blue;
   final AppwriteService _appwrite = AppwriteService.instance;
   final LocalCacheService _cache = LocalCacheService.instance;
   String? _userId;
@@ -59,6 +62,8 @@ class AppStateProvider extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isDarkMode => _isDarkMode;
+  String get languageCode => _languageCode;
+  AppPalette get palette => _palette;
   List<dynamic> get favoriteAnime => _favoriteAnime;
   List<dynamic> get favoriteComics => _favoriteComics;
   List<dynamic> get animeHistory => _animeHistory;
@@ -98,6 +103,8 @@ class AppStateProvider extends ChangeNotifier {
       _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
       _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
+      _languageCode = prefs.getString('app_language') == 'en' ? 'en' : 'ar';
+      _palette = appPaletteFromString(prefs.getString('app_palette'));
       await _applyAuthenticatedUser(user, syncCloud: false);
       if (_isLoggedIn && _userId != null) await _loadLocalAccountCache(_userId!);
       notifyListeners();
@@ -422,7 +429,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateUserData({String? username, String? email, bool? isLoggedIn, bool? isDarkMode}) async {
+  Future<void> updateUserData({String? username, String? email, bool? isLoggedIn, bool? isDarkMode, String? languageCode, AppPalette? palette}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (username != null) { _username = username; await prefs.setString('username', username); }
@@ -433,6 +440,8 @@ class AppStateProvider extends ChangeNotifier {
         final scope = _userId == null ? 'guest' : 'user_$_userId';
         await prefs.setBool('dark_mode_$scope', isDarkMode);
       }
+      if (languageCode != null) { _languageCode = languageCode == 'en' ? 'en' : 'ar'; await prefs.setString('app_language', _languageCode); }
+      if (palette != null) { _palette = palette; await prefs.setString('app_palette', appPaletteName(_palette)); }
       notifyListeners();
     } catch (_) { _setErrorMessage('تعذر حفظ بيانات الحساب. حاول مرة أخرى.'); }
   }
