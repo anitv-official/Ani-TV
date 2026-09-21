@@ -6,6 +6,7 @@ import '../sources/source_registry.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/ui/state_views.dart';
+import 'video_player_screen.dart';
 
 class YoutubeScreen extends StatefulWidget {
   final bool embedded;
@@ -172,10 +173,35 @@ class _YoutubeScreenState extends State<YoutubeScreen> {
     );
   }
 
-  void _openVideo(Map<String, dynamic> item) {
+  Future<void> _openVideo(Map<String, dynamic> item) async {
     final url = item['url']?.toString() ?? '';
     if (url.isEmpty) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => YoutubePlayerScreen(url: url, title: item['title']?.toString() ?? 'YouTube')));
+    try {
+      final streams = await SourceRegistry.streams(url);
+      final links = (streams?['direct_stream_urls'] as List? ?? const [])
+          .whereType<Map>()
+          .map((link) => <String, String>{
+                'url': link['url']?.toString() ?? '',
+                'quality': link['quality']?.toString() ?? link['label']?.toString() ?? 'Auto',
+                'label': link['label']?.toString() ?? link['quality']?.toString() ?? 'YouTube',
+              })
+          .where((link) => link['url']!.isNotEmpty)
+          .toList();
+      if (!mounted) return;
+      if (links.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر استخراج رابط تشغيل YouTube داخل التطبيق.')));
+        return;
+      }
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(
+            url: links.first['url']!,
+            title: item['title']?.toString() ?? 'YouTube',
+            episodeId: url,
+            directStreamUrls: links,
+            allowWebView: false,
+          )));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تشغيل فيديو YouTube داخل التطبيق.')));
+    }
   }
 }
 
@@ -238,7 +264,14 @@ class _YoutubePlayerScreenState extends State<YoutubePlayerScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
-      ..setNavigationDelegate(NavigationDelegate(onNavigationRequest: (_) => NavigationDecision.navigate))
+      ..setNavigationDelegate(NavigationDelegate(onNavigationRequest: (request) {
+        final uri = Uri.tryParse(request.url);
+        final host = uri?.host.toLowerCase().replaceFirst('www.', '');
+        final allowed = host == 'youtube.com' || host == 'm.youtube.com' || host == 'youtube-nocookie.com' || host == 'youtu.be';
+        return allowed && (uri?.scheme == 'http' || uri?.scheme == 'https')
+            ? NavigationDecision.navigate
+            : NavigationDecision.prevent;
+      }))
       ..loadRequest(Uri.parse(_mobileWatchUrl(widget.url)));
   }
 
@@ -281,6 +314,11 @@ class _YoutubePlayerScreenState extends State<YoutubePlayerScreen> {
     if (uri == null) return value;
     final id = uri.host.contains('youtu.be') ? (uri.pathSegments.isEmpty ? '' : uri.pathSegments.first) : (uri.queryParameters['v'] ?? '');
     if (id.isEmpty) return value;
-    return Uri.https('m.youtube.com', '/watch', {'v': id, 'app': 'm', 'persist_app': '1'}).toString();
+    return Uri.https('www.youtube-nocookie.com', '/embed/$id', {
+      'autoplay': '1',
+      'playsinline': '1',
+      'rel': '0',
+      'modestbranding': '1',
+    }).toString();
   }
 }
