@@ -79,9 +79,24 @@ object YoutubeBridge {
 
     private fun search(query: String): Map<String, Any> {
         val service = ServiceList.YouTube
-        val handler = service.searchQHFactory.fromQuery(query, listOf("videos"), "")
-        val info = SearchInfo.getInfo(service, handler)
-        val videos = info.relatedItems
+        // YouTube sometimes returns an empty filtered page when its search
+        // layout changes. Try the requested video filter first, then retry the
+        // general search page and keep only actual video items.
+        val filtered = SearchInfo.getInfo(
+            service,
+            service.searchQHFactory.fromQuery(query, listOf("videos"), ""),
+        )
+        val filteredVideos = filtered.relatedItems
+            .filterIsInstance<StreamInfoItem>()
+        if (filteredVideos.isNotEmpty()) {
+            return mapOf("items" to filteredVideos.map(::mapStreamItem))
+        }
+
+        val general = SearchInfo.getInfo(
+            service,
+            service.searchQHFactory.fromQuery(query, emptyList(), ""),
+        )
+        val videos = general.relatedItems
             .filterIsInstance<StreamInfoItem>()
             .map(::mapStreamItem)
         return mapOf("items" to videos)
