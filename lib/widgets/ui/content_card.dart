@@ -137,6 +137,7 @@ class YouTubeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final views = item['rating']?.toString() ?? '';
+    final duration = item['duration']?.toString() ?? '';
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -159,7 +160,7 @@ class YouTubeCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 13, height: 1.25, fontWeight: FontWeight.w700)),
-          if (views.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text(views, maxLines: 1, overflow: TextOverflow.ellipsis,
+          if (views.isNotEmpty || duration.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text([views, duration].where((e) => e.isNotEmpty).join('  •  '), maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11))),
         ]),
       ),

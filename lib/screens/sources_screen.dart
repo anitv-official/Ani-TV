@@ -8,6 +8,7 @@ import '../widgets/ui/state_views.dart';
 import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
+import 'youtube_watch_screen.dart';
 import 'comic_details_screen.dart';
 import 'video_player_screen.dart';
 import 'explore_screen.dart';
@@ -223,7 +224,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
                 if (widget.source.id == 'youtube') {
                   return YouTubeCard(
                     item: item,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'].toString()))),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => YouTubeWatchScreen(url: item['url'].toString(), title: item['title']?.toString() ?? 'YouTube', imageUrl: item['image_url']?.toString() ?? ''))),
                   );
                 }
                 return ContentCard(

@@ -54,9 +54,9 @@ class YouTubeExtension extends AniExtension {
       final root = jsonDecode(jsonText);
       final videos = <Map<String, dynamic>>[];
       final seen = <String>{};
-      void add(String id, String title, String image, String views, String description) {
+      void add(String id, String title, String image, String views, String description, [String duration = '']) {
         if (id.length < 6 || title.trim().isEmpty || !seen.add(id)) return;
-        videos.add(item(title: title.trim(), url: '$_base/watch?v=$id', image: image.isEmpty ? 'https://i.ytimg.com/vi/$id/hqdefault.jpg' : image, type: 'video', description: description, rating: views));
+        videos.add({...item(title: title.trim(), url: '$_base/watch?v=$id', image: image.isEmpty ? 'https://i.ytimg.com/vi/$id/hqdefault.jpg' : image, type: 'video', description: description, rating: views), 'duration': duration});
       }
       String text(dynamic value) {
         if (value is Map) {
@@ -70,7 +70,7 @@ class YouTubeExtension extends AniExtension {
       void walk(dynamic node) {
         if (node is Map) {
           final renderer = node['videoRenderer'] ?? node['gridVideoRenderer'] ?? node['compactVideoRenderer'] ?? node['videoWithContextRenderer'];
-          if (renderer is Map) add(renderer['videoId']?.toString() ?? '', text(renderer['title']), thumb(renderer['thumbnail']), text(renderer['viewCountText']), text(renderer['descriptionSnippet']));
+          if (renderer is Map) add(renderer['videoId']?.toString() ?? '', text(renderer['title']), thumb(renderer['thumbnail']), text(renderer['viewCountText']), text(renderer['descriptionSnippet']), text(renderer['lengthText']));
           final lockup = node['lockupViewModel'];
           if (lockup is Map && lockup['contentId']?.toString().isNotEmpty == true) {
             final metadata = lockup['metadata']?['lockupMetadataViewModel'];

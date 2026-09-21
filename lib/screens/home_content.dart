@@ -11,6 +11,7 @@ import '../widgets/ui/state_views.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'search_screen.dart';
+import 'youtube_watch_screen.dart';
 
 
 class HomeContent extends StatefulWidget {
@@ -305,7 +306,7 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
         final item = visible[index];
         return YouTubeCard(
           item: item,
-          onTap: () => _openItem(item, isAnime: true),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => YouTubeWatchScreen(url: item['url'].toString(), title: item['title']?.toString() ?? 'YouTube', imageUrl: item['image_url']?.toString() ?? ''))),
         );
       },
     );
