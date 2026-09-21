@@ -14,10 +14,12 @@ import 'comic_details_screen.dart';
 import 'fasel_explore_screen.dart';
 import 'video_player_screen.dart';
 import 'explore_screen.dart';
+import 'youtube_screen.dart';
 
 Widget sourceContentPage(ContentSource source) {
   if (source.id == 'fasel_hd') return const FaselExploreScreen();
   if (source.id == 'drama_slayer') return const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
+  if (source.id == 'youtube') return const YoutubeScreen();
   return SourceContentScreen(source: source);
 }
 
@@ -38,7 +40,7 @@ class SourcesScreen extends StatelessWidget {
             FutureBuilder<List<RemotePlugin>>(
               future: remoteRepositoryService.installedPlugins(),
               builder: (context, snapshot) {
-                final installed = snapshot.data ?? const <RemotePlugin>[];
+                final installed = (snapshot.data ?? const <RemotePlugin>[]).where((plugin) => !SourceRegistry.isHiddenFromExtensionLists(plugin)).toList();
                 if (installed.isEmpty) return const SizedBox.shrink();
                 return Container(
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),

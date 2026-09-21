@@ -154,7 +154,7 @@ class _ExtensionsScreenState extends State<ExtensionsScreen> {
     const SizedBox(height: 8),
     Text('${repository.plugins.length} إضافة • ${repositoryHost(repository.url)}', style: const TextStyle(color: AppTheme.primaryColor)),
     const SizedBox(height: 8),
-    ...repository.plugins.map(_pluginTile),
+      ...repository.plugins.where((plugin) => !SourceRegistry.isHiddenFromExtensionLists(plugin)).map(_pluginTile),
   ])));
 
   Widget _pluginTile(RemotePlugin plugin) {
