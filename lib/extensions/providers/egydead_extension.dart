@@ -114,7 +114,10 @@ class EgyDeadExtension extends AniExtension {
     final poster = _meta(document, 'og:image') ?? '';
     final description = _clean(_meta(document, 'og:description') ?? document.querySelector('div.singleStory')?.text ?? '');
     final isMovie = url.contains('/film/');
-    final episodes = isMovie ? [_episode(url, title, 1)] : await _loadSeriesEpisodes(document, url);
+    final isEpisode = url.contains('/episode/');
+    final episodes = isMovie || isEpisode
+        ? [_episode(url, title, isEpisode ? (_episodeNumber(title) ?? _episodeNumber(url) ?? 1) : 1)]
+        : await _loadSeriesEpisodes(document, url);
     return {
       ...item(title: title, url: url, image: poster, type: isMovie ? 'movie' : 'series', description: description),
       'episodes': episodes,
@@ -154,10 +157,15 @@ class EgyDeadExtension extends AniExtension {
       ...document.querySelectorAll('ul.episodes'),
     ];
     if (containers.isEmpty && pageUrl.contains('/season/')) return [];
-    final container = containers.isNotEmpty ? containers.first : document.body;
-    if (container == null) return [];
+    final nodes = containers.isNotEmpty
+        ? containers.first.querySelectorAll('li, a')
+        : document.querySelectorAll('a[href*="/episode/"]');
+    if (nodes.isEmpty && pageUrl.contains('/episode/')) {
+      final title = _clean(_meta(document, 'og:title') ?? document.querySelector('h1')?.text ?? 'الحلقة');
+      return [_episode(pageUrl, title, _episodeNumber(title) ?? _episodeNumber(pageUrl) ?? 1)];
+    }
     final output = <Map<String, dynamic>>[];
-    for (final node in container.querySelectorAll('li, a')) {
+    for (final node in nodes) {
       final anchor = node.localName == 'a' ? node : node.querySelector('a');
       if (anchor == null) continue;
       final href = anchor.attributes['href'];
@@ -209,13 +217,24 @@ class EgyDeadExtension extends AniExtension {
       }
     }
     for (final element in document.querySelectorAll('[data-link]')) add(element.attributes['data-link'], element.attributes['data-name'] ?? element.attributes['data-provider']);
-    for (final iframe in document.querySelectorAll('iframe[src]')) add(iframe.attributes['src'], 'Embed');
     for (final anchor in document.querySelectorAll('a')) {
       final href = anchor.attributes['href'];
       if (href != null && RegExp(r'(player|embed|download|drive|mp4|m3u8)', caseSensitive: false).hasMatch(href)) add(href, anchor.attributes['title'] ?? anchor.text);
     }
     for (final match in RegExp(r'''https?://[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]+)?''', caseSensitive: false).allMatches(html)) add(match.group(0), 'Direct');
-    if (candidates.isEmpty) return null;
+    if (candidates.isEmpty) {
+      // The current site injects the real server iframe through JavaScript.
+      // Returning the episode page lets the existing WebView execute that
+      // script instead of selecting a trailer or a hidden ad iframe.
+      return {
+        'stream_url': url,
+        'direct_stream_urls': [
+          {'url': url, 'quality': 'Auto', 'name': 'EgyDead WebView', 'label': 'Episode page', 'type': 'embed'},
+        ],
+        'headers': _headers(referer: url),
+        'allowed_hosts': [_host, 'cvt-s1.agl006.host', 'tv8.egydead.live'],
+      };
+    }
     final direct = candidates.where((candidate) => _isDirect(candidate.url)).map((candidate) => _link(candidate, direct: true)).toList();
     final embeds = candidates.where((candidate) => !_isDirect(candidate.url)).map((candidate) => _link(candidate, direct: false)).toList();
     final links = [...direct, ...embeds];
