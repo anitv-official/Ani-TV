@@ -38,7 +38,7 @@ class CloudStreamEngine(private val context: Context) {
             when (call.method) {
                 "engineInfo" -> result.success(mapOf("api" to ENGINE_API, "mode" to "cloudstream-library-4.8.0"))
                 "listInstalledPlugins" -> result.success(listInstalledPlugins())
-                "inspectPlugin" -> result.success(inspect(requirePath(call)))
+                "inspectPlugin" -> result.success(inspect(File(requirePath(call))))
                 "loadPlugin" -> result.success(load(File(requirePath(call))))
                 "providers" -> result.success(providers())
                 "search" -> result.success(search(call.argument<String>("provider"), call.argument<String>("query") ?: ""))
