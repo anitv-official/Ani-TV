@@ -8,6 +8,7 @@ enum AppSection {
   favorites,
   downloads,
   sources,
+  extensions,
   account,
   settings,
   about,

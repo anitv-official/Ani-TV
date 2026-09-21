@@ -6,6 +6,7 @@ import 'manga_swat_source.dart';
 import 'mangatime_source.dart';
 import 'source_base.dart';
 import 'web_catalog_source.dart';
+import '../extensions/extension_catalog.dart';
 
 /// Internal API catalog.
 ///
@@ -17,10 +18,10 @@ class SourceRegistry {
   static const int _maxAttempts = 3;
   static final Map<String, _RegistryCache> _cache = {};
   static final Map<String, Future<List<Map<String, dynamic>>>> _inFlight = {};
-  static final _animeWitcher = AnimeWitcherSource();
   static final _anime3rb = Anime3rbSource();
   static final _wecima = WecimaSource();
   static final _kormoz = KormozSource();
+  static final List<ContentSource> _extensions = ExtensionCatalog.all;
   // API-only adapters. Keep this list private so the UI cannot expose them.
   static final List<ContentSource> _apis = [
     AnimeSlayerSource(),
@@ -29,14 +30,13 @@ class SourceRegistry {
     MangaSwatSource(),
     MangaTimeSource(),
     MangaMelloSource(),
-    _animeWitcher,
     _anime3rb,
     _wecima,
     _kormoz,
   ];
 
   static List<ContentSource> get _repositorySources => const [];
-  static List<ContentSource> get _allSources => [..._apis, ..._repositorySources];
+  static List<ContentSource> get _allSources => [..._apis, ..._repositorySources, ..._extensions];
 
   static List<ContentSource> get _animeApis =>
       _apis.where((s) => s.kind == 'anime').toList(growable: false);

@@ -16,6 +16,7 @@ import 'profile_screen.dart';
 import 'about_screen.dart';
 import 'novel_explore_screen.dart';
 import 'empty_movies_screen.dart';
+import 'extensions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -111,6 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const EmptyMoviesScreen(embedded: true);
       case AppSection.novels:
         return const NovelExploreScreen(embedded: true);
+      case AppSection.extensions:
+        return const ExtensionsScreen(embedded: true);
       case AppSection.favorites:
         return const FavoritesScreen(embedded: true);
       case AppSection.downloads:
