@@ -1,15 +1,15 @@
 {
-  "tag_name": "v1.2.8",
-  "name": "AniTV 1.2.8",
-  "version": "1.2.8",
-  "published_at": "2026-09-17T15:30:50Z",
-  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.8",
-  "body": "إصلاح تشغيل الأفلام والمسلسلات والحلقات، دعم Vidtube وUqload وStreamWish وUpDown، تحسين تشغيل المشغلات المضمنة، ومنع النوافذ الإعلانية والتحويلات الخارجية.",
-  "deployment_id": "anitv-v1.2.8",
+  "tag_name": "v1.2.9",
+  "name": "AniTV 1.2.9",
+  "version": "1.2.9",
+  "published_at": "2026-09-21T18:12:08Z",
+  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.2.9",
+  "body": "تحسين تشغيل الحلقات والأفلام والمسلسلات، إصلاح مصادر EgyDead وKrmzy، تحسين استخراج الحلقات والسيرفرات، وتحديث توافق مشغل المحتوى.",
+  "deployment_id": "anitv-v1.2.9",
   "assets": [
     {
-      "name": "anitv-v1.2.8.apk",
-      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.8/anitv-v1.2.8.apk"
+      "name": "anitv-v1.2.9.apk",
+      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.2.9/anitv-v1.2.9.apk"
     }
   ]
 }
