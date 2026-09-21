@@ -5,6 +5,7 @@ import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/ui/app_search_bar.dart';
 
 class NovelExploreScreen extends StatefulWidget {
   final bool embedded;
@@ -41,10 +42,18 @@ class _NovelExploreScreenState extends State<NovelExploreScreen> {
     backgroundColor: AppTheme.backgroundColor,
     body: SafeArea(child: Column(children: [
       if (!widget.embedded) const AppFixedHeader(title: 'الروايات', showBack: true),
-      Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), child: TextField(
-        controller: _search, onSubmitted: _submitSearch, textInputAction: TextInputAction.search,
-        style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'ابحث عن رواية...', prefixIcon: const Icon(Icons.search_rounded), suffixIcon: IconButton(onPressed: () { _search.clear(); _submitSearch(''); }, icon: const Icon(Icons.clear_rounded)), filled: true, fillColor: AppTheme.elevatedColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
-      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: ExpandableSearchBar(
+          controller: _search,
+          hintText: 'ابحث عن رواية...',
+          onSubmitted: _submitSearch,
+          onClear: () {
+            _search.clear();
+            _submitSearch('');
+          },
+        ),
+      ),
       Expanded(child: _loading && _items.isEmpty ? const LoadingView(message: 'جارٍ تحميل الروايات...', size: 58) : _items.isEmpty ? EmptyState(icon: Icons.auto_stories_outlined, title: 'لا توجد روايات', message: 'جرّب كلمة بحث أخرى.', actionLabel: 'إعادة المحاولة', onAction: () => _load(reset: true)) : ContentGrid(
         controller: _scroll, itemCount: _items.length + (_more ? 1 : 0), padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         itemBuilder: (context, index) { if (index >= _items.length) return const Center(child: CircularProgressIndicator()); final item = _items[index]; return ContentCard(title: item['title']?.toString() ?? 'رواية بدون عنوان', imageUrl: item['image_url']?.toString() ?? '', badge: 'رواية', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NovelDetailsScreen(url: item['url'].toString())))); },

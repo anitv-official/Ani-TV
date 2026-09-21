@@ -110,3 +110,79 @@ class SearchLaunchField extends StatelessWidget {
     );
   }
 }
+
+class ExpandableSearchBar extends StatefulWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onClear;
+
+  const ExpandableSearchBar({
+    super.key,
+    required this.controller,
+    this.hintText = 'بحث',
+    this.onChanged,
+    this.onSubmitted,
+    this.onClear,
+  });
+
+  @override
+  State<ExpandableSearchBar> createState() => _ExpandableSearchBarState();
+}
+
+class _ExpandableSearchBarState extends State<ExpandableSearchBar> {
+  bool _expanded = false;
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _open() {
+    setState(() => _expanded = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      alignment: AlignmentDirectional.centerEnd,
+      child: _expanded
+          ? AppSearchBar(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              hintText: widget.hintText,
+              onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmitted,
+              onClear: widget.onClear,
+            )
+          : Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _open,
+                  borderRadius: BorderRadius.circular(14),
+                  child: Ink(
+                    height: 46,
+                    width: 46,
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.borderColor),
+                    ),
+                    child: const Icon(Icons.search_rounded),
+                  ),
+                ),
+              ),
+            ),
+    );
+  }
+}

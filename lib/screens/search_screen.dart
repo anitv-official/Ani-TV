@@ -10,6 +10,7 @@ import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
 import 'manga_reader_screen.dart';
 import 'video_player_screen.dart';
+import 'youtube_watch_screen.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/custom_loading_widget.dart';
 import '../widgets/ui/app_search_bar.dart';
@@ -174,13 +175,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     });
 
     try {
-      final results = await Future.wait<dynamic>([
-        ApiService.searchAnime(query),
-        ApiService.searchComics(query),
-      ]);
-      final animeResults = results[0] as List<dynamic>;
-      final comicResults = results[1] as List<dynamic>;
-      final allResults = [...animeResults, ...comicResults];
+      final allResults = await ApiService.searchAll(query);
 
       if (mounted && requestId == _searchRequestId) {
         setState(() {
@@ -537,7 +532,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return AppSearchBar(
       controller: _searchController,
       focusNode: _searchFocusNode,
-      hintText: 'ابحث عن أنمي أو مانجا...',
+      hintText: 'ابحث في جميع المصادر...',
       onSubmitted: (query) {
         setState(() => _selectedChip = '');
         _performSearch(query);
@@ -652,7 +647,13 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
        if (t == 'comic' || t == 'manga' || t == 'manhwa' || t == 'manhua') category = 'comic';
     }
 
-    if (category == 'anime' || category == 'drama') {
+    if (item['source_id'] == 'youtube' || category == 'video') {
+      targetScreen = YouTubeWatchScreen(
+        url: item['url']?.toString() ?? '',
+        title: item['title']?.toString() ?? 'YouTube',
+        imageUrl: (item['image_url'] ?? item['image'])?.toString() ?? '',
+      );
+    } else if (category == 'anime' || category == 'drama' || category == 'movie') {
       targetScreen = AnimeDetailsScreen(url: item['url']);
     } else if (category == 'comic') {
       targetScreen = ComicDetailsScreen(url: item['url'], type: item['type']);

@@ -16,6 +16,7 @@ import 'profile_screen.dart';
 import 'about_screen.dart';
 import 'novel_explore_screen.dart';
 import 'extensions_screen.dart';
+import 'youtube_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -113,6 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
           sourceId: 'aflaam',
           title: 'لائحة الأفلام والمسلسلات',
         );
+      case AppSection.youtube:
+        return const YoutubeScreen(embedded: true);
       case AppSection.novels:
         return const NovelExploreScreen(embedded: true);
       case AppSection.extensions:

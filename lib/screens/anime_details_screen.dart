@@ -94,74 +94,48 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, Map<String, dynamic> anime) {
-    return Stack(
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // On wide screens, restrict the height so it doesn't take up the whole view
-            // If width > 800, use a fixed shorter height or wider aspect ratio
-            double aspectRatio = 16 / 9;
-            if (constraints.maxWidth > 800) {
-              aspectRatio = 21 / 9; // Ultra-wide for desktop
-            }
-            return ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 300),
-              child: AspectRatio(
-                aspectRatio: aspectRatio,
+    return SizedBox(
+      height: 252,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [AppTheme.surfaceColor, AppTheme.backgroundColor],
+              ),
+            ),
+            child: SizedBox.expand(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 18, 56, 18),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 176, maxHeight: 220),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                 child: PosterImage(
                   url: anime['image_url']?.toString(),
                   fit: BoxFit.cover,
                   borderRadius: BorderRadius.zero,
                 ),
               ),
-            );
-          }
-        ),
-        // Gradient overlay
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.backgroundColor.withOpacity(0.18),
-                  Colors.transparent,
-                  AppTheme.backgroundColor.withOpacity(0.78),
-                  AppTheme.backgroundColor,
-                ],
-                stops: const [0.0, 0.3, 0.8, 1.0],
+            ),
+          ),
+          PositionedDirectional(
+            top: 8,
+            start: 8,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48)),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               ),
             ),
           ),
-        ),
-        // Back Button
-        PositionedDirectional(
-          top: 8,
-          start: 8,
-          child: SafeArea(
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.45)),
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: Center(
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(.45),
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white24),
-              ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 34),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

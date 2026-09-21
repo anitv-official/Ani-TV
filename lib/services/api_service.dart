@@ -80,6 +80,14 @@ class ApiService {
     }
   }
 
+  static Future<List<dynamic>> searchAll(String query) async {
+    try {
+      return await SourceRegistry.searchAll(query);
+    } catch (e) {
+      throw ApiException('Failed to search all sources: ${e.toString()}');
+    }
+  }
+
 
 
 

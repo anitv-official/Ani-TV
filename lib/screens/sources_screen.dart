@@ -6,6 +6,7 @@ import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/app_fixed_header.dart';
+import '../widgets/ui/app_search_bar.dart';
 import '../widgets/app_navigation_drawer.dart';
 import 'anime_details_screen.dart';
 import 'youtube_watch_screen.dart';
@@ -173,19 +174,14 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
         AppFixedHeader(title: widget.source.name, showBack: true),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: TextField(
+          child: ExpandableSearchBar(
             controller: _searchController,
-            textDirection: TextDirection.rtl,
-            textInputAction: TextInputAction.search,
+            hintText: 'ابحث داخل ${widget.source.name}',
             onSubmitted: (_) => _search(),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'ابحث داخل ${widget.source.name}',
-              prefixIcon: IconButton(icon: const Icon(Icons.search), onPressed: _search),
-              filled: true,
-              fillColor: AppTheme.surfaceColor,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            ),
+            onClear: () {
+              _searchController.clear();
+              _search();
+            },
           ),
         ),
         Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(

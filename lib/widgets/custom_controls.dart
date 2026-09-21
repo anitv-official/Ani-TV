@@ -813,12 +813,9 @@ class _MaterialControlsState extends State<MaterialControls>
                 widget.onShowEpisodes,
               ),
               _buildActionIcon(
-                'Subtitles', 
-                'assets/icons/subtitle.svg', 
-                () {
-                  // TODO: Implement new function here
-                  // _showQualityDialog(); // Disabled as requested
-                },
+                'الجودة',
+                'assets/icons/playback.svg',
+                _showQualityDialog,
               ),
               _buildActionIcon(
                 'Next Ep.', 

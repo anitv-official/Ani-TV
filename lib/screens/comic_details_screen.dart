@@ -286,56 +286,49 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, Map<String, dynamic> comic) {
-    return Stack(
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-             double aspectRatio = 2.15;
-            if (constraints.maxWidth > 800) {
-              aspectRatio = 2.6;
-            }
-            return AspectRatio(
-              aspectRatio: aspectRatio,
-              child: PosterImage(
-                url: comic['image_url']?.toString(),
-                fit: BoxFit.cover,
-                fallbackIcon: Icons.menu_book_outlined,
-                borderRadius: BorderRadius.zero,
-              ),
-            );
-          }
-        ),
-        // Gradient overlay
-        Positioned.fill(
-          child: Container(
+    return SizedBox(
+      height: 252,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.backgroundColor.withOpacity(0.18),
-                  Colors.transparent,
-                  AppTheme.backgroundColor.withOpacity(0.78),
-                  AppTheme.backgroundColor,
-                ],
-                stops: const [0.0, 0.3, 0.8, 1.0],
+                colors: [AppTheme.surfaceColor, AppTheme.backgroundColor],
+              ),
+            ),
+            child: SizedBox.expand(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 18, 56, 18),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 176, maxHeight: 220),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                child: PosterImage(
+                  url: comic['image_url']?.toString(),
+                  fit: BoxFit.cover,
+                  fallbackIcon: Icons.menu_book_outlined,
+                  borderRadius: BorderRadius.zero,
+                ),
               ),
             ),
           ),
-        ),
-        // Back Button
-        PositionedDirectional(
-          top: 8,
-          start: 8,
-          child: SafeArea(
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.45)),
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          PositionedDirectional(
+            top: 8,
+            start: 8,
+            child: SafeArea(
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48)),
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

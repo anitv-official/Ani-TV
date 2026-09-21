@@ -4,6 +4,7 @@ enum AppSection {
   manga,
   drama,
   movies,
+  youtube,
   novels,
   favorites,
   downloads,

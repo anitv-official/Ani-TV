@@ -1,67 +1,199 @@
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+
 import '../sources/source_registry.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_controls.dart';
 import '../widgets/ui/poster_image.dart';
-import 'video_player_screen.dart';
 
 class YouTubeWatchScreen extends StatefulWidget {
   final String url;
   final String title;
   final String imageUrl;
+
   const YouTubeWatchScreen({super.key, required this.url, required this.title, this.imageUrl = ''});
-  @override State<YouTubeWatchScreen> createState() => _YouTubeWatchScreenState();
+
+  @override
+  State<YouTubeWatchScreen> createState() => _YouTubeWatchScreenState();
 }
 
 class _YouTubeWatchScreenState extends State<YouTubeWatchScreen> {
-  VideoPlayerController? _controller;
+  VideoPlayerController? _videoController;
+  ChewieController? _chewieController;
   Map<String, dynamic>? _streams;
   List<Map<String, dynamic>> _related = [];
+  List<Map<String, String>> _qualityOptions = [];
+  String _selectedQuality = '';
   bool _loading = true;
+  bool _changingQuality = false;
   String _error = '';
 
-  @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _controller?.dispose(); super.dispose(); }
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _chewieController?.dispose();
+    _videoController?.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
     try {
       final streams = await SourceRegistry.streams(widget.url);
-      if (streams == null || streams['stream_url']?.toString().isEmpty != false) throw Exception('لا توجد صيغة تشغيل متاحة');
-      final controller = VideoPlayerController.networkUrl(Uri.parse(streams['stream_url'].toString()), httpHeaders: Map<String, String>.from(streams['headers'] ?? {}));
-      await controller.initialize();
-      await controller.play();
-      final related = await SourceRegistry.sourceFor(widget.url)?.search(widget.title) ?? <Map<String, dynamic>>[];
-      if (!mounted) return;
-      setState(() { _streams = streams; _controller = controller; _related = related.where((e) => e['url'] != widget.url).take(20).toList(); _loading = false; });
-    } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تشغيل الفيديو حالياً'; }); }
+      final streamUrl = streams?['stream_url']?.toString() ?? '';
+      if (streams == null || streamUrl.isEmpty) {
+        throw Exception('لا توجد صيغة تشغيل متاحة');
+      }
+      final options = _readQualityOptions(streams);
+      final controller = await _initializeController(streamUrl, streams);
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      _streams = streams;
+      _qualityOptions = options;
+      _selectedQuality = options.isEmpty ? '' : options.first['quality'] ?? '';
+      _videoController = controller;
+      _chewieController = _createChewieController(controller);
+      setState(() => _loading = false);
+      _loadRelated();
+    } catch (_) {
+      if (mounted) setState(() { _loading = false; _error = 'تعذر تشغيل الفيديو حالياً.'; });
+    }
   }
 
-  void _openFullscreen() {
-    final streams = _streams; if (streams == null) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: streams['stream_url'].toString(), title: widget.title, episodeId: widget.url, directStreamUrls: (streams['direct_stream_urls'] as List? ?? []).map((e) => Map<String, String>.from(e)).toList(), headers: Map<String, String>.from(streams['headers'] ?? {}), allowedHosts: const ['googlevideo.com'], allowWebView: false)));
+  Future<VideoPlayerController> _initializeController(String url, Map<String, dynamic> streams) async {
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      httpHeaders: Map<String, String>.from(streams['headers'] ?? const {}),
+    );
+    try {
+      await controller.initialize();
+      return controller;
+    } catch (_) {
+      controller.dispose();
+      rethrow;
+    }
+  }
+
+  List<Map<String, String>> _readQualityOptions(Map<String, dynamic> streams) {
+    final raw = streams['direct_stream_urls'];
+    if (raw is! List) return const [];
+    return raw.whereType<Map>().map((item) {
+      return {
+        'url': item['url']?.toString() ?? '',
+        'quality': item['quality']?.toString().trim().isNotEmpty == true ? item['quality'].toString() : 'تلقائي',
+      };
+    }).where((item) => item['url']!.isNotEmpty).toList(growable: false);
+  }
+
+  ChewieController _createChewieController(VideoPlayerController controller) {
+    return ChewieController(
+      videoPlayerController: controller,
+      autoPlay: true,
+      looping: false,
+      showControls: true,
+      allowFullScreen: true,
+      fullScreenByDefault: false,
+      allowPlaybackSpeedChanging: true,
+      aspectRatio: controller.value.aspectRatio > 0 ? controller.value.aspectRatio : 16 / 9,
+      customControls: CustomControls(
+        title: widget.title,
+        onBackPressed: () => Navigator.of(context).maybePop(),
+        qualityOptions: _qualityOptions,
+        selectedQuality: _selectedQuality,
+        onQualityChanged: _changeQuality,
+      ),
+      materialProgressColors: ChewieProgressColors(
+        playedColor: AppTheme.primaryColor,
+        handleColor: AppTheme.primaryColor,
+        bufferedColor: Colors.white54,
+        backgroundColor: Colors.white24,
+      ),
+    );
+  }
+
+  Future<void> _changeQuality(String url, String quality) async {
+    if (_changingQuality || url.isEmpty) return;
+    final previous = _videoController;
+    final previousChewie = _chewieController;
+    final position = previous?.value.position ?? Duration.zero;
+    final wasPlaying = previous?.value.isPlaying == true;
+    final streams = _streams;
+    if (streams == null) return;
+
+    setState(() => _changingQuality = true);
+    try {
+      final next = await _initializeController(url, streams);
+      if (!mounted) {
+        next.dispose();
+        return;
+      }
+      await next.seekTo(position);
+      if (wasPlaying) await next.play();
+      previousChewie?.dispose();
+      previous?.dispose();
+      _videoController = next;
+      _selectedQuality = quality;
+      _chewieController = _createChewieController(next);
+      setState(() => _changingQuality = false);
+    } catch (_) {
+      if (mounted) setState(() => _changingQuality = false);
+    }
+  }
+
+  Future<void> _loadRelated() async {
+    try {
+      final source = SourceRegistry.sourceFor(widget.url);
+      if (source == null) return;
+      final related = await source.search(widget.title);
+      if (!mounted) return;
+      setState(() => _related = related.where((item) => item['url'] != widget.url).take(20).toList());
+    } catch (_) {
+      // The player remains usable when related content is unavailable.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
-    final relatedWidgets = _related.map((item) => ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: SizedBox(width: 140, height: 80, child: PosterImage(url: item['image_url']?.toString(), borderRadius: BorderRadius.circular(8))),
-      title: Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)),
-      subtitle: Text([item['rating']?.toString() ?? '', item['duration']?.toString() ?? ''].where((e) => e.isNotEmpty).join(' • '), style: const TextStyle(color: Colors.white60)),
-      onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => YouTubeWatchScreen(url: item['url'].toString(), title: item['title'].toString(), imageUrl: item['image_url']?.toString() ?? ''))),
-    )).toList();
+    final chewie = _chewieController;
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.black, title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis)),
-      body: ListView(children: [
-        if (_loading) const AspectRatio(aspectRatio: 16 / 9, child: Center(child: CircularProgressIndicator()))
-        else if (_error.isNotEmpty) AspectRatio(aspectRatio: 16 / 9, child: Center(child: Text(_error, style: const TextStyle(color: Colors.white))))
-        else if (controller != null) Stack(children: [AspectRatio(aspectRatio: controller.value.aspectRatio, child: VideoPlayer(controller)), Positioned(bottom: 10, right: 10, child: IconButton(onPressed: _openFullscreen, icon: const Icon(Icons.fullscreen, color: Colors.white, size: 32)))])
-        else const SizedBox.shrink(),
-        Padding(padding: const EdgeInsets.all(16), child: Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('فيديوهات مرتبطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
-        ...relatedWidgets,
-      ]),
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      body: ListView(
+        children: [
+          if (_loading)
+            const AspectRatio(aspectRatio: 16 / 9, child: Center(child: CircularProgressIndicator()))
+          else if (_error.isNotEmpty)
+            AspectRatio(aspectRatio: 16 / 9, child: Center(child: Text(_error, style: const TextStyle(color: Colors.white))))
+          else if (chewie != null)
+            AspectRatio(aspectRatio: _videoController?.value.aspectRatio ?? 16 / 9, child: Chewie(controller: chewie)),
+          if (_changingQuality) const LinearProgressIndicator(minHeight: 2),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('فيديوهات مرتبطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+          ),
+          ..._related.map((item) => ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: SizedBox(width: 140, height: 80, child: PosterImage(url: item['image_url']?.toString(), borderRadius: BorderRadius.circular(8))),
+                title: Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)),
+                subtitle: Text([item['rating']?.toString() ?? '', item['duration']?.toString() ?? ''].where((value) => value.isNotEmpty).join(' • '), style: const TextStyle(color: Colors.white60)),
+                onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => YouTubeWatchScreen(url: item['url'].toString(), title: item['title'].toString(), imageUrl: item['image_url']?.toString() ?? ''))),
+              )),
+        ],
+      ),
     );
   }
 }

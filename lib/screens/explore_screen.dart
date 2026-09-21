@@ -5,7 +5,6 @@ import '../widgets/custom_error_dialog.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/app_navigation_drawer.dart';
-import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/segmented_toggle.dart';
@@ -13,8 +12,6 @@ import '../widgets/ui/state_views.dart';
 import '../sources/source_registry.dart';
 import 'anime_details_screen.dart';
 import 'comic_details_screen.dart';
-import 'search_screen.dart';
-import 'youtube_watch_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   final bool initialIsAnime;
@@ -203,28 +200,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
         onAction: _loadData,
       );
     }
-    if (widget.sourceId == 'aflaam') {
-      return ListView(
-        controller: _scrollController,
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          ContentGrid(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            itemBuilder: (context, index) => ContentCard(
-              title: items[index]['title']?.toString() ?? 'بدون عنوان',
-              imageUrl: items[index]['image_url']?.toString(),
-              badge: items[index]['type']?.toString(),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: items[index]['url']))),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const _ExploreSectionTitle(title: 'YouTube', subtitle: 'فيديوهات YouTube أسفل قائمة الأفلام والمسلسلات'),
-          const YouTubeCatalogSection(),
-        ],
-      );
-    }
     return ContentGrid(
       key: const PageStorageKey<String>('explore-content-grid'),
       controller: _scrollController,
@@ -249,63 +224,5 @@ class _ExploreScreenState extends State<ExploreScreen> {
         );
       },
     );
-  }
-}
-
-class _ExploreSectionTitle extends StatelessWidget {
-  final String title, subtitle;
-  const _ExploreSectionTitle({required this.title, required this.subtitle});
-  @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), Text(subtitle, style: const TextStyle(color: Colors.white60, fontSize: 12))]));
-}
-
-class YouTubeCatalogSection extends StatefulWidget {
-  const YouTubeCatalogSection({super.key});
-  @override State<YouTubeCatalogSection> createState() => _YouTubeCatalogSectionState();
-}
-
-class _YouTubeCatalogSectionState extends State<YouTubeCatalogSection> {
-  List<Map<String, dynamic>> items = [];
-  List<Map<String, dynamic>> allItems = [];
-  bool loading = true, loadingMore = false;
-  int page = 1;
-  @override void initState() { super.initState(); _load(); }
-  Future<void> _load({bool more = false}) async {
-    if (more && loadingMore) return;
-    setState(() => more ? loadingMore = true : loading = true);
-    final result = await SourceRegistry.latestFromSource('youtube', page: more ? page + 1 : 1);
-    if (!mounted) return;
-    final known = allItems.map((e) => e['url']).toSet();
-    final merged = [...allItems, ...result.where((e) => known.add(e['url']))];
-    final visibleCount = more ? items.length + 12 : 12;
-    setState(() { allItems = merged; items = merged.take(visibleCount).toList(); page = more ? page + 1 : 1; loading = false; loadingMore = false; });
-  }
-  @override Widget build(BuildContext context) {
-    if (loading) return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
-    return Column(children: [
-      ContentGrid(
-        shrinkWrap: true,
-        columns: 1,
-        childAspectRatio: 1.35,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: items.length,
-        itemBuilder: (context, index) => YouTubeCard(
-          item: items[index],
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => YouTubeWatchScreen(
-                url: items[index]['url'].toString(),
-                title: items[index]['title']?.toString() ?? 'YouTube',
-              ),
-            ),
-          ),
-        ),
-      ),
-      TextButton.icon(
-        onPressed: (loadingMore || items.length >= allItems.length) ? null : () => _load(more: true),
-        icon: loadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
-        label: const Text('تحميل المزيد من YouTube'),
-      ),
-    ]);
   }
 }

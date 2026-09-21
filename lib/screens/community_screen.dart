@@ -9,6 +9,7 @@ import '../models/news_model.dart';
 import '../providers/app_state_provider.dart';
 import '../providers/news_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ui/app_search_bar.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key});
@@ -46,7 +47,22 @@ class _NewsBodyState extends State<_NewsBody> {
             const SizedBox(height: 4),
             Text('آخر أخبار الأنمي والمانجا والأفلام والترفيه', style: TextStyle(color: AppTheme.textSecondaryColor)),
             const SizedBox(height: 14),
-            TextField(controller: search, onChanged: (value) { debounce?.cancel(); debounce = Timer(const Duration(milliseconds: 250), () => context.read<NewsProvider>().setQuery(value)); }, decoration: InputDecoration(hintText: 'ابحث داخل الأخبار فقط', prefixIcon: const Icon(Icons.search_rounded), suffixIcon: search.text.isEmpty ? null : IconButton(onPressed: () { search.clear(); context.read<NewsProvider>().setQuery(''); setState(() {}); }, icon: const Icon(Icons.close_rounded)))),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: ExpandableSearchBar(
+                controller: search,
+                hintText: 'ابحث داخل الأخبار فقط',
+                onChanged: (value) {
+                  debounce?.cancel();
+                  debounce = Timer(const Duration(milliseconds: 250), () => context.read<NewsProvider>().setQuery(value));
+                },
+                onClear: () {
+                  search.clear();
+                  context.read<NewsProvider>().setQuery('');
+                  setState(() {});
+                },
+              ),
+            ),
             const SizedBox(height: 12),
           ]))),
           SliverToBoxAdapter(child: SizedBox(height: 43, child: ListView.separated(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: newsCategories.length, separatorBuilder: (_, __) => const SizedBox(width: 8), itemBuilder: (_, index) { final value = newsCategories[index]; final selected = provider.category == value; return ChoiceChip(label: Text(value), selected: selected, onSelected: (_) => provider.setCategory(value), selectedColor: AppTheme.primaryColor, labelStyle: TextStyle(color: selected ? Colors.white : AppTheme.textSecondaryColor, fontWeight: FontWeight.w700)); }))),
