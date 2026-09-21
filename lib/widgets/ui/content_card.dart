@@ -127,3 +127,42 @@ class MangaCard extends StatelessWidget {
     );
   }
 }
+
+class YouTubeCard extends StatelessWidget {
+  final dynamic item;
+  final VoidCallback? onTap;
+
+  const YouTubeCard({super.key, required this.item, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final views = item['rating']?.toString() ?? '';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Stack(fit: StackFit.expand, children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              child: PosterImage(url: item['image_url']?.toString(), borderRadius: BorderRadius.zero),
+            ),
+            const PositionedDirectional(
+              bottom: 8, end: 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.all(Radius.circular(5))),
+                child: Padding(padding: EdgeInsets.symmetric(horizontal: 7, vertical: 4), child: Icon(Icons.play_arrow, color: Colors.white, size: 18)),
+              ),
+            ),
+          ])),
+          const SizedBox(height: 8),
+          Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 13, height: 1.25, fontWeight: FontWeight.w700)),
+          if (views.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text(views, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11))),
+        ]),
+      ),
+    );
+  }
+}

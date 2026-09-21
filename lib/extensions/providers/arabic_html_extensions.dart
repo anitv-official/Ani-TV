@@ -48,7 +48,10 @@ abstract class ArabicHtmlExtension extends AniExtension {
   String attr(dom.Element? element, String key) => element?.attributes[key]?.trim() ?? '';
   String image(dom.Element? element, String pageUrl) {
     final value = attr(element, 'data-src').isNotEmpty ? attr(element, 'data-src') : attr(element, 'src');
-    return value.isEmpty ? '' : abs(value, pageUrl);
+    if (value.isNotEmpty) return abs(value, pageUrl);
+    final style = element?.attributes['style'] ?? '';
+    final match = RegExp(r'''url\(["']?([^"')]+)''', caseSensitive: false).firstMatch(style);
+    return match == null ? '' : abs(match.group(1)!, pageUrl);
   }
 
   List<Map<String, dynamic>> cards(dom.Document doc, String pageUrl, {String selector = 'li.movieItem, article.postEp, .postDiv, .blockMovie, div.item'}) {
@@ -115,8 +118,8 @@ class KrmzyExtension extends ArabicHtmlExtension {
   @override String get id => 'krmzy';
   @override String get name => 'Krmzy';
   @override String get kind => 'drama';
-  @override List<String> get hosts => const ['krmzi.org'];
-  @override String get baseUrl => 'https://krmzi.org/';
+  @override List<String> get hosts => const ['krmzi.org', 'krmizi.onl'];
+  @override String get baseUrl => 'https://krmizi.onl/';
   @override String get contentLabel => 'مسلسلات وأفلام';
   @override String get iconUrl => 'https://krmzi.org/favicon.ico';
   @override ExtensionStatus get status => ExtensionStatus.limited;
@@ -152,7 +155,15 @@ class AflaamExtension extends ArabicHtmlExtension {
     final doc = await document(url) ?? html_parser.parse('');
     final title = clean(doc.querySelector('h1.font-size-44, h1')?.text ?? name);
     final poster = image(doc.querySelector('a.movie-poster img, img.poster'), url);
-    final eps = episodesFrom(doc.querySelectorAll('#movie-tab-1 .entry-box-3, a[href*="/episode/"]'), url, imageUrl: poster);
+    final eps = <Map<String, dynamic>>[];
+    for (final box in doc.querySelectorAll('#movie-tab-1 .entry-box-3')) {
+      final a = box.querySelector('a[href]');
+      if (a == null) continue;
+      final raw = clean(box.querySelector('h3.entry-title, h3, .title')?.text ?? a.text);
+      final number = SourceUtils.episodeNumber(box.querySelector('span.font-size-50')?.text ?? raw) ?? eps.length + 1;
+      eps.add(episode(abs(attr(a, 'href'), url), raw.replaceFirst(RegExp(r'^\d+'), '').trim(), number, imageUrl: poster));
+    }
+    eps.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     final type = url.contains('/series/') ? 'series' : 'movie';
     return {...item(title: title, url: url, image: poster, type: type, description: clean(doc.querySelector('#movie-tab-2 p, .synopsis')?.text ?? '')), 'episodes': eps, 'total_episodes': eps.length};
   }
@@ -178,7 +189,7 @@ class AkwamExtension extends ArabicHtmlExtension {
   @override String get name => 'Akwam';
   @override String get kind => 'drama';
   @override List<String> get hosts => const ['ak.sv', 'akwam.ss'];
-  @override String get baseUrl => 'https://ak.sv/';
+  @override String get baseUrl => 'https://akwam.ss/';
   @override String get contentLabel => 'أفلام ومسلسلات';
   @override String get iconUrl => 'https://ak.sv/favicon.ico';
   @override ExtensionStatus get status => ExtensionStatus.limited;
@@ -191,7 +202,15 @@ class AkwamExtension extends ArabicHtmlExtension {
     final doc = await document(url, referer: baseUrl) ?? html_parser.parse('');
     final title = clean(doc.querySelector('h1.entry-title, h1')?.text ?? name);
     final poster = image(doc.querySelector('img[data-src], img'), url);
-    final eps = episodesFrom(doc.querySelectorAll('#series-episodes div.col-lg-4, #series-episodes div.col-md-6, a[href*="/episode/"]'), url, imageUrl: poster);
+    final eps = <Map<String, dynamic>>[];
+    for (final a in doc.querySelectorAll('#series-episodes a[href]')) {
+      final href = attr(a, 'href');
+      if (href.isEmpty) continue;
+      final raw = clean(a.querySelector('h2, h3, .entry-title')?.text ?? a.text);
+      final number = SourceUtils.episodeNumber(raw) ?? eps.length + 1;
+      eps.add(episode(abs(href, url), raw, number, imageUrl: image(a.querySelector('img'), url)));
+    }
+    eps.sort((a, b) => (a['number'] as int).compareTo(b['number'] as int));
     return {...item(title: title, url: url, image: poster, type: eps.isEmpty ? 'movie' : 'series'), 'episodes': eps, 'total_episodes': eps.length};
   }
 

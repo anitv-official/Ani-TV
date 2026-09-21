@@ -6,6 +6,7 @@ class ContentGrid extends StatelessWidget {
   final ScrollController? controller;
   final EdgeInsetsGeometry padding;
   final int? columns;
+  final double childAspectRatio;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
@@ -16,6 +17,7 @@ class ContentGrid extends StatelessWidget {
     this.controller,
     this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 24),
     this.columns,
+    this.childAspectRatio = 0.66,
     this.shrinkWrap = false,
     this.physics,
   });
@@ -40,7 +42,7 @@ class ContentGrid extends StatelessWidget {
           padding: padding.add(const EdgeInsets.only(top: 6)),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: count,
-            childAspectRatio: 0.66,
+            childAspectRatio: childAspectRatio,
             crossAxisSpacing: 12,
             mainAxisSpacing: 18,
           ),

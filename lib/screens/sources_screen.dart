@@ -109,6 +109,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
   late final TextEditingController _searchController;
   int _page = 1;
   bool _loadingMore = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -129,22 +130,27 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
     final query = _searchController.text.trim();
     setState(() {
       _page = 1;
+      _hasMore = true;
       _content = query.isEmpty ? widget.source.latest() : widget.source.search(query);
     });
   }
 
   void _loadMoreWhenNeeded() {
-    if (_scrollController.hasClients && _scrollController.position.extentAfter < 400) {
+    if (_hasMore && _scrollController.hasClients && _scrollController.position.extentAfter < 400) {
       _loadMore();
     }
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore || !mounted) return;
-    _loadingMore = true;
+    setState(() => _loadingMore = true);
     try {
       final next = await widget.source.nextPage(query: _searchController.text.trim(), page: _page + 1);
-      if (!mounted || next.isEmpty) return;
+      if (!mounted) return;
+      if (next.isEmpty) {
+        setState(() => _hasMore = false);
+        return;
+      }
       final current = await _content;
       final keys = current.map((e) => e['url'] ?? e['title']).toSet();
       setState(() {
@@ -152,7 +158,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
         _content = Future.value([...current, ...next.where((e) => keys.add(e['url'] ?? e['title']))]);
       });
     } finally {
-      _loadingMore = false;
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -203,11 +209,22 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
             color: AppTheme.primaryColor,
             onRefresh: () async => setState(() => _content = widget.source.latest()),
             child: ContentGrid(
+              key: const PageStorageKey<String>('source-content-grid'),
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              itemCount: items.length,
+              childAspectRatio: widget.source.id == 'youtube' ? 1.22 : 0.66,
+              itemCount: items.length + (_loadingMore ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index >= items.length) {
+                  return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(strokeWidth: 2)));
+                }
                 final item = items[index];
+                if (widget.source.id == 'youtube') {
+                  return YouTubeCard(
+                    item: item,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AnimeDetailsScreen(url: item['url'].toString()))),
+                  );
+                }
                 return ContentCard(
                   title: item['title']?.toString(),
                   imageUrl: item['image_url']?.toString(),

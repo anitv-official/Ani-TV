@@ -44,6 +44,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   int _animePage = 2;
   int _comicPage = 2;
   bool _loadingMore = false;
+  bool _hasMore = true;
 
   @override
   void initState() {
@@ -63,26 +64,35 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients && _scrollController.position.extentAfter < 500) {
+    if (_hasMore && _scrollController.hasClients && _scrollController.position.extentAfter < 500) {
       _loadMore();
     }
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore || !mounted) return;
-    _loadingMore = true;
+    setState(() => _loadingMore = true);
     try {
       final isAnime = _currentTabIndex == 0;
-      final page = isAnime ? ++_animePage : ++_comicPage;
+      final page = (isAnime ? _animePage : _comicPage) + 1;
       final items = await _fetchPage(isAnime: isAnime, page: page);
       if (!mounted) return;
+      if (items.isEmpty) {
+        setState(() => _hasMore = false);
+        return;
+      }
       setState(() {
+        if (isAnime) {
+          _animePage = page;
+        } else {
+          _comicPage = page;
+        }
         final target = isAnime ? latestAnime : latestComics;
         final keys = target.map((e) => e['url'] ?? e['title']).toSet();
         target.addAll(items.where((e) => keys.add(e['url'] ?? e['title'])));
       });
     } finally {
-      _loadingMore = false;
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
@@ -96,6 +106,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           latestComics = widget.initialIsAnime ? [] : items;
           _animePage = 1;
           _comicPage = 1;
+          _hasMore = true;
           isLoadingContent = false;
         });
         return;
@@ -112,6 +123,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           latestComics = latestComicsData;
           _animePage = 1;
           _comicPage = 1;
+          _hasMore = true;
           isLoadingContent = false;
         });
       }
@@ -191,10 +203,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
       );
     }
     return ContentGrid(
+      key: const PageStorageKey<String>('explore-content-grid'),
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: items.length,
+      itemCount: items.length + (_loadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index >= items.length) {
+          return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(strokeWidth: 2)));
+        }
         final item = items[index];
         return ContentCard(
           title: item['title']?.toString() ?? 'بدون عنوان',

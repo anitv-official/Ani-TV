@@ -166,7 +166,7 @@ class SourceRegistry {
       'firestream.site',
     }.any((host) => uri.host.toLowerCase().replaceFirst('www.', '') == host);
     final requestedEmbed = link['type']?.toString() == 'embed';
-    final providerVideo = const {'anime3rb', 'aflaam', 'akwam', 'faselhd'}.contains(source.id) &&
+    final providerVideo = const {'anime3rb', 'aflaam', 'akwam', 'faselhd', 'youtube'}.contains(source.id) &&
         link['type']?.toString() == 'video';
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
