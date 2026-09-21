@@ -15,6 +15,7 @@ class AppScaffoldHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
       child: SizedBox(
@@ -34,7 +35,7 @@ class AppScaffoldHeader extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleLarge?.copyWith(fontSize: 22, fontWeight: FontWeight.w800),
               ),
             ),
             ...?actions,
@@ -54,7 +55,7 @@ class AppPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor ?? AppTheme.backgroundColor,
+      backgroundColor: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(child: child),
     );
   }

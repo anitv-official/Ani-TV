@@ -24,30 +24,38 @@ class PosterImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(AppTheme.radiusSmall);
     final imageUrl = (url ?? '').trim();
-    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final targetWidth = ((width ?? 180) * devicePixelRatio).round().clamp(160, 720).toInt();
-    final targetHeight = height == null
-        ? null
-        : (height! * devicePixelRatio).round().clamp(160, 960).toInt();
     return ClipRRect(
       borderRadius: radius,
       child: SizedBox(
         width: width,
         height: height,
-        child: imageUrl.isEmpty
-            ? _fallback()
-            : CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: fit,
-                width: width ?? double.infinity,
-                height: height,
-                memCacheWidth: targetWidth,
-                memCacheHeight: targetHeight,
-                maxWidthDiskCache: targetWidth,
-                maxHeightDiskCache: targetHeight,
-                placeholder: (_, __) => Container(color: AppTheme.elevatedColor),
-                errorWidget: (_, __, ___) => _fallback(),
-              ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+            final logicalWidth = width ?? (constraints.hasBoundedWidth ? constraints.maxWidth : 180);
+            final logicalHeight = height ?? (constraints.hasBoundedHeight ? constraints.maxHeight : null);
+            final targetWidth = (logicalWidth * devicePixelRatio).round().clamp(160, 1440).toInt();
+            final targetHeight = logicalHeight == null
+                ? null
+                : (logicalHeight * devicePixelRatio).round().clamp(160, 1440).toInt();
+
+            if (imageUrl.isEmpty) return _fallback();
+            return CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: fit,
+              width: width ?? double.infinity,
+              height: height,
+              memCacheWidth: targetWidth,
+              memCacheHeight: targetHeight,
+              maxWidthDiskCache: targetWidth,
+              maxHeightDiskCache: targetHeight,
+              fadeInDuration: const Duration(milliseconds: 180),
+              fadeOutDuration: const Duration(milliseconds: 100),
+              placeholder: (_, __) => const ColoredBox(color: AppTheme.elevatedColor),
+              errorWidget: (_, __, ___) => _fallback(),
+            );
+          },
+        ),
       ),
     );
   }

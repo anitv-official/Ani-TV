@@ -8,6 +8,9 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectedColor = theme.colorScheme.primary;
+    final unselectedColor = theme.colorScheme.onSurface.withOpacity(.62);
     final items = <({IconData icon, IconData active, String label})>[
       (icon: Icons.home_outlined, active: Icons.home_rounded, label: 'الرئيسية'),
       (icon: Icons.explore_outlined, active: Icons.explore_rounded, label: 'استكشاف'),
@@ -17,8 +20,8 @@ class CustomBottomNavBar extends StatelessWidget {
     ];
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTheme.cardColor.withOpacity(.97),
-        border: const Border(top: BorderSide(color: AppTheme.borderColor)),
+        color: theme.colorScheme.surface.withOpacity(.97),
+        border: Border(top: BorderSide(color: theme.dividerColor)),
       ),
       child: SafeArea(
         top: false,
@@ -48,10 +51,18 @@ class CustomBottomNavBar extends StatelessWidget {
                             borderRadius: BorderRadius.circular(99),
                           ),
                         ),
-                        Icon(
-                          selected ? item.active : item.icon,
-                          size: 22,
-                          color: selected ? AppTheme.primaryColor : AppTheme.textSecondaryColor,
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          transitionBuilder: (child, animation) => FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(scale: animation, child: child),
+                          ),
+                          child: Icon(
+                            selected ? item.active : item.icon,
+                            key: ValueKey(selected),
+                            size: 22,
+                            color: selected ? selectedColor : unselectedColor,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -61,7 +72,7 @@ class CustomBottomNavBar extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 11,
                             height: 1,
-                            color: selected ? Colors.white : AppTheme.textSecondaryColor,
+                            color: selected ? theme.colorScheme.onSurface : unselectedColor,
                             fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
                           ),
                         ),

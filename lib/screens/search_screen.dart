@@ -46,6 +46,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   bool _showAnimeHistory = true; // Toggle between anime and manga history
   Timer? _debounce;
   final FocusNode _searchFocusNode = FocusNode();
+  int _searchRequestId = 0;
 
   @override
   void dispose() {
@@ -77,10 +78,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 1000), () {
+    _debounce = Timer(const Duration(milliseconds: 450), () {
       if (query.isNotEmpty) {
         _performSearch(query);
       } else {
+        _searchRequestId++;
         setState(() {
           _searchResults = [];
           _hasSearched = false;
@@ -105,7 +107,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingGenres = false);
-        print('Error loading genres: $e');
+        debugPrint('Error loading genres: $e');
       }
     }
   }
@@ -165,17 +167,22 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   void _performSearch(String query) async {
     if (query.isEmpty) return;
 
+    final requestId = ++_searchRequestId;
     setState(() {
       _isLoading = true;
       _hasSearched = true;
     });
 
     try {
-      final animeResults = await ApiService.searchAnime(query);
-      final comicResults = await ApiService.searchComics(query);
+      final results = await Future.wait<dynamic>([
+        ApiService.searchAnime(query),
+        ApiService.searchComics(query),
+      ]);
+      final animeResults = results[0] as List<dynamic>;
+      final comicResults = results[1] as List<dynamic>;
       final allResults = [...animeResults, ...comicResults];
 
-      if (mounted) {
+      if (mounted && requestId == _searchRequestId) {
         setState(() {
           List<dynamic> filteredResults = allResults;
 
@@ -194,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && requestId == _searchRequestId) {
         setState(() => _isLoading = false);
         _showErrorDialog('Search Error', 'Failed to perform search: $e');
       }
@@ -234,8 +241,8 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         FocusScope.of(context).unfocus();
       } else {
         // Automatically focus search field when opened
-        Future.delayed(Duration(milliseconds: 100), () {
-            FocusScope.of(context).requestFocus(_searchFocusNode);
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) FocusScope.of(context).requestFocus(_searchFocusNode);
         });
       }
     });

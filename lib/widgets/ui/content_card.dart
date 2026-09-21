@@ -23,14 +23,18 @@ class ContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Semantics(
+        button: onTap != null,
+        label: title,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Expanded(
               child: Stack(
                 fit: StackFit.expand,
@@ -38,7 +42,7 @@ class ContentCard extends StatelessWidget {
                   DecoratedBox(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      border: Border.all(color: AppTheme.borderColor),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                       boxShadow: AppTheme.subtleShadow,
                     ),
                     child: ClipRRect(
@@ -79,15 +83,16 @@ class ContentCard extends StatelessWidget {
                 title ?? '',
                 maxLines: compactTitle ? 1 : 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+                  color: textColor,
                   fontSize: 12,
                   height: 1.25,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -136,6 +141,8 @@ class YouTubeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurface;
+    final secondaryTextColor = textColor.withOpacity(.68);
     final views = item['rating']?.toString() ?? '';
     final duration = item['duration']?.toString() ?? '';
     return Material(
@@ -159,9 +166,9 @@ class YouTubeCard extends StatelessWidget {
           ])),
           const SizedBox(height: 8),
           Text(item['title']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppTheme.textPrimaryColor, fontSize: 13, height: 1.25, fontWeight: FontWeight.w700)),
+              style: TextStyle(color: textColor, fontSize: 13, height: 1.25, fontWeight: FontWeight.w700)),
           if (views.isNotEmpty || duration.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text([views, duration].where((e) => e.isNotEmpty).join('  •  '), maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11))),
+              style: TextStyle(color: secondaryTextColor, fontSize: 11))),
         ]),
       ),
     );

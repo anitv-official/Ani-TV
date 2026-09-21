@@ -7,11 +7,11 @@ class CustomLoadingWidget extends StatelessWidget {
   final Color? color;
 
   const CustomLoadingWidget({
-    Key? key,
+    super.key,
     this.message = 'جارٍ التحميل...',
-    this.size = 120.0, // Default size for Lottie
+    this.size = 120.0,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class CustomLoadingWidget extends StatelessWidget {
             ),
           ),
           if (message.isNotEmpty) ...[
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
               message,
               style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12, fontWeight: FontWeight.w600),
@@ -50,13 +50,13 @@ class CustomLoadingOverlay extends StatelessWidget {
   final Color? color;
 
   const CustomLoadingOverlay({
-    Key? key,
+    super.key,
     required this.child,
     required this.isLoading,
     this.message = 'جارٍ التحميل...',
     this.size = 40.0,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -83,11 +83,11 @@ class CustomProgressIndicator extends StatefulWidget {
   final Color? color;
 
   const CustomProgressIndicator({
-    Key? key,
+    super.key,
     required this.progress,
     this.message = 'جارٍ التحميل...',
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   _CustomProgressIndicatorState createState() => _CustomProgressIndicatorState();
