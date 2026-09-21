@@ -59,6 +59,7 @@ class MainActivity: FlutterActivity() {
                 }
         }
         CloudStreamEngine(this).register(flutterEngine.dartExecutor.binaryMessenger)
+        YoutubeNativeBridge.register(MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.anitv.app/youtube"))
     }
     
     override fun onNewIntent(intent: Intent) {

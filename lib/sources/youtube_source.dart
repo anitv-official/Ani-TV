@@ -1,17 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../services/youtube_native_service.dart';
 import 'source_base.dart';
 
 class YoutubeSource extends ContentSource {
   final http.Client _client = http.Client();
   static const _userAgent = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/122 Safari/537.36';
-  static const _pipedApis = <String>[
-    'https://pipedapi.kavin.rocks',
-    'https://pipedapi.leptons.xyz',
-    'https://piped-api.privacy.com.de',
-    'https://pipedapi-libre.kavin.rocks',
-    'https://pipedapi.reallyaweso.me',
-  ];
   final Map<String, String> _continuations = {};
 
   @override String get id => 'youtube';
@@ -60,31 +54,7 @@ class YoutubeSource extends ContentSource {
   @override Future<Map<String, dynamic>> details(String url) async => item(title: 'فيديو YouTube', url: url, type: 'فيديو');
 
   @override Future<Map<String, dynamic>?> streams(String url) async {
-    final id = _videoId(url);
-    if (id.isEmpty) return null;
-    for (final api in _pipedApis) {
-      try {
-        final response = await _client.get(Uri.parse('$api/streams/$id'), headers: const {'Accept': 'application/json', 'User-Agent': _userAgent}).timeout(const Duration(seconds: 20));
-        if (response.statusCode < 200 || response.statusCode >= 300) continue;
-        final raw = jsonDecode(response.body);
-        if (raw is! Map) continue;
-        final data = Map<String, dynamic>.from(raw);
-        final links = <Map<String, dynamic>>[];
-        final hls = data['hls']?.toString() ?? '';
-        if (hls.isNotEmpty) links.add({'url': hls, 'label': 'HLS', 'name': 'HLS', 'quality': 'Auto', 'type': 'hls'});
-        final streams = data['videoStreams'];
-        if (streams is List) {
-          final playable = streams.whereType<Map>().where((stream) => stream['videoOnly'] != true && (stream['url']?.toString() ?? '').isNotEmpty).toList();
-          playable.sort((a, b) => _quality(b['height']).compareTo(_quality(a['height'])));
-          for (final stream in playable.take(5)) {
-            final quality = stream['quality']?.toString() ?? '${stream['height'] ?? ''}p';
-            links.add({'url': stream['url'].toString(), 'label': quality, 'name': quality, 'quality': quality, 'type': 'mp4'});
-          }
-        }
-        if (links.isNotEmpty) return {'stream_url': links.first['url'], 'direct_stream_urls': links, 'title': data['title']?.toString() ?? 'YouTube'};
-      } catch (_) {}
-    }
-    return null;
+    return YoutubeNativeService.extractStreams(url);
   }
 
   Map<String, dynamic> _initialData(String html) {
