@@ -62,7 +62,7 @@ class _YoutubeScreenState extends State<YoutubeScreen> {
     }
     try {
       final query = _searchController.text.trim();
-      final rows = query.isEmpty ? await SourceRegistry.latestFromSource('youtube', page: _page) : await SourceRegistry.searchFromSource('youtube', query);
+      final rows = query.isEmpty ? await SourceRegistry.latestFromSource('youtube', page: _page) : await SourceRegistry.searchFromSource('youtube', query, page: _page);
       if (!mounted) return;
       final known = _items.map((item) => item['url']).toSet();
       final fresh = rows.where((item) => known.add(item['url'])).toList();
@@ -70,7 +70,7 @@ class _YoutubeScreenState extends State<YoutubeScreen> {
         if (reset) _items.clear();
         _items.addAll(fresh);
         _page++;
-        _hasMore = query.isEmpty && fresh.isNotEmpty && rows.isNotEmpty;
+        _hasMore = fresh.isNotEmpty && rows.isNotEmpty;
         _loading = false;
         _loadingMore = false;
       });

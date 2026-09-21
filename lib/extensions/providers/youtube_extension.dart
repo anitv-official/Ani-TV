@@ -35,16 +35,29 @@ class YouTubeExtension extends AniExtension {
 
   @override Future<List<Map<String, dynamic>>> latest({int page = 1}) async {
     try {
-      final trending = _videosFromPage(await _page('$_base/feed/trending'));
-      if (trending.isNotEmpty) return trending;
-      return _videosFromPage(await _page('$_base/results?search_query=anime'));
+      final uri = Uri.parse('$_base/results').replace(queryParameters: {'search_query': 'anime', 'sp': 'CAI=', 'page': '$page'});
+      final recent = _videosFromPage(await _page(uri.toString()));
+      if (recent.isNotEmpty) return recent;
+      return _videosFromPage(await _page('$_base/feed/trending'));
     } catch (_) { return []; }
   }
 
   @override Future<List<Map<String, dynamic>>> search(String query) async {
     final value = query.trim();
     if (value.isEmpty) return latest();
-    try { return _videosFromPage(await _page(Uri.parse('$_base/results').replace(queryParameters: {'search_query': value}).toString())); } catch (_) { return []; }
+    return _searchPage(value, 1);
+  }
+
+  @override Future<List<Map<String, dynamic>>> nextPage({String query = '', int page = 2}) async {
+    if (query.trim().isEmpty) return latest(page: page);
+    return _searchPage(query, page);
+  }
+
+  Future<List<Map<String, dynamic>>> _searchPage(String query, int page) async {
+    try {
+      final uri = Uri.parse('$_base/results').replace(queryParameters: {'search_query': query, 'page': '$page'});
+      return _videosFromPage(await _page(uri.toString()));
+    } catch (_) { return []; }
   }
 
   List<Map<String, dynamic>> _videosFromPage(String html) {

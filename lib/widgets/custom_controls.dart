@@ -433,100 +433,42 @@ class _MaterialControlsState extends State<MaterialControls>
       );
     } 
     
-    // 2. Mobile Layout (Android) - Preserves Original Design
-    else {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: Row(
-          children: [
-            const Spacer(flex: 4),
-
-            SizedBox(
-              height: 180,
-              child: _buildBrightnessSlider(),
-            ),
-
-            const SizedBox(width: 94),
-
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: () {
-                    controller?.seekTo(
-                      latestValue.position - const Duration(seconds: 10),
-                    );
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/rewind.svg',
-                        color: Colors.white,
-                        width: 48,
-                        height: 48,
-                      ),
-                      const Text(
-                        '10',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 40),
-
-                InkWell(
-                  onTap: _playPause,
-                  child: Icon(
-                    latestValue.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 64,
-                  ),
-                ),
-
-                const SizedBox(width: 40),
-
-                InkWell(
-                  onTap: () {
-                    controller?.seekTo(
-                      latestValue.position + const Duration(seconds: 10),
-                    );
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/forward.svg',
-                        color: Colors.white,
-                        width: 48,
-                        height: 48,
-                      ),
-                      const Text(
-                        '10',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const Spacer(flex: 7),
-          ],
-        ),
+    // Responsive mobile layout: keep the three primary actions centered and
+    // avoid fixed-width brightness controls that used to cover the buttons.
+    return LayoutBuilder(builder: (context, constraints) {
+      final iconSize = constraints.maxWidth < 360 ? 40.0 : 48.0;
+      final gap = constraints.maxWidth < 360 ? 20.0 : 34.0;
+      return Center(
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          _seekButton(-10, 'assets/icons/rewind.svg', iconSize),
+          SizedBox(width: gap),
+          IconButton(onPressed: _playPause, icon: Icon(latestValue.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, color: Colors.white, size: iconSize + 18), tooltip: latestValue.isPlaying ? 'إيقاف مؤقت' : 'تشغيل'),
+          SizedBox(width: gap),
+          _seekButton(10, 'assets/icons/forward.svg', iconSize),
+        ]),
       );
-    }
+    });
+  }
+
+  Widget _seekButton(int seconds, String asset, double size) {
+    return IconButton(
+      onPressed: () => _seekBy(seconds),
+      tooltip: seconds < 0 ? 'تأخير 10 ثوانٍ' : 'تقديم 10 ثوانٍ',
+      icon: Stack(alignment: Alignment.center, children: [
+        SvgPicture.asset(asset, color: Colors.white, width: size, height: size),
+        Text('10', style: TextStyle(color: Colors.white, fontSize: size * .24, fontWeight: FontWeight.bold)),
+      ]),
+    );
+  }
+
+  Future<void> _seekBy(int seconds) async {
+    final video = controller;
+    if (video == null || !video.value.isInitialized) return;
+    final duration = video.value.duration;
+    final next = video.value.position + Duration(seconds: seconds);
+    final bounded = next < Duration.zero ? Duration.zero : (next > duration ? duration : next);
+    await video.seekTo(bounded);
+    _resetHideTimer();
   }
 
   Widget _buildLockOverlayButton() {
@@ -801,9 +743,11 @@ class _MaterialControlsState extends State<MaterialControls>
           
           // Actions Row (With restored original padding)
           Padding(
-             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-             child: Row(
-               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+             padding: const EdgeInsets.symmetric(horizontal: 16.0),
+             child: SingleChildScrollView(
+               scrollDirection: Axis.horizontal,
+               child: Row(
+               mainAxisSize: MainAxisSize.min,
                children: [
               _buildActionIcon(
                 'Speed (${latestValue.playbackSpeed.toString().replaceAll(RegExp(r"([.]*0)(?!.*\d)"), "")}x)', 
@@ -829,7 +773,7 @@ class _MaterialControlsState extends State<MaterialControls>
               if (widget.onNextEpisode != null)
                 _buildActionIcon('التالي', 'assets/icons/next.svg', widget.onNextEpisode),
                ],
-             ),
+             )),
           ),
         ],
       ),

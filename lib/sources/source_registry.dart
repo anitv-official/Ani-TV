@@ -102,9 +102,9 @@ class SourceRegistry {
     return _retry(() => source.latest(page: page));
   }
 
-  static Future<List<Map<String, dynamic>>> searchFromSource(String sourceId, String query) async {
+  static Future<List<Map<String, dynamic>>> searchFromSource(String sourceId, String query, {int page = 1}) async {
     final source = _allSources.firstWhere((entry) => entry.id == sourceId);
-    return _retry(() => source.search(query));
+    return _retry(() => page <= 1 ? source.search(query) : source.nextPage(query: query, page: page));
   }
 
   static Future<Map<String, dynamic>?> details(String url) async {
