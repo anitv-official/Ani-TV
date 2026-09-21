@@ -1,9 +1,11 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+
 import '../services/download_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/app_navigation_drawer.dart';
+import '../widgets/ui/app_fixed_header.dart';
 import '../widgets/ui/poster_image.dart';
 import '../widgets/ui/state_views.dart';
 import 'manga_reader_screen.dart';
@@ -12,6 +14,7 @@ import 'video_player_screen.dart';
 class DownloadsScreen extends StatefulWidget {
   final bool embedded;
   const DownloadsScreen({super.key, this.embedded = false});
+
   @override
   State<DownloadsScreen> createState() => _DownloadsScreenState();
 }
@@ -19,120 +22,142 @@ class DownloadsScreen extends StatefulWidget {
 class _DownloadsScreenState extends State<DownloadsScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
-  final Set<String> _expanded = {};
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    DownloadService.changes.addListener(_refresh);
+    _refresh();
+  }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    DownloadService.changes.removeListener(_refresh);
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
     final items = await DownloadService.list();
     if (mounted) setState(() { _items = items; _loading = false; });
   }
 
-  Map<String, List<Map<String, dynamic>>> _group(String kind) {
-    final groups = <String, List<Map<String, dynamic>>>{};
-    for (final item in _items.where((e) => e['kind'] == kind)) {
-      final key = '${item['source_id'] ?? ''}:${item['title'] ?? ''}';
-      (groups[key] ??= []).add(item);
-    }
-    for (final list in groups.values) {
-      list.sort((a, b) => _number(a).compareTo(_number(b)));
-    }
-    return groups;
-  }
-
-  int _number(Map<String, dynamic> item) {
-    final text = item['chapter']?.toString() ?? item['episode']?.toString() ?? '';
-    return int.tryParse(RegExp(r'\d+').firstMatch(text)?.group(0) ?? '') ?? 999999;
+  Future<void> _clearCompleted() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('حذف التنزيلات المكتملة؟'),
+        content: const Text('سيتم حذف الملفات المكتملة فقط من مساحة AniTV. لن تتأثر ملفاتك الشخصية.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (confirmed == true) await DownloadService.clearCompleted();
+    await _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final manga = _group('manga');
-    final anime = _group('anime');
+    final active = _items.where((item) => !{'completed', 'cancelled'}.contains(item['status'])).toList();
+    final completed = _items.where((item) => item['status'] == 'completed').toList();
+    final failed = _items.where((item) => item['status'] == 'failed' || item['status'] == 'cancelled').toList();
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
       body: SafeArea(
         child: Column(
           children: [
-            if (!widget.embedded) const AppFixedHeader(title: 'التنزيلات'),
-            Expanded(child: _loading
-          ? const LoadingView(message: 'جارٍ تحميل التنزيلات...', size: 64)
-          : _items.isEmpty
-              ? const EmptyState(
-                  icon: Icons.download_outlined,
-                  title: 'لا توجد تنزيلات محفوظة',
-                  message: 'ستظهر هنا الحلقات والفصول التي تقوم بتنزيلها.',
-                )
-              : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 28), children: [
-                  if (manga.isNotEmpty) _section('المانجا المنزلة', manga, true),
-                  if (anime.isNotEmpty) _section('الأنمي المنزّل', anime, false),
-                ])),
+            if (!widget.embedded)
+              AppFixedHeader(title: 'التنزيلات', trailing: IconButton(onPressed: completed.isEmpty ? null : _clearCompleted, tooltip: 'حذف المكتمل', icon: const Icon(Icons.delete_sweep_outlined))),
+            Expanded(
+              child: _loading
+                  ? const LoadingView(message: 'جارٍ تحميل التنزيلات...', size: 64)
+                  : _items.isEmpty
+                      ? const EmptyState(icon: Icons.download_outlined, title: 'لا توجد تنزيلات', message: 'ستظهر هنا الحلقات والفصول التي تقوم بتنزيلها.')
+                      : RefreshIndicator(
+                          onRefresh: _refresh,
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                            children: [
+                              FutureBuilder<int>(future: DownloadService.storageBytes(), builder: (_, snapshot) => _storageSummary(snapshot.data ?? 0)),
+                              if (active.isNotEmpty) _section('قيد التنزيل أو الانتظار', active),
+                              if (completed.isNotEmpty) _section('اكتملت', completed),
+                              if (failed.isNotEmpty) _section('تحتاج إلى إجراء', failed),
+                            ],
+                          ),
+                        ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _section(String title, Map<String, List<Map<String, dynamic>>> groups, bool isManga) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(padding: const EdgeInsets.only(bottom: 10, top: 6), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800))),
-      ...groups.entries.map((entry) => _seriesCard(entry.value, isManga)),
-      const SizedBox(height: 16),
-    ],
-  );
-
-  Widget _seriesCard(List<Map<String, dynamic>> items, bool isManga) {
-    final first = items.first;
-    final key = '${first['source_id'] ?? ''}:${first['title'] ?? ''}';
-    final open = _expanded.contains(key);
-    final cover = first['cover_url']?.toString() ?? '';
+  Widget _storageSummary(int bytes) {
+    final mb = bytes / (1024 * 1024);
+    final label = mb >= 1024 ? '${(mb / 1024).toStringAsFixed(1)} GB' : '${mb.toStringAsFixed(1)} MB';
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderColor),
-      ),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
+      child: Row(children: [const Icon(Icons.storage_rounded, color: AppTheme.primaryColor), const SizedBox(width: 10), Text('مساحة تنزيلات AniTV: $label', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), const Spacer(), Text('${_items.where((e) => e['status'] == 'completed').length} ملف', style: const TextStyle(color: AppTheme.textSecondaryColor))]),
+    );
+  }
+
+  Widget _section(String title, List<Map<String, dynamic>> items) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: const EdgeInsets.only(bottom: 9), child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800))), ...items.map(_taskCard), const SizedBox(height: 12)]);
+  }
+
+  Widget _taskCard(Map<String, dynamic> item) {
+    final status = item['status']?.toString() ?? 'queued';
+    final progress = (item['progress'] is num ? (item['progress'] as num).toDouble() : 0).clamp(0, 1);
+    final bytes = (item['bytes'] is num ? (item['bytes'] as num).toInt() : 0);
+    final total = (item['total'] is num ? (item['total'] as num).toInt() : 0);
+    final isManga = item['kind'] == 'manga';
+    final path = item['path']?.toString() ?? '';
+    final exists = isManga ? Directory(path).existsSync() : File(path).existsSync();
+    final playable = status == 'completed' && exists;
+    final id = item['id']?.toString() ?? '';
+    final title = item['episode']?.toString().isNotEmpty == true ? item['episode'].toString() : item['chapter']?.toString() ?? item['title']?.toString() ?? '';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppTheme.borderColor)),
       child: Column(children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          leading: PosterImage(url: cover, width: 46, height: 62, fallbackIcon: isManga ? Icons.menu_book : Icons.movie_outlined, borderRadius: BorderRadius.circular(8)),
-          title: Text(first['title']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
-          subtitle: Text('${items.length} ${isManga ? 'فصل' : 'حلقة'} محفوظة', style: const TextStyle(color: AppTheme.textSecondaryColor)),
-          trailing: IconButton(icon: Icon(open ? Icons.expand_less : Icons.expand_more, color: Colors.white), onPressed: () => setState(() => open ? _expanded.remove(key) : _expanded.add(key))),
-        ),
-        if (open) ...items.asMap().entries.map((downloadEntry) {
-          final item = downloadEntry.value;
-          final exists = File(item['path']?.toString() ?? '').existsSync() || (isManga && Directory(item['path']?.toString() ?? '').existsSync());
-          return ListTile(
-            dense: true,
-            leading: Icon(isManga ? Icons.menu_book : Icons.play_circle_outline, color: AppTheme.primaryColor),
-            title: Text((isManga ? item['chapter'] : item['episode'])?.toString() ?? '', style: const TextStyle(color: Colors.white)),
-            trailing: Icon(exists ? Icons.check_circle : Icons.error_outline, color: exists ? AppTheme.successColor : AppTheme.warningColor),
-            onTap: () => _open(item, isManga, nextItem: isManga && downloadEntry.key + 1 < items.length ? items[downloadEntry.key + 1] : null),
-          );
-        }),
+        Row(children: [PosterImage(url: item['cover_url']?.toString(), width: 54, height: 70, fallbackIcon: isManga ? Icons.menu_book : Icons.movie_outlined, borderRadius: BorderRadius.circular(9)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item['title']?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), const SizedBox(height: 5), Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12)), const SizedBox(height: 7), _statusLine(status, progress)])), if (playable) IconButton(onPressed: () => _open(item, isManga), tooltip: 'تشغيل بدون اتصال', icon: const Icon(Icons.play_circle_fill_rounded, color: AppTheme.primaryColor))]),
+        if (status == 'downloading' || status == 'paused' || status == 'queued') ...[
+          const SizedBox(height: 9),
+          LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 5, borderRadius: BorderRadius.circular(5), color: AppTheme.primaryColor),
+          const SizedBox(height: 5),
+          Row(children: [Text('${(progress * 100).round()}%', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (total > 0) Text('  ${_formatBytes(bytes)} / ${_formatBytes(total)}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), const Spacer(), if (status == 'paused') IconButton(onPressed: () => DownloadService.resumeTask(id), icon: const Icon(Icons.play_arrow_rounded, color: Colors.white)), if (status != 'paused') IconButton(onPressed: () => DownloadService.pauseTask(id), icon: const Icon(Icons.pause_rounded, color: Colors.white)), IconButton(onPressed: () => DownloadService.cancelTask(id), icon: const Icon(Icons.close_rounded, color: Colors.orange))]),
+        ],
+        if (status == 'failed' || status == 'cancelled' || (status == 'completed' && !exists)) Row(children: [Expanded(child: Text(item['error']?.toString().isNotEmpty == true ? item['error'].toString() : 'الملف غير موجود أو فشل التنزيل', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.orange, fontSize: 11))), TextButton(onPressed: () => DownloadService.retry(id), child: const Text('إعادة المحاولة'))]),
+        if (status == 'completed') Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(onPressed: () => DownloadService.delete(id), icon: const Icon(Icons.delete_outline, size: 18), label: const Text('حذف'))),
       ]),
     );
   }
 
-  Future<void> _open(Map<String, dynamic> item, bool isManga, {Map<String, dynamic>? nextItem}) async {
+  Widget _statusLine(String status, double progress) {
+    final text = {'queued': 'في قائمة الانتظار', 'downloading': 'جارٍ التنزيل', 'paused': 'متوقف مؤقتًا', 'completed': 'تم التنزيل', 'failed': 'فشل التنزيل', 'cancelled': 'تم الإلغاء'}[status] ?? status;
+    final color = status == 'completed' ? Colors.greenAccent : status == 'failed' || status == 'cancelled' ? Colors.orange : AppTheme.primaryColor;
+    return Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700));
+  }
+
+  String _formatBytes(int value) {
+    if (value < 1024 * 1024) return '${(value / 1024).toStringAsFixed(0)} KB';
+    return '${(value / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _open(Map<String, dynamic> item, bool isManga) async {
     final path = item['path']?.toString() ?? '';
-    if (!File(path).existsSync() && isManga == false) return;
     if (isManga) {
-      final files = Directory(path).existsSync() ? Directory(path).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.jpg')).toList() : <File>[];
-      files.sort((a, b) => a.path.compareTo(b.path));
+      final directory = Directory(path);
+      if (!directory.existsSync()) return;
+      final files = directory.listSync().whereType<File>().where((file) => file.path.toLowerCase().endsWith('.jpg')).toList()..sort((a, b) => a.path.compareTo(b.path));
       if (!mounted || files.isEmpty) return;
-      List<String>? nextPages;
-      if (nextItem != null && Directory(nextItem['path']?.toString() ?? '').existsSync()) {
-        final nextFiles = Directory(nextItem['path'].toString()).listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith('.jpg')).toList()..sort((a, b) => a.path.compareTo(b.path));
-        nextPages = nextFiles.map((f) => f.path).toList();
-      }
-      Navigator.push(context, MaterialPageRoute(builder: (_) => MangaReaderScreen(pages: files.map((f) => f.path).toList(), title: item['title']?.toString(), chapterId: item['chapter']?.toString(), comicImageUrl: item['cover_url']?.toString(), nextOfflinePages: nextPages, nextOfflineTitle: nextItem?['chapter']?.toString(), nextOfflineChapterId: nextItem?['chapter']?.toString())));
-    } else if (mounted) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => MangaReaderScreen(pages: files.map((file) => file.path).toList(), title: item['chapter']?.toString(), chapterId: item['chapter']?.toString(), comicImageUrl: item['cover_url']?.toString())));
+    } else if (File(path).existsSync() && mounted) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: path, title: item['episode']?.toString() ?? 'حلقة', episodeId: path)));
     }
   }

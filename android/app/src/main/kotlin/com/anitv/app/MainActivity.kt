@@ -51,7 +51,7 @@ class MainActivity: FlutterActivity() {
                 when (call.method) {
                 "sendToAdm" -> sendToAdm(call.argument<String>("url"), call.argument<String>("title"), result)
                 "downloadNotification" -> {
-                    showDownloadNotification(call.argument<String>("title") ?: "AniTV", call.argument<String>("body") ?: "", call.argument<Int>("progress") ?: 0, call.argument<Int>("total") ?: 0, call.argument<Boolean>("complete") ?: false, call.argument<String>("taskId") ?: "", call.argument<Boolean>("paused") ?: false)
+                    showDownloadNotification(call.argument<String>("title") ?: "AniTV", call.argument<String>("body") ?: "", call.argument<Int>("progress") ?: 0, call.argument<Int>("total") ?: 0, call.argument<Boolean>("complete") ?: false, call.argument<Boolean>("failed") ?: false, call.argument<String>("taskId") ?: "", call.argument<Boolean>("paused") ?: false)
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -111,11 +111,11 @@ class MainActivity: FlutterActivity() {
         } catch (_: Exception) { result.success(false) }
     }
 
-    private fun showDownloadNotification(title: String, body: String, progress: Int, total: Int, complete: Boolean, taskId: String, paused: Boolean) {
+    private fun showDownloadNotification(title: String, body: String, progress: Int, total: Int, complete: Boolean, failed: Boolean, taskId: String, paused: Boolean) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(NotificationChannel("downloads", "التنزيلات", NotificationManager.IMPORTANCE_LOW))
-        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete).setOngoing(!complete)
-        if (complete) {
+        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete || failed).setOngoing(!complete && !failed)
+        if (complete || failed) {
             manager.cancel(NOTIFICATION_ID)
             manager.notify(NOTIFICATION_ID + 1, builder.build())
         } else {
