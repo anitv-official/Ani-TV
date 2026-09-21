@@ -4,7 +4,9 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../models/remote_plugin.dart';
+import 'cloudstream_engine_service.dart';
 
 class RemoteRepositoryService {
   static const _timeout = Duration(seconds: 30);
@@ -91,6 +93,11 @@ class RemoteRepositoryService {
     final safeName = plugin.internalName.replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_');
     final file = File('${directory.path}/${safeName.isEmpty ? 'extension' : safeName}.cs3');
     await file.writeAsBytes(response.bodyBytes, flush: true);
+    try {
+      await CloudStreamEngineService.inspectPlugin(file.path);
+    } on MissingPluginException {
+      // Keep Dart tests and non-Android tooling usable; Android always exposes the bridge.
+    }
     final installed = plugin.withLocalPath(file.path);
     final current = (await installedPlugins()).where((item) => item.stableId != plugin.stableId).toList()..add(installed);
     final preferences = await SharedPreferences.getInstance();

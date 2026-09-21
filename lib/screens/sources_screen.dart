@@ -14,10 +14,12 @@ import 'comic_details_screen.dart';
 import 'fasel_explore_screen.dart';
 import 'video_player_screen.dart';
 import 'explore_screen.dart';
+import 'youtube_screen.dart';
 
 Widget sourceContentPage(ContentSource source) {
   if (source.id == 'fasel_hd') return const FaselExploreScreen();
   if (source.id == 'drama_slayer') return const ExploreScreen(initialIsAnime: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
+  if (source.id == 'youtube') return const YoutubeScreen();
   return SourceContentScreen(source: source);
 }
 
@@ -38,7 +40,7 @@ class SourcesScreen extends StatelessWidget {
             FutureBuilder<List<RemotePlugin>>(
               future: remoteRepositoryService.installedPlugins(),
               builder: (context, snapshot) {
-                final installed = snapshot.data ?? const <RemotePlugin>[];
+                final installed = (snapshot.data ?? const <RemotePlugin>[]).where((plugin) => !SourceRegistry.isHiddenFromExtensionLists(plugin)).toList();
                 if (installed.isEmpty) return const SizedBox.shrink();
                 return Container(
                   margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -167,7 +169,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
     if (_loadingMore || !mounted) return;
     _loadingMore = true;
     try {
-      final next = await widget.source.latest(page: _page + 1);
+      final next = await widget.source.nextPage(query: _searchController.text.trim(), page: _page + 1);
       if (!mounted || next.isEmpty) return;
       final current = await _content;
       final keys = current.map((e) => e['url'] ?? e['title']).toSet();
@@ -177,6 +179,31 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
       });
     } finally {
       _loadingMore = false;
+    }
+  }
+
+  Future<void> _playYoutube(Map<String, dynamic> item) async {
+    final url = item['url']?.toString() ?? '';
+    if (url.isEmpty) return;
+    try {
+      final streams = await SourceRegistry.streams(url);
+      final links = (streams?['direct_stream_urls'] as List? ?? const [])
+          .whereType<Map>()
+          .map((link) => <String, String>{
+                'url': link['url']?.toString() ?? '',
+                'quality': link['quality']?.toString() ?? link['label']?.toString() ?? 'Auto',
+                'label': link['label']?.toString() ?? link['quality']?.toString() ?? 'YouTube',
+              })
+          .where((link) => link['url']!.isNotEmpty)
+          .toList();
+      if (!mounted) return;
+      if (links.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر استخراج رابط تشغيل YouTube حاليًا، حاول لاحقًا.')));
+        return;
+      }
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(url: links.first['url']!, title: item['title']?.toString() ?? 'YouTube', episodeId: url, directStreamUrls: links, allowWebView: false)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تشغيل فيديو YouTube داخل التطبيق.')));
     }
   }
 
@@ -226,7 +253,17 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
           return RefreshIndicator(
             color: AppTheme.primaryColor,
             onRefresh: () async => setState(() => _content = widget.source.latest()),
-            child: ContentGrid(
+            child: widget.source.id == 'youtube'
+                ? ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(12, 16, 12, 32),
+                    itemCount: items.length + (_loadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= items.length) return const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()));
+                      return _YoutubeVideoCard(item: items[index], onTap: () => _playYoutube(items[index]));
+                    },
+                  )
+                : ContentGrid(
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: items.length,
@@ -236,13 +273,7 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
                   title: item['title']?.toString(),
                   imageUrl: item['image_url']?.toString(),
                   badge: widget.source.id == 'youtube' ? 'YouTube' : (widget.source.kind == 'drama' ? 'دراما' : (isVideo ? 'أنمي' : item['type']?.toString())),
-                  onTap: () => Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => widget.source.id == 'youtube'
-                        ? VideoPlayerScreen(url: item['url'].toString(), title: item['title']?.toString() ?? 'YouTube', episodeId: item['url'].toString())
-                        : isVideo
-                            ? AnimeDetailsScreen(url: item['url'].toString())
-                            : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()),
-                  )),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => isVideo ? AnimeDetailsScreen(url: item['url'].toString()) : ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString()))),
                 );
               },
             ),
@@ -253,6 +284,34 @@ class _SourceContentScreenState extends State<SourceContentScreen> {
       ),
     );
   }
+}
+
+class _YoutubeVideoCard extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+  const _YoutubeVideoCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => Card(
+        margin: const EdgeInsets.only(bottom: 18),
+        clipBehavior: Clip.antiAlias,
+        color: AppTheme.surfaceColor,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            AspectRatio(aspectRatio: 16 / 9, child: Image.network(item['image_url']?.toString() ?? '', fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.black26, child: const Icon(Icons.play_circle_outline, color: Colors.white54, size: 48)))),
+            Padding(padding: const EdgeInsets.fromLTRB(14, 12, 14, 14), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const CircleAvatar(radius: 18, backgroundColor: Color(0xFFE62117), child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20)),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(item['title']?.toString() ?? 'فيديو YouTube', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text([item['description']?.toString() ?? '', item['rating']?.toString() ?? ''].where((value) => value.isNotEmpty).join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+              ])),
+            ])),
+          ]),
+        ),
+      );
 }
 
 class SourceSummary extends StatelessWidget {
