@@ -166,6 +166,8 @@ class SourceRegistry {
       'kormoz.com',
       'kormozi.com',
       'kormozy.com',
+      'qrmzi.tv',
+      'krmzi.org',
       'mediafire.com',
       'pixeldrain.com',
       'firestream.to',
@@ -177,7 +179,7 @@ class SourceRegistry {
     final extractorCandidate = source.id == 'egydead' &&
         RegExp(r'(?:embed|player|stream|vid|file)', caseSensitive: false).hasMatch(lower);
     final providerEmbed =
-        (source.id == 'egydead' || source.id == 'anime_witcher') && requestedEmbed;
+        (source.id == 'egydead' || source.id == 'kormoz' || source.id == 'anime_witcher') && requestedEmbed;
     return providerVideo || (!requestedEmbed && media) || embeddedPlayer || extractorCandidate || providerEmbed;
   }
 

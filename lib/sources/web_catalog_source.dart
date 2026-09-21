@@ -48,15 +48,22 @@ class WebCatalogSource extends ContentSource {
           RegExp(r'<title[^>]*>(.*?)</title>', caseSensitive: false, dotAll: true),
         ]) ?? sourceName;
     final description = HtmlParse.meta(html, 'og:description') ?? '';
+    final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+    final isEpisode = path.contains('/episode/') || path.contains('/watch/') || path.contains('/play/');
+    final isMovie = path.contains('/movie') || path.contains('/movies') || path.contains('/film');
+    final episodes = isEpisode
+        ? [{'title': SourceUtils.cleanTitle(title), 'url': url, 'number': SourceUtils.episodeNumber(title) ?? 1}]
+        : _episodeLinks(html, url);
     return {
       ...item(
         title: SourceUtils.cleanTitle(title),
         url: url,
         image: HtmlParse.meta(html, 'og:image') ?? '',
-        type: sourceKind == 'anime' ? 'anime' : 'فيلم',
+        type: sourceKind == 'anime' ? 'anime' : (isMovie ? 'movie' : 'series'),
         description: SourceUtils.cleanTitle(description),
       ),
-      'episodes': _episodeLinks(html, url),
+      'episodes': episodes,
+      'total_episodes': episodes.length,
       'videos': <Map<String, dynamic>>[],
     };
   }
@@ -121,9 +128,9 @@ class WebCatalogSource extends ContentSource {
     for (final match in pattern.allMatches(html)) {
       final attrs = match.group(1) ?? '';
       final text = SourceUtils.cleanTitle(match.group(2) ?? '');
-      if (!RegExp(r'(الحلقة|حلقة|episode|ep\.?\s*\d+|مشاهدة|watch)', caseSensitive: false).hasMatch(text)) continue;
       final href = HtmlParse.firstMatch(attrs, [RegExp(r'''href=["']([^"']+)''', caseSensitive: false)]);
       if (href == null) continue;
+      if (!RegExp(r'(الحلقة|حلقة|episode|ep\.?\s*\d+|مشاهدة|watch|play)', caseSensitive: false).hasMatch(text) && !RegExp(r'/(?:episode|watch|play)/', caseSensitive: false).hasMatch(href)) continue;
       final resolved = HtmlParse.absUrl(pageUrl, href);
       if (!seen.add(resolved)) continue;
       results.add({
@@ -202,7 +209,7 @@ class WecimaSource extends WebCatalogSource {
 class KormozSource extends WebCatalogSource {
   KormozSource() : super(
     sourceId: 'kormoz', sourceName: 'كُرْمُزِي (Kormoz)', sourceKind: 'movie',
-    sourceHosts: const ['kormoz.com', 'kormozi.com', 'kormozy.com'],
-    baseUrl: 'https://kormoz.com/', searchParam: 's',
+    sourceHosts: const ['qrmzi.tv', 'kormoz.com', 'kormozi.com', 'kormozy.com', 'krmzi.org'],
+    baseUrl: 'https://www.qrmzi.tv/', searchParam: 's',
   );
 }

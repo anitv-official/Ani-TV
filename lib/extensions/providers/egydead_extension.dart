@@ -113,8 +113,8 @@ class EgyDeadExtension extends AniExtension {
     final title = _clean(_meta(document, 'og:title') ?? document.querySelector('h1')?.text ?? name);
     final poster = _meta(document, 'og:image') ?? '';
     final description = _clean(_meta(document, 'og:description') ?? document.querySelector('div.singleStory')?.text ?? '');
-    final isMovie = url.contains('/film/');
-    final isEpisode = url.contains('/episode/');
+    final isMovie = url.contains('/film/') || RegExp(r'\b(فيلم|movie|film)\b', caseSensitive: false).hasMatch(title);
+    final isEpisode = url.contains('/episode/') || url.contains('/watch/') || RegExp(r'(الحلقة|episode|ep\.?\s*\d+)', caseSensitive: false).hasMatch(title);
     final episodes = isMovie || isEpisode
         ? [_episode(url, title, isEpisode ? (_episodeNumber(title) ?? _episodeNumber(url) ?? 1) : 1)]
         : await _loadSeriesEpisodes(document, url);
@@ -127,11 +127,11 @@ class EgyDeadExtension extends AniExtension {
 
   Future<List<Map<String, dynamic>>> _loadSeriesEpisodes(dom.Document document, String url) async {
     final seasonUrls = <String>{};
-    for (final anchor in document.querySelectorAll('div.seasons-list a, div.seasons a, div.seasons-list li a')) {
+    for (final anchor in document.querySelectorAll('div.seasons-list a, div.seasons a, div.seasons-list li a, ul.seasons a, .season-list a, .seasons-list a, a[href*="/season/"]')) {
       final href = anchor.attributes['href'];
       if (href == null) continue;
       final resolved = _resolve(href, url);
-      if (resolved.contains('/season/')) seasonUrls.add(resolved);
+      if (resolved.contains('/season/') || RegExp(r'(?:season|الموسم)', caseSensitive: false).hasMatch(resolved)) seasonUrls.add(resolved);
     }
     final pages = <String, dom.Document>{url: document};
     for (final seasonUrl in seasonUrls) {
@@ -155,11 +155,12 @@ class EgyDeadExtension extends AniExtension {
       ...document.querySelectorAll('div.EpsList'),
       ...document.querySelectorAll('div.episodes-list'),
       ...document.querySelectorAll('ul.episodes'),
+      ...document.querySelectorAll('.EpisodesList, .episodes-list, .all-episodes, .season-episodes, .watch-episodes'),
     ];
     if (containers.isEmpty && pageUrl.contains('/season/')) return [];
     final nodes = containers.isNotEmpty
-        ? containers.first.querySelectorAll('li, a')
-        : document.querySelectorAll('a[href*="/episode/"]');
+        ? containers.expand((container) => container.querySelectorAll('li, a'))
+        : document.querySelectorAll('a[href*="/episode/"], a[href*="/watch/"], a[href*="episode"], a[data-episode]');
     if (nodes.isEmpty && pageUrl.contains('/episode/')) {
       final title = _clean(_meta(document, 'og:title') ?? document.querySelector('h1')?.text ?? 'الحلقة');
       return [_episode(pageUrl, title, _episodeNumber(title) ?? _episodeNumber(pageUrl) ?? 1)];
@@ -171,7 +172,8 @@ class EgyDeadExtension extends AniExtension {
       final href = anchor.attributes['href'];
       if (href == null) continue;
       final resolved = _resolve(href, pageUrl);
-      if (!resolved.contains('/episode/') || resolved.contains('/season/') || resolved.contains('/film/')) continue;
+      final episodeLike = resolved.contains('/episode/') || resolved.contains('/watch/') || resolved.contains('episode') || anchor.attributes['data-episode'] != null;
+      if (!episodeLike || resolved.contains('/season/') || resolved.contains('/film/')) continue;
       final title = _clean(anchor.attributes['title'] ?? anchor.text);
       final number = _episodeNumber(title) ?? _episodeNumber(resolved) ?? output.length + 1;
       output.add(_episode(resolved, title.isEmpty ? 'الحلقة $number' : title, number, season: _seasonNumber(title) ?? _seasonNumber(pageUrl) ?? 1));
@@ -211,12 +213,12 @@ class EgyDeadExtension extends AniExtension {
       candidates.add(_Candidate(resolved, server?.trim().isEmpty == true ? null : server?.trim()));
     }
     final document = html_parser.parse(html);
-    for (final selector in ['ul.donwload-servers-list li', 'ul.download-servers-list li', 'div.donwload-servers-list li', 'ul.serversList li', 'ul.servers-list li', 'div.serversList li', 'div.servers-list li']) {
+    for (final selector in ['ul.donwload-servers-list li', 'ul.download-servers-list li', 'div.donwload-servers-list li', 'ul.serversList li', 'ul.servers-list li', 'div.serversList li', 'div.servers-list li', '.servers a', '.server a', '[data-server]']) {
       for (final li in document.querySelectorAll(selector)) {
         add(li.attributes['data-link'] ?? li.querySelector('[data-link]')?.attributes['data-link'] ?? li.querySelector('button[data-link]')?.attributes['data-link'] ?? li.querySelector('a.ser-link')?.attributes['href'] ?? li.querySelector('a')?.attributes['href'], li.querySelector('p')?.text ?? li.querySelector('.ser-name')?.text ?? li.querySelector('span.ser-name')?.text ?? li.attributes['data-name'] ?? li.attributes['data-provider']);
       }
     }
-    for (final element in document.querySelectorAll('[data-link]')) add(element.attributes['data-link'], element.attributes['data-name'] ?? element.attributes['data-provider']);
+    for (final element in document.querySelectorAll('[data-link], [data-url], [data-server-url]')) add(element.attributes['data-link'] ?? element.attributes['data-url'] ?? element.attributes['data-server-url'], element.attributes['data-name'] ?? element.attributes['data-provider'] ?? element.attributes['data-server']);
     for (final anchor in document.querySelectorAll('a')) {
       final href = anchor.attributes['href'];
       if (href != null && RegExp(r'(player|embed|download|drive|mp4|m3u8)', caseSensitive: false).hasMatch(href)) add(href, anchor.attributes['title'] ?? anchor.text);
