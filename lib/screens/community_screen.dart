@@ -122,8 +122,13 @@ class _CommunityBodyState extends State<_CommunityBody> {
                     onProfile: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                UserProfileScreen(userId: post.author.id))),
+                            builder: (_) => UserProfileScreen(
+                                userId: post.author.id,
+                                isCurrentUser:
+                                    post.author.id == account.userId,
+                                avatarFuture: post.author.id == account.userId
+                                    ? account.profileImageBytes
+                                    : null))),
                     onShare: () => Share.share(post.text.isEmpty
                         ? 'منشور من مجتمع AniTV'
                         : post.text));
