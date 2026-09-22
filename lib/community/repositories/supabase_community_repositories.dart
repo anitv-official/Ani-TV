@@ -463,7 +463,7 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
     try {
       final result = await writeApi.invoke('list_conversations');
       final rows = (result['conversations'] as List?) ?? const [];
-      return rows.map((value) {
+      return Future.wait(rows.map((value) async {
         final row = Map<String, dynamic>.from(value as Map);
         final participant = Map<String, dynamic>.from(
             (row['participant'] as Map?) ?? const {});
@@ -475,7 +475,7 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
             participant: hydratedParticipant,
             lastMessage: last['content']?.toString() ?? '',
             updatedAt: DateTime.parse(row['updated_at'].toString()));
-      }).toList();
+      }));
     } catch (error) {
       throw this.error(error);
     }
