@@ -9,7 +9,6 @@ import '../services/appwrite_service.dart';
 import '../services/local_cache_service.dart';
 import '../l10n/app_strings.dart';
 import '../services/fcm_service.dart';
-import '../services/firebase_auth_service.dart';
 
 class RegistrationResult {
   final bool accountCreated;
@@ -36,7 +35,6 @@ class AppStateProvider extends ChangeNotifier {
   String _languageCode = 'ar';
   AppPalette _palette = AppPalette.blue;
   final AppwriteService _appwrite = AppwriteService.instance;
-  final FirebaseAuthService _firebaseAuth = FirebaseAuthService.instance;
   final LocalCacheService _cache = LocalCacheService.instance;
   String? _userId;
   String? _profileDocumentId;
@@ -101,20 +99,6 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      try {
-        await _firebaseAuth.initialize();
-      } catch (error) {
-        debugPrint('Firebase session restore skipped: $error');
-      }
-      final firebaseUser = _firebaseAuth.currentUser;
-      if (firebaseUser != null) {
-        _isDarkMode = prefs.getBool('dark_mode_user_firebase_${firebaseUser.uid}') ?? true;
-        _languageCode = prefs.getString('app_language') == 'en' ? 'en' : 'ar';
-        _palette = appPaletteFromString(prefs.getString('app_palette'));
-        await _applyFirebaseUser(firebaseUser);
-        notifyListeners();
-        return;
-      }
       final user = await _appwrite.getCurrentUser();
       _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
@@ -177,42 +161,6 @@ class AppStateProvider extends ChangeNotifier {
     _favoriteComics = await _cache.readFavorites(userId, 'comics');
   }
 
-  Future<void> _applyFirebaseUser(dynamic user) async {
-    if (user == null) {
-      _clearUser();
-      await FcmService.instance.clearUser();
-      return;
-    }
-    // Firebase and Appwrite have separate account namespaces. The prefix
-    // prevents a Firebase UID from ever being treated as an Appwrite user ID.
-    _userId = 'firebase_${user.uid as String}';
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastUserIdKey, _userId!);
-    _isOffline = false;
-    _displayName = (user.displayName as String?)?.trim() ?? '';
-    _email = (user.email as String?)?.trim() ?? '';
-    _emailVerified = true;
-    _isLoggedIn = true;
-    await FcmService.instance.setUser(_userId);
-    await _loadLocalAccountCache(_userId!);
-    try {
-      final profile = await _appwrite.ensureProfile(
-        userId: _userId!,
-        username: _username.isEmpty ? _usernameCandidate(_userId!) : _username,
-      );
-      _profileDocumentId = profile.$id;
-      final data = Map<String, dynamic>.from(profile.data as Map);
-      _username = (data['username'] ?? _username).toString();
-      _displayName = (data['displayname'] ?? _displayName).toString();
-      _birthDate = (data['birthdate'] ?? _birthDate).toString();
-      _country = (data['country'] ?? _country).toString();
-      _profileImageId = (data['profileImageId'] ?? _profileImageId).toString();
-      await _writeCurrentProfileCache();
-    } catch (error) {
-      debugPrint('Firebase profile sync skipped: $error');
-    }
-  }
-
   Future<void> _syncAccountFromCloud() async {
     final lastSync = _lastCloudSyncAt;
     if (lastSync != null && DateTime.now().toUtc().difference(lastSync) < const Duration(minutes: 5)) return;
@@ -231,8 +179,8 @@ class AppStateProvider extends ChangeNotifier {
     final userId = _userId;
     if (userId == null) return;
     try {
-      // OAuth users may not have chosen a username yet. Keep it empty until
-      // the user explicitly chooses one; never use displayName as identity.
+      // Keep the username independent from the display name; users choose it
+      // explicitly and it is never used as an implicit identity.
       final profile = await _appwrite.ensureProfile(userId: userId, username: _username);
       _profileDocumentId = profile.$id;
       await FcmService.instance.setUser(userId);
@@ -377,22 +325,6 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loginWithGoogle() async {
-    try {
-      final user = await _firebaseAuth.signInWithGoogle();
-      _favoriteAnime = [];
-      _favoriteComics = [];
-      _animeHistory = [];
-      _comicHistory = [];
-      await _applyFirebaseUser(user);
-      if (_isLoggedIn) await _loadHistory();
-      notifyListeners();
-    } catch (_) {
-      _clearUser();
-      rethrow;
-    }
-  }
-
   Future<RegistrationResult> register({
     required String email,
     required String password,
@@ -500,7 +432,6 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> logout() async {
     try {
       await FcmService.instance.clearUser();
-      if (_firebaseAuth.currentUser != null) await _firebaseAuth.signOut();
       if (await _appwrite.getCurrentUser() != null) await _appwrite.logout();
       _clearUser();
       notifyListeners();
@@ -513,27 +444,13 @@ class AppStateProvider extends ChangeNotifier {
       throw const AccountDeletionException('NO_SESSION');
     }
     await FcmService.instance.clearUser();
-    if (_firebaseAuth.currentUser != null) {
-      await _firebaseAuth.deleteAccount();
-    } else {
-      await _appwrite.deleteCurrentAccount(password: password);
-    }
+    await _appwrite.deleteCurrentAccount(password: password);
     await _cache.clearUserData(userId);
     _clearUser();
     notifyListeners();
   }
 
   Future<void> updateProfileName(String name) async {
-    if (_firebaseAuth.currentUser != null) {
-      await _firebaseAuth.updateDisplayName(name);
-      final documentId = await _ensureCurrentProfileId();
-      final profile = await _appwrite.updateProfile(documentId: documentId, username: _username, displayName: name);
-      _profileDocumentId = profile.$id;
-      _displayName = name.trim();
-      await _writeCurrentProfileCache();
-      notifyListeners();
-      return;
-    }
     final user = await _appwrite.updateName(name);
     final documentId = _profileDocumentId;
     if (documentId != null) {

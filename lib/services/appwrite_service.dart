@@ -4,11 +4,9 @@ import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/src/enums.dart' show HttpMethod;
-import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'firebase_auth_service.dart';
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
 class AppwriteService {
@@ -88,25 +86,6 @@ class AppwriteService {
   Future<models.User> login({required String email, required String password}) async {
     final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
     await _rememberSession(session.secret);
-    return account.get();
-  }
-
-  Future<models.User> loginWithGoogle() async {
-    const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
-    const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
-    // SDK 17 opens Google, waits for the Android callback, and completes the
-    // Appwrite session before this future returns.
-    await account.createOAuth2Session(
-      provider: enums.OAuthProvider.google,
-      success: success,
-      failure: failure,
-    );
-    try {
-      final session = await account.getSession(sessionId: 'current');
-      await _rememberSession(session.secret);
-    } catch (_) {
-      // account.get() below remains the source of truth for OAuth sessions.
-    }
     return account.get();
   }
 
@@ -398,14 +377,6 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
-  if (error is GoogleAuthException || error is FirebaseGoogleAuthException) {
-    final code = error is GoogleAuthException ? error.code : (error as FirebaseGoogleAuthException).code;
-    return code == 'CANCELLED'
-        ? 'تم إلغاء تسجيل الدخول باستخدام Google.'
-        : code.contains('DEVELOPER_ERROR') || code.contains('GOOGLE_10')
-            ? 'إعداد Google غير مكتمل للتطبيق (SHA-1 أو OAuth). أضف بصمة توقيع التطبيق في Firebase ثم جرّب مرة أخرى. ($code)'
-            : 'تعذر تسجيل الدخول باستخدام Google. رمز الخطأ: $code';
-  }
   if (error is AccountCreatedButSessionUnavailableException) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
   }
@@ -454,11 +425,6 @@ class UsernameAvailabilityException implements Exception {
 class AccountCreatedButSessionUnavailableException implements Exception {
   final Object cause;
   const AccountCreatedButSessionUnavailableException(this.cause);
-}
-
-class GoogleAuthException implements Exception {
-  final String code;
-  const GoogleAuthException(this.code);
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';

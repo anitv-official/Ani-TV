@@ -34,20 +34,6 @@ class AuthChoiceScreen extends StatelessWidget {
               icon: const Icon(Icons.visibility_outlined, color: AppTheme.textSecondaryColor),
               label: const Text('المتابعة كزائر', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15)),
             ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () async {
-                try {
-                  await context.read<AppStateProvider>().loginWithGoogle();
-                  if (context.mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
-                } catch (error) {
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
-                }
-              },
-              icon: const Text('G', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-              label: const Text('التسجيل باستخدام Google'),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), side: const BorderSide(color: AppTheme.borderColor), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-            ),
           ],
         ),
       ),
