@@ -7,6 +7,7 @@ import '../community/services/appwrite_community_identity.dart';
 import '../community/widgets/community_widgets.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
+import '../services/appwrite_service.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key, required this.userId, this.isCurrentUser = false, this.avatarFuture});
@@ -119,7 +120,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   return ListView(children: [
                     _ProfileHeader(
                         profile: profile,
-                        avatarFuture: widget.avatarFuture,
+                        avatarFuture: widget.avatarFuture ??
+                            (profile.author.avatarPath == null
+                                ? null
+                                : AppwriteService.instance.profileImageBytes(
+                                    profile.author.avatarPath!)),
                         onFriend: profile.friendStatus == FriendStatus.friends
                             ? null
                             : widget.isCurrentUser ? null : _addFriend,

@@ -273,7 +273,7 @@ class AppwriteService {
       fileId: ID.unique(),
       file: InputFile.fromBytes(bytes: response.bodyBytes, filename: filename),
       permissions: [
-        Permission.read(Role.user(userId)),
+        Permission.read(Role.any()),
         Permission.update(Role.user(userId)),
         Permission.delete(Role.user(userId))
       ],
@@ -603,7 +603,7 @@ class AppwriteService {
       fileId: ID.unique(),
       file: InputFile.fromPath(path: path),
       permissions: [
-        Permission.read(Role.user(userId)),
+        Permission.read(Role.any()),
         Permission.update(Role.user(userId)),
         Permission.delete(Role.user(userId))
       ],
@@ -613,6 +613,18 @@ class AppwriteService {
 
   Future<Uint8List> profileImageBytes(String fileId) =>
       storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
+  Future<void> makeProfileImagePublic(
+      {required String userId, required String fileId}) async {
+    if (fileId.trim().isEmpty) return;
+    await storage.updateFile(
+        bucketId: profileImagesBucketId,
+        fileId: fileId,
+        permissions: [
+          Permission.read(Role.any()),
+          Permission.update(Role.user(userId)),
+          Permission.delete(Role.user(userId))
+        ]);
+  }
   Future<void> deleteProfileImage(String fileId) async {
     if (fileId.isNotEmpty)
       await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId);

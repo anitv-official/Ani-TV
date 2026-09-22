@@ -10,6 +10,7 @@ import '../community/widgets/community_widgets.dart';
 import '../community/services/community_repository_factory.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
+import '../services/appwrite_service.dart';
 import 'community_social_screens.dart';
 import 'community_notifications_screen.dart';
 
@@ -600,18 +601,60 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                           itemCount: comments.length,
                           itemBuilder: (_, index) {
                             final comment = comments[index];
-                            return ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: CommunityAvatar(
-                                  author: comment.author, radius: 18),
-                              title: Text(comment.author.displayName,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700)),
-                              subtitle: Text(comment.text,
-                                  style: const TextStyle(
-                                      color: AppTheme.textSecondaryColor,
-                                      height: 1.4)),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                  color: AppTheme.surfaceColor,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                      color: AppTheme.borderColor)),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CommunityAvatar(
+                                      author: comment.author,
+                                      radius: 19,
+                                      avatarFuture: comment.author.avatarPath ==
+                                              null
+                                          ? null
+                                          : AppwriteService.instance
+                                              .profileImageBytes(
+                                                  comment.author.avatarPath!)),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                        Row(children: [
+                                          Expanded(
+                                              child: Text(comment.author.label,
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w800))),
+                                          Text(_commentTime(comment.createdAt),
+                                              style: const TextStyle(
+                                                  color:
+                                                      AppTheme.textMutedColor,
+                                                  fontSize: 10))
+                                        ]),
+                                        const SizedBox(height: 4),
+                                        Text('@${comment.author.username}',
+                                            style: const TextStyle(
+                                                color:
+                                                    AppTheme.textMutedColor,
+                                                fontSize: 11)),
+                                        const SizedBox(height: 5),
+                                        Text(comment.text,
+                                            style: const TextStyle(
+                                                color: AppTheme
+                                                    .textSecondaryColor,
+                                                height: 1.4))
+                                      ]))
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -638,3 +681,6 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     );
   }
 }
+
+String _commentTime(DateTime value) =>
+    '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';

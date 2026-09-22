@@ -5,6 +5,7 @@ import '../services/appwrite_community_identity.dart';
 import '../services/community_backend_config.dart';
 import '../services/community_media_api.dart';
 import '../services/community_write_api.dart';
+import '../../services/appwrite_service.dart';
 
 class SupabaseRepositoryBase {
   SupabaseRepositoryBase(
@@ -102,7 +103,7 @@ class SupabasePostRepository extends SupabaseRepositoryBase
     try {
       var request = client
           .from('community_posts')
-          .select('*, community_profiles(*), community_post_media(*)')
+          .select('*, community_profiles!community_posts_author_id_fkey(*), community_post_media(*)')
           .isFilter('deleted_at', null)
           .ilike('content', query.trim().isEmpty ? '%' : '%${query.trim()}%');
       if (before != null)
@@ -155,15 +156,47 @@ class SupabaseCommentRepository extends SupabaseRepositoryBase
     try {
       final rows = await client
           .from('community_comments')
-          .select('*, community_profiles(*)')
+          .select('*, community_profiles!community_comments_author_id_fkey(*)')
           .eq('post_id', postId)
           .isFilter('deleted_at', null)
           .order('created_at');
-      return (rows as List)
+      final comments = (rows as List)
           .map((row) => _commentFromRow(Map<String, dynamic>.from(row as Map)))
           .toList();
+      return Future.wait(comments.map(_hydrateCommentAuthor));
     } catch (error) {
       throw this.error(error);
+    }
+  }
+
+  Future<CommunityComment> _hydrateCommentAuthor(
+      CommunityComment comment) async {
+    try {
+      final document =
+          await AppwriteService.instance.getProfile(comment.author.id);
+      final data = document?.data ?? const <String, dynamic>{};
+      final username = data['username']?.toString().trim();
+      final displayName = data['displayname']?.toString().trim();
+      final imageId = data['profileImageId']?.toString().trim();
+      return CommunityComment(
+          id: comment.id,
+          postId: comment.postId,
+          author: PostAuthor(
+              id: comment.author.id,
+              username: username?.isNotEmpty == true
+                  ? username!
+                  : comment.author.username,
+              displayName: displayName?.isNotEmpty == true
+                  ? displayName!
+                  : comment.author.displayName,
+              avatarPath: imageId?.isNotEmpty == true
+                  ? imageId
+                  : comment.author.avatarPath,
+              isVerified: comment.author.isVerified),
+          text: comment.text,
+          createdAt: comment.createdAt);
+    } catch (_) {
+      return comment;
     }
   }
 
@@ -213,7 +246,8 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
           .select('*')
           .eq('user_id', userId)
           .single();
-      final profile = _profileFromRow(Map<String, dynamic>.from(row));
+      var profile = await _withAppwriteData(
+          _profileFromRow(Map<String, dynamic>.from(row)), userId);
       final current = await identity.currentUserId();
       if (current == null || current == userId) return profile;
       try {
@@ -229,10 +263,42 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
         final current = await requireUser();
         if (current == userId) {
           final row = await writeApi.invoke('ensure_profile');
-          return _profileFromRow(row);
+          return _withAppwriteData(_profileFromRow(row), userId);
         }
       }
       throw this.error(error);
+    }
+  }
+
+  Future<CommunityProfile> _withAppwriteData(
+      CommunityProfile profile, String userId) async {
+    try {
+      final appwriteProfile =
+          await AppwriteService.instance.getProfile(userId);
+      final data = appwriteProfile?.data ?? const <String, dynamic>{};
+      final username = data['username']?.toString().trim();
+      final displayName = data['displayname']?.toString().trim();
+      final imageId = data['profileImageId']?.toString().trim();
+      return CommunityProfile(
+          author: PostAuthor(
+              id: userId,
+              username: username?.isNotEmpty == true
+                  ? username!
+                  : profile.author.username,
+              displayName: displayName?.isNotEmpty == true
+                  ? displayName!
+                  : profile.author.displayName,
+              avatarPath: imageId?.isNotEmpty == true
+                  ? imageId
+                  : profile.author.avatarPath,
+              isVerified: profile.author.isVerified),
+          country: data['country']?.toString() ?? profile.country,
+          birthDate: data['birthdate']?.toString() ?? profile.birthDate,
+          bio: profile.bio,
+          friendStatus: profile.friendStatus,
+          favoriteTitles: profile.favoriteTitles);
+    } catch (_) {
+      return profile;
     }
   }
 
@@ -241,7 +307,7 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
     try {
       final rows = await client
           .from('community_posts')
-          .select('*, community_profiles(*), community_post_media(*)')
+          .select('*, community_profiles!community_posts_author_id_fkey(*), community_post_media(*)')
           .eq('author_id', userId)
           .isFilter('deleted_at', null)
           .order('created_at', ascending: false)

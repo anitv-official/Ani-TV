@@ -213,6 +213,12 @@ class AppStateProvider extends ChangeNotifier {
       _birthDate = (data['birthdate'] ?? '').toString();
       _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
+      if (_profileImageId?.isNotEmpty == true) {
+        try {
+          await _appwrite.makeProfileImagePublic(
+              userId: userId, fileId: _profileImageId);
+        } catch (_) {}
+      }
       await _storeSocialProfileImage();
       await _cache.writeProfile(userId, {
         'profileDocumentId': _profileDocumentId,
