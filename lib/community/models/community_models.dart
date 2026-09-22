@@ -182,13 +182,15 @@ class CommunityNotification {
   final String body;
   final DateTime createdAt;
   final bool isRead;
+  final String? friendRequestId;
   const CommunityNotification(
       {required this.id,
       required this.type,
       required this.title,
       required this.body,
       required this.createdAt,
-      this.isRead = false});
+      this.isRead = false,
+      this.friendRequestId});
 }
 
 class CreatePostDraft {

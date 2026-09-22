@@ -20,8 +20,10 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final profiles = CommunityRepositoryFactory.profile();
   final friends = CommunityRepositoryFactory.friends();
+  final community = CommunityRepositoryFactory.community();
   late Future<CommunityProfile> profileFuture;
   late Future<List<CommunityPost>> postsFuture;
+  List<CommunityPost> loadedPosts = [];
   @override
   void initState() {
     super.initState();
@@ -42,6 +44,56 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               : 'تم تحديث حالة الصداقة.')));
   }
 
+  Future<void> _toggleLike(CommunityPost post) async {
+    final updated = await community.toggleLike(post);
+    if (!mounted) return;
+    setState(() {
+      final index = loadedPosts.indexWhere((item) => item.id == post.id);
+      if (index >= 0) loadedPosts[index] = updated;
+    });
+  }
+
+  Future<void> _showComments(CommunityPost post) async {
+    final items = await community.fetchComments(post.id);
+    if (!mounted) return;
+    final input = TextEditingController();
+    await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+            builder: (_, setDialogState) => AlertDialog(
+                title: const Text('التعليقات'),
+                content: SizedBox(
+                    width: double.maxFinite,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      if (items.isEmpty)
+                        const Text('لا توجد تعليقات بعد.')
+                      else
+                        ...items.map((item) => ListTile(
+                            dense: true,
+                            title: Text(item.author.label),
+                            subtitle: Text(item.text))),
+                      TextField(
+                          controller: input,
+                          decoration: const InputDecoration(
+                              hintText: 'اكتب تعليقًا...'))
+                    ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('إغلاق')),
+                  FilledButton(
+                      onPressed: () async {
+                        if (input.text.trim().isEmpty) return;
+                        final comment =
+                            await community.addComment(post.id, input.text);
+                        input.clear();
+                        setDialogState(() => items.add(comment));
+                      },
+                      child: const Text('إرسال'))
+                ])));
+    input.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -60,7 +112,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             return FutureBuilder<List<CommunityPost>>(
                 future: postsFuture,
                 builder: (_, postsSnapshot) {
-                  final posts = postsSnapshot.data ?? const <CommunityPost>[];
+                  if (postsSnapshot.hasData && loadedPosts.isEmpty) {
+                    loadedPosts = [...postsSnapshot.data!];
+                  }
+                  final posts = loadedPosts;
                   return ListView(children: [
                     _ProfileHeader(
                         profile: profile,
@@ -111,8 +166,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     else
                       ...posts.map((post) => CommunityPostItem(
                           post: post,
-                          onLike: () {},
-                          onComment: () {},
+                          onLike: () => _toggleLike(post),
+                          onComment: () => _showComments(post),
                           onProfile: () {},
                           onShare: () {}))
                   ]);

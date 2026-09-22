@@ -213,7 +213,17 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
           .select('*')
           .eq('user_id', userId)
           .single();
-      return _profileFromRow(Map<String, dynamic>.from(row));
+      final profile = _profileFromRow(Map<String, dynamic>.from(row));
+      final current = await identity.currentUserId();
+      if (current == null || current == userId) return profile;
+      try {
+        final status = await SupabaseFriendRepository(
+                client: client, identity: identity)
+            .statusFor(userId);
+        return profile.copyWith(friendStatus: status);
+      } catch (_) {
+        return profile;
+      }
     } catch (error) {
       if (error is PostgrestException && error.code == 'PGRST116') {
         final current = await requireUser();
@@ -227,11 +237,22 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
   }
 
   @override
-  Future<List<CommunityPost>> postsByUser(String userId) async =>
-      SupabasePostRepository(client: client, identity: identity)
-          .fetchPosts(limit: 50)
-          .then((rows) =>
-              rows.where((post) => post.author.id == userId).toList());
+  Future<List<CommunityPost>> postsByUser(String userId) async {
+    try {
+      final rows = await client
+          .from('community_posts')
+          .select('*, community_profiles(*), community_post_media(*)')
+          .eq('author_id', userId)
+          .isFilter('deleted_at', null)
+          .order('created_at', ascending: false)
+          .range(0, 49);
+      return (rows as List)
+          .map((row) => _postFromRow(Map<String, dynamic>.from(row as Map)))
+          .toList();
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
   @override
   Future<CommunityProfile> updateBio(String userId, String bio) async {
     if (userId != await requireUser())
@@ -256,17 +277,13 @@ class SupabaseFriendRepository extends SupabaseRepositoryBase
     final me = await requireUser();
     if (me == userId) return FriendStatus.none;
     try {
-      final rows = await client
-          .from('community_friend_requests')
-          .select('requester_id,recipient_id,status')
-          .or('and(requester_id.eq.$me,recipient_id.eq.$userId),and(requester_id.eq.$userId,recipient_id.eq.$me)')
-          .order('created_at', ascending: false)
-          .limit(1);
-      if ((rows as List).isEmpty) return FriendStatus.none;
-      final row = Map<String, dynamic>.from((rows as List).first);
-      if (row['status'] == 'accepted') return FriendStatus.friends;
-      if (row['requester_id'] == me) return FriendStatus.pending;
-      return FriendStatus.incoming;
+      final result = await writeApi.invoke('friend_status', {'user_id': userId});
+      return switch (result['status']) {
+        'friends' => FriendStatus.friends,
+        'pending' => FriendStatus.pending,
+        'incoming' => FriendStatus.incoming,
+        _ => FriendStatus.none,
+      };
     } catch (error) {
       throw this.error(error);
     }
@@ -277,7 +294,46 @@ class SupabaseFriendRepository extends SupabaseRepositoryBase
     try {
       final result = await writeApi.invoke('send_friend_request', {'user_id': userId});
       if (result['status'] == 'accepted') return FriendStatus.friends;
+      if (result['status'] == 'friends') return FriendStatus.friends;
+      if (result['status'] == 'incoming') return FriendStatus.incoming;
       return FriendStatus.pending;
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
+
+  @override
+  Future<FriendStatus> respondToRequest(String requestId,
+      {required bool accept}) async {
+    try {
+      final result = await writeApi.invoke('respond_friend_request', {
+        'request_id': requestId,
+        'accept': accept,
+      });
+      return result['status'] == 'friends'
+          ? FriendStatus.friends
+          : FriendStatus.none;
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
+
+  @override
+  Future<List<FriendRequest>> incomingRequests() async {
+    try {
+      final result = await writeApi.invoke('list_friend_requests');
+      final requests = (result['requests'] as List?) ?? const [];
+      return requests.map((value) {
+        final row = Map<String, dynamic>.from(value as Map);
+        final from = _profileFromRow(Map<String, dynamic>.from(
+            (row['requester_profile'] as Map?) ?? const {}));
+        return FriendRequest(
+            id: row['id'].toString(),
+            from: from.author,
+            to: const PostAuthor(
+                id: '', username: 'me', displayName: 'Me'),
+            status: FriendStatus.incoming);
+      }).toList();
     } catch (error) {
       throw this.error(error);
     }
@@ -397,14 +453,9 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
   SupabaseNotificationRepository({super.client, super.identity});
   @override
   Future<List<CommunityNotification>> fetchNotifications() async {
-    final me = await requireUser();
     try {
-      final rows = await client
-          .from('community_notifications')
-          .select('*')
-          .eq('recipient_id', me)
-          .order('created_at', ascending: false)
-          .range(0, 49);
+      final result = await writeApi.invoke('list_notifications');
+      final rows = (result['notifications'] as List?) ?? const [];
       return (rows as List).map((row) {
         final map = Map<String, dynamic>.from(row as Map);
         return CommunityNotification(
@@ -413,7 +464,8 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
             title: map['type'].toString(),
             body: '',
             createdAt: DateTime.parse(map['created_at'].toString()),
-            isRead: map['is_read'] == true);
+            isRead: map['is_read'] == true,
+            friendRequestId: map['friend_request_id']?.toString());
       }).toList();
     } catch (error) {
       throw this.error(error);
@@ -422,14 +474,10 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
 
   @override
   Future<int> unreadCount() async {
-    final me = await requireUser();
     try {
-      final rows = await client
-          .from('community_notifications')
-          .select('id')
-          .eq('recipient_id', me)
-          .eq('is_read', false);
-      return (rows as List).length;
+      final result = await writeApi.invoke('list_notifications');
+      final rows = (result['notifications'] as List?) ?? const [];
+      return rows.where((row) => row is Map && row['is_read'] != true).length;
     } catch (error) {
       throw this.error(error);
     }

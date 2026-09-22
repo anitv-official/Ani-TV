@@ -51,6 +51,8 @@ abstract class ProfileRepository {
 abstract class FriendRepository {
   Future<FriendStatus> statusFor(String userId);
   Future<FriendStatus> sendRequest(String userId);
+  Future<FriendStatus> respondToRequest(String requestId, {required bool accept});
+  Future<List<FriendRequest>> incomingRequests();
   Future<List<Friend>> friends();
 }
 

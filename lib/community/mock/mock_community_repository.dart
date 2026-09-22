@@ -364,6 +364,14 @@ class MockFriendRepository implements FriendRepository {
   }
 
   @override
+  Future<FriendStatus> respondToRequest(String requestId,
+      {required bool accept}) async =>
+      accept ? FriendStatus.friends : FriendStatus.none;
+
+  @override
+  Future<List<FriendRequest>> incomingRequests() async => const [];
+
+  @override
   Future<List<Friend>> friends() async => [
         Friend(id: 'friend-1', user: MockCommunityRepository._authors[2]),
         Friend(id: 'friend-2', user: MockCommunityRepository._authors[3])

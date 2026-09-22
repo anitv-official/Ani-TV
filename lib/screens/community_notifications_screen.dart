@@ -15,11 +15,17 @@ class CommunityNotificationsScreen extends StatefulWidget {
 class _CommunityNotificationsScreenState
     extends State<CommunityNotificationsScreen> {
   final repository = CommunityRepositoryFactory.notifications();
+  final friends = CommunityRepositoryFactory.friends();
   late Future<List<CommunityNotification>> future;
   @override
   void initState() {
     super.initState();
     future = repository.fetchNotifications();
+  }
+
+  Future<void> _respond(String requestId, bool accept) async {
+    await friends.respondToRequest(requestId, accept: accept);
+    if (mounted) setState(() => future = repository.fetchNotifications());
   }
 
   @override
@@ -65,10 +71,26 @@ class _CommunityNotificationsScreenState
                             item.isRead ? FontWeight.w500 : FontWeight.w800)),
                 subtitle: Text(item.body,
                     style: const TextStyle(color: AppTheme.textSecondaryColor)),
-                trailing: item.isRead
-                    ? null
-                    : const Icon(Icons.circle,
-                        size: 9, color: AppTheme.primaryColor),
+                trailing: item.type == NotificationType.friendRequest &&
+                        item.friendRequestId != null
+                    ? Wrap(spacing: 4, children: [
+                        IconButton(
+                            tooltip: 'قبول',
+                            onPressed: () =>
+                                _respond(item.friendRequestId!, true),
+                            icon: const Icon(Icons.check_circle_outline,
+                                color: Colors.greenAccent)),
+                        IconButton(
+                            tooltip: 'رفض',
+                            onPressed: () =>
+                                _respond(item.friendRequestId!, false),
+                            icon: const Icon(Icons.cancel_outlined,
+                                color: Colors.redAccent))
+                      ])
+                    : item.isRead
+                        ? null
+                        : const Icon(Icons.circle,
+                            size: 9, color: AppTheme.primaryColor),
               );
             },
           );

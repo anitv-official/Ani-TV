@@ -59,6 +59,40 @@ Deno.serve(async (req) => {
         const profiles = await supabaseGet(config, `community_profiles?user_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,bio,is_verified,profile_image_reference&limit=100`);
         return json({ friends: profiles });
       }
+      case "friend_status": {
+        const otherUserId = requireString(body.user_id, "user id", 128);
+        if (otherUserId === identity.id) return json({ status: "none" });
+        const requests = await supabaseGet(config, `community_friend_requests?or=(and(requester_id.eq.${encodeURIComponent(identity.id)},recipient_id.eq.${encodeURIComponent(otherUserId)}),and(requester_id.eq.${encodeURIComponent(otherUserId)},recipient_id.eq.${encodeURIComponent(identity.id)}))&status=in.(pending,accepted)&select=id,requester_id,recipient_id,status&order=created_at.desc&limit=1`);
+        if (!requests.length) return json({ status: "none" });
+        const request = requests[0];
+        if (request.status === "accepted") return json({ status: "friends" });
+        return json({ status: request.requester_id === identity.id ? "pending" : "incoming", request_id: request.id });
+      }
+      case "list_friend_requests": {
+        const requests = await supabaseGet(config, `community_friend_requests?recipient_id=eq.${encodeURIComponent(identity.id)}&status=eq.pending&select=id,requester_id,recipient_id,status,created_at&order=created_at.desc&limit=100`);
+        const ids = requests.map((row) => row.requester_id).filter((id) => typeof id === "string");
+        const profiles = ids.length ? await supabaseGet(config, `community_profiles?user_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,bio,is_verified,profile_image_reference&limit=100`) : [];
+        const byId = new Map(profiles.map((row) => [row.user_id, row]));
+        return json({ requests: requests.map((row) => ({ ...row, requester_profile: byId.get(row.requester_id) ?? {} })) });
+      }
+      case "list_notifications": {
+        const notifications = await supabaseGet(config, `community_notifications?recipient_id=eq.${encodeURIComponent(identity.id)}&select=id,type,friend_request_id,is_read,created_at&order=created_at.desc&limit=50`);
+        return json({ notifications });
+      }
+      case "respond_friend_request": {
+        const requestId = requireString(body.request_id, "request id", 80);
+        const accept = body.accept === true;
+        const requests = await supabaseGet(config, `community_friend_requests?id=eq.${encodeURIComponent(requestId)}&recipient_id=eq.${encodeURIComponent(identity.id)}&status=eq.pending&select=id,requester_id,recipient_id&limit=1`);
+        if (!requests.length) throw new MediaFunctionError("not_found", 404, "The friend request was not found.");
+        const request = requests[0];
+        await supabaseUpdate(config, "community_friend_requests", `id=eq.${encodeURIComponent(requestId)}&recipient_id=eq.${encodeURIComponent(identity.id)}&status=eq.pending`, { status: accept ? "accepted" : "rejected" });
+        if (!accept) return json({ status: "none" });
+        const low = request.requester_id < request.recipient_id ? request.requester_id : request.recipient_id;
+        const high = request.requester_id < request.recipient_id ? request.recipient_id : request.requester_id;
+        await supabaseInsert(config, "community_friendships", { user_low_id: low, user_high_id: high });
+        await supabaseInsert(config, "community_notifications", { recipient_id: request.requester_id, actor_id: identity.id, type: "friend_request_accepted", friend_request_id: requestId });
+        return json({ status: "friends" });
+      }
       case "create_post": {
         const content = typeof body.content === "string" ? body.content.trim() : "";
         const link = body.link == null ? null : requireString(body.link, "link", 2048);
@@ -94,8 +128,11 @@ Deno.serve(async (req) => {
       case "send_friend_request": {
         const recipient = requireString(body.user_id, "user id", 128);
         if (recipient === identity.id) throw new MediaFunctionError("invalid_input", 400, "You cannot send a friend request to yourself.");
-        const existing = await supabaseGet(config, `community_friend_requests?requester_id=eq.${encodeURIComponent(identity.id)}&recipient_id=eq.${encodeURIComponent(recipient)}&status=in.(pending,accepted)&select=id,status&limit=1`);
-        if (existing.length) return json({ status: existing[0].status });
+        const existing = await supabaseGet(config, `community_friend_requests?or=(and(requester_id.eq.${encodeURIComponent(identity.id)},recipient_id.eq.${encodeURIComponent(recipient)}),and(requester_id.eq.${encodeURIComponent(recipient)},recipient_id.eq.${encodeURIComponent(identity.id)}))&status=in.(pending,accepted)&select=id,requester_id,status&order=created_at.desc&limit=1`);
+        if (existing.length) {
+          if (existing[0].status === "accepted") return json({ status: "friends" });
+          return json({ status: existing[0].requester_id === identity.id ? "pending" : "incoming" });
+        }
         const request = await supabaseInsert(config, "community_friend_requests", { requester_id: identity.id, recipient_id: recipient, status: "pending" });
         await supabaseInsert(config, "community_notifications", { recipient_id: recipient, actor_id: identity.id, type: "friend_request", friend_request_id: request.id });
         return json({ status: "pending" });
