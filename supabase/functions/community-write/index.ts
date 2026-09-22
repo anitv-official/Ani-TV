@@ -128,8 +128,10 @@ Deno.serve(async (req) => {
         if (!accept) return json({ status: "none" });
         const low = request.requester_id < request.recipient_id ? request.requester_id : request.recipient_id;
         const high = request.requester_id < request.recipient_id ? request.recipient_id : request.requester_id;
-        await supabaseInsert(config, "community_friendships", { user_low_id: low, user_high_id: high });
-        await supabaseInsert(config, "community_notifications", { recipient_id: request.requester_id, actor_id: identity.id, type: "friend_request_accepted", friend_request_id: requestId });
+        const friendship = await supabaseGet(config, `community_friendships?user_low_id=eq.${encodeURIComponent(low)}&user_high_id=eq.${encodeURIComponent(high)}&select=id&limit=1`);
+        if (!friendship.length) await supabaseInsert(config, "community_friendships", { user_low_id: low, user_high_id: high });
+        const acceptedNotification = await supabaseGet(config, `community_notifications?friend_request_id=eq.${encodeURIComponent(requestId)}&recipient_id=eq.${encodeURIComponent(request.requester_id)}&type=eq.friend_request_accepted&select=id&limit=1`);
+        if (!acceptedNotification.length) await supabaseInsert(config, "community_notifications", { recipient_id: request.requester_id, actor_id: identity.id, type: "friend_request_accepted", friend_request_id: requestId });
         return json({ status: "friends" });
       }
       case "create_post": {
@@ -204,6 +206,21 @@ Deno.serve(async (req) => {
         await member(config, conversationId, identity.id);
         const message = await supabaseInsert(config, "community_messages", { conversation_id: conversationId, sender_id: identity.id, content, media_reference: mediaReference, message_type: mediaReference ? "image" : "text" });
         await supabaseUpdate(config, "community_conversations", `id=eq.${encodeURIComponent(conversationId)}`, { updated_at: new Date().toISOString() });
+        try {
+          const recipients = await supabaseGet(config, `community_conversation_members?conversation_id=eq.${encodeURIComponent(conversationId)}&user_id=neq.${encodeURIComponent(identity.id)}&select=user_id&limit=20`);
+          for (const recipient of recipients) {
+            if (typeof recipient.user_id !== "string" || recipient.user_id.length === 0) continue;
+            await supabaseInsert(config, "community_notifications", {
+              recipient_id: recipient.user_id,
+              actor_id: identity.id,
+              type: "message",
+              conversation_id: conversationId,
+              message_id: message.id,
+            });
+          }
+        } catch (notificationError) {
+          console.error("community message notification skipped", notificationError instanceof Error ? notificationError.name : "unknown");
+        }
         return json(message);
       }
       case "delete_comment": {

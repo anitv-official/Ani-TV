@@ -4,7 +4,7 @@ enum PostType { text, image, link, audio, mixed }
 
 enum MediaType { image, audio }
 
-enum NotificationType { friendRequest, friendRequestAccepted, comment, reaction }
+enum NotificationType { friendRequest, friendRequestAccepted, message, comment, reaction }
 
 enum FriendStatus { none, pending, incoming, friends, blocked }
 

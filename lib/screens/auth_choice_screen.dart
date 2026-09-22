@@ -71,14 +71,14 @@ class _FacebookChoiceButtonState extends State<_FacebookChoiceButton> {
       final url = await context.read<AppStateProvider>().facebookOAuthUrl();
       final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح تسجيل الدخول باستخدام Facebook.')));
       }
     } catch (error) {
       if (mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -88,9 +88,7 @@ class _FacebookChoiceButtonState extends State<_FacebookChoiceButton> {
       child: IconButton(
         onPressed: _loading ? null : _openFacebook,
         tooltip: 'التسجيل باستخدام Facebook',
-        icon: _loading
-            ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.facebook, size: 30, color: Colors.white),
+        icon: _loading ? const _OAuthLoadingIcon() : const Icon(Icons.facebook, size: 30, color: Colors.white),
         style: IconButton.styleFrom(
           backgroundColor: const Color(0xFF1877F2),
           disabledBackgroundColor: const Color(0xFF1877F2).withOpacity(.55),
@@ -119,14 +117,14 @@ class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
       final url = await context.read<AppStateProvider>().googleOAuthUrl();
       final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح تسجيل الدخول باستخدام Google.')));
       }
     } catch (error) {
       if (mounted) {
+        setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
       }
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -136,9 +134,7 @@ class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
       child: IconButton(
         onPressed: _loading ? null : _signInWithGoogle,
         tooltip: 'التسجيل باستخدام Google',
-        icon: _loading
-            ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : SvgPicture.asset('assets/images/google_g_logo.svg', width: 30, height: 30),
+        icon: _loading ? const _OAuthLoadingIcon() : SvgPicture.asset('assets/images/google_g_logo.svg', width: 30, height: 30),
         style: IconButton.styleFrom(
           backgroundColor: Colors.white,
           disabledBackgroundColor: Colors.white.withOpacity(.55),
@@ -148,6 +144,23 @@ class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
       ),
     );
   }
+}
+
+class _OAuthLoadingIcon extends StatelessWidget {
+  const _OAuthLoadingIcon();
+
+  @override
+  Widget build(BuildContext context) => Stack(
+        alignment: Alignment.center,
+        children: [
+          const SizedBox(
+            width: 42,
+            height: 42,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+          ),
+          Image.asset('assets/images/anitv_logo_transparent.png', width: 25, height: 25, fit: BoxFit.contain),
+        ],
+      );
 }
 
 class _ChoiceCard extends StatelessWidget {

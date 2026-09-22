@@ -246,10 +246,25 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final chat = CommunityRepositoryFactory.chat();
   late Future<List<Conversation>> future;
+  Timer? refreshTimer;
   @override
   void initState() {
     super.initState();
     future = chat.conversations();
+    refreshTimer = Timer.periodic(const Duration(seconds: 6), (_) => _refresh());
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final latest = await chat.conversations();
+      if (mounted) setState(() => future = Future.value(latest));
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    refreshTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -330,6 +345,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   List<CommunityMessage> messages = [];
   String? currentUserId;
   Timer? refreshTimer;
+  bool sending = false;
   @override
   void initState() {
     super.initState();
@@ -367,12 +383,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Future<void> _send() async {
+    if (sending) return;
     final value = input.text.trim();
     if (value.isEmpty && pendingImage == null) return;
+    setState(() => sending = true);
+    try {
     String? mediaReference;
     if (pendingImage != null) {
       final userId = await const AppwriteCommunityIdentity().currentUserId();
-      if (userId == null) return;
+      if (userId == null) {
+        if (mounted) setState(() => sending = false);
+        return;
+      }
       mediaReference = await AppwriteService.instance
           .uploadChatImage(userId: userId, path: pendingImage!);
     }
@@ -389,6 +411,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
         scroll.animateTo(scroll.position.maxScrollExtent,
             duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
     });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
   }
 
   @override
@@ -461,8 +490,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                         hintText: 'اكتب رسالة...'))),
                             const SizedBox(width: 8),
                             IconButton.filled(
-                                onPressed: _send,
-                                icon: const Icon(Icons.send_rounded))
+                                onPressed: sending ? null : _send,
+                                icon: sending
+                                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.send_rounded))
                           ]))),
             ],
           );

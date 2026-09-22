@@ -368,8 +368,10 @@ class AppStateProvider extends ChangeNotifier {
   Future<String> googleOAuthUrl() => _appwrite.createGoogleOAuth2Token();
 
   Future<void> completeGoogleLogin({required String userId, required String secret}) async {
+    var sessionCreated = false;
     try {
       final user = await _appwrite.createGoogleSession(userId: userId, secret: secret);
+      sessionCreated = true;
       _isFacebookSession = false;
       _isGoogleSession = true;
       _favoriteAnime = [];
@@ -380,7 +382,12 @@ class AppStateProvider extends ChangeNotifier {
       await _storeSocialProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
-    } catch (_) {
+    } catch (error) {
+      if (sessionCreated) {
+        debugPrint('Google OAuth completed; optional post-login sync skipped: ${error.runtimeType}');
+        notifyListeners();
+        return;
+      }
       _clearUser();
       rethrow;
     }
@@ -395,8 +402,10 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> completeFacebookLogin({required String userId, required String secret}) async {
+    var sessionCreated = false;
     try {
       final user = await _appwrite.createFacebookSession(userId: userId, secret: secret);
+      sessionCreated = true;
       _isFacebookSession = true;
       _isGoogleSession = false;
       _favoriteAnime = [];
@@ -408,7 +417,12 @@ class AppStateProvider extends ChangeNotifier {
       await _storeSocialProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
-    } catch (_) {
+    } catch (error) {
+      if (sessionCreated) {
+        debugPrint('Facebook OAuth completed; optional post-login sync skipped: ${error.runtimeType}');
+        notifyListeners();
+        return;
+      }
       _clearUser();
       rethrow;
     }

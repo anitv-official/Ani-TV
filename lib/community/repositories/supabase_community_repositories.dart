@@ -553,6 +553,8 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
                 ? 'طلب صداقة من $actorName'
                 : type == NotificationType.friendRequestAccepted
                     ? '$actorName قبل طلب صداقتك'
+                    : type == NotificationType.message
+                        ? 'رسالة جديدة من $actorName'
                     : type == NotificationType.comment
                         ? 'تعليق جديد من $actorName'
                         : 'إعجاب جديد من $actorName',
@@ -560,6 +562,8 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
                 ? 'يمكنك قبول الطلب أو رفضه.'
                 : type == NotificationType.friendRequestAccepted
                     ? 'أصبحتم أصدقاء الآن.'
+                    : type == NotificationType.message
+                        ? 'لديك رسالة جديدة في المحادثة.'
                     : 'لديك تفاعل جديد على منشورك.',
             createdAt: DateTime.parse(map['created_at'].toString()),
             isRead: map['is_read'] == true,
@@ -779,6 +783,8 @@ NotificationType _notificationType(String value) => value == 'comment'
         ? NotificationType.friendRequest
         : value == 'friend_request_accepted'
             ? NotificationType.friendRequestAccepted
+        : value == 'message'
+            ? NotificationType.message
         : NotificationType.reaction;
 
 class SupabaseCommunityRealtimeRepository extends SupabaseRepositoryBase

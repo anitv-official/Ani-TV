@@ -68,14 +68,16 @@ class _CommunityNotificationsScreenState
             separatorBuilder: (_, __) => const Divider(
                 height: 1, indent: 78, color: AppTheme.borderColor),
             itemBuilder: (_, index) {
-              final item = items[index];
-              final icon = item.type == NotificationType.friendRequest
-                  ? Icons.person_add_alt_1_rounded
-                  : item.type == NotificationType.friendRequestAccepted
+                  final item = items[index];
+                  final icon = item.type == NotificationType.friendRequest
                       ? Icons.person_add_alt_1_rounded
-                  : item.type == NotificationType.comment
-                      ? Icons.mode_comment_outlined
-                      : Icons.favorite_border_rounded;
+                      : item.type == NotificationType.friendRequestAccepted
+                          ? Icons.person_add_alt_1_rounded
+                          : item.type == NotificationType.message
+                              ? Icons.mark_chat_unread_outlined
+                      : item.type == NotificationType.comment
+                          ? Icons.mode_comment_outlined
+                          : Icons.favorite_border_rounded;
               if (!item.isRead && _markingRead.add(item.id)) {
                 repository.markRead(item.id).catchError((_) {});
               }
