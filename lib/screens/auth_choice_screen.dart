@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
@@ -34,7 +35,59 @@ class AuthChoiceScreen extends StatelessWidget {
               icon: const Icon(Icons.visibility_outlined, color: AppTheme.textSecondaryColor),
               label: const Text('المتابعة كزائر', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15)),
             ),
+            const SizedBox(height: 16),
+            const Text('أو', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
+            const SizedBox(height: 10),
+            const _FacebookChoiceButton(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FacebookChoiceButton extends StatefulWidget {
+  const _FacebookChoiceButton();
+
+  @override
+  State<_FacebookChoiceButton> createState() => _FacebookChoiceButtonState();
+}
+
+class _FacebookChoiceButtonState extends State<_FacebookChoiceButton> {
+  bool _loading = false;
+
+  Future<void> _openFacebook() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final url = await context.read<AppStateProvider>().facebookOAuthUrl();
+      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح تسجيل الدخول باستخدام Facebook.')));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: IconButton(
+        onPressed: _loading ? null : _openFacebook,
+        tooltip: 'التسجيل باستخدام Facebook',
+        icon: _loading
+            ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Icon(Icons.facebook, size: 30, color: Colors.white),
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFF1877F2),
+          disabledBackgroundColor: const Color(0xFF1877F2).withOpacity(.55),
+          fixedSize: const Size(64, 64),
+          shape: const CircleBorder(),
         ),
       ),
     );

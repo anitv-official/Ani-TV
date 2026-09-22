@@ -40,17 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (error) { if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor); }
     finally { if (mounted) setState(() => _loading = false); }
   }
-  Future<void> _loginWithFacebook() async {
-    setState(() => _loading = true);
-    try {
-      final provider = context.read<AppStateProvider>();
-      final url = await provider.facebookOAuthUrl();
-      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      if (!opened && mounted) _show('تعذر فتح تسجيل الدخول باستخدام Facebook.');
-    } catch (error) {
-      if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor);
-    } finally { if (mounted) setState(() => _loading = false); }
-  }
   Future<void> _forgotPassword() async { try { final opened = await launchUrl(Uri.parse('https://anitv-tau.vercel.app/reset-password'), mode: LaunchMode.externalApplication); if (!opened && mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } catch (_) { if (mounted) _show('تعذر فتح صفحة استعادة كلمة المرور.'); } }
   void _show(String message) => ToastUtils.show(message, backgroundColor: AppTheme.errorColor);
   InputDecoration _decoration(String hint, {Widget? suffix}) => InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondaryColor), filled: true, fillColor: AppTheme.surfaceColor, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16), suffixIcon: suffix, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.5)));
@@ -62,8 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
     const SizedBox(height: 24),
     Row(children: [if (_step > 0) Expanded(child: OutlinedButton(onPressed: _loading ? null : () => setState(() => _step = 0), child: const Text('رجوع'))), if (_step > 0) const SizedBox(width: 10), Expanded(child: ElevatedButton(onPressed: _loading ? null : _next, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: _loading ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(_step == 0 ? 'متابعة' : 'تسجيل الدخول', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))))]),
     if (_step == 1) Align(alignment: Alignment.center, child: TextButton(onPressed: _loading ? null : _forgotPassword, child: const Text('نسيت كلمة المرور؟'))),
-    const SizedBox(height: 10),
-    OutlinedButton.icon(onPressed: _loading ? null : _loginWithFacebook, icon: const Icon(Icons.facebook, color: Colors.white), label: const Text('Sign in with Facebook'), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15), side: const BorderSide(color: AppTheme.borderColor), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)))),
   ]))));
 
   Widget _identifierStep() => Column(key: const ValueKey('identifier'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [const Text('البريد الإلكتروني أو اسم المستخدم', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), const SizedBox(height: 10), TextFormField(controller: _identifier, autofocus: true, textDirection: TextDirection.ltr, keyboardType: TextInputType.emailAddress, style: const TextStyle(color: Colors.white), decoration: _decoration('example@email.com'), onFieldSubmitted: (_) => _next()), const SizedBox(height: 10), CheckboxListTile(value: _remember, onChanged: (v) => setState(() => _remember = v ?? false), contentPadding: EdgeInsets.zero, activeColor: AppTheme.primaryColor, title: const Text('تذكر البريد الإلكتروني', style: TextStyle(color: AppTheme.textSecondaryColor))) ]);

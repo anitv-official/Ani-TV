@@ -39,6 +39,7 @@ class AppStateProvider extends ChangeNotifier {
   String? _userId;
   String? _profileDocumentId;
   String? _profileImageId;
+  String? _profileImageUrl;
   Future<Uint8List>? get profileImageBytes => _profileImageId == null || _profileImageId!.isEmpty ? null : _appwrite.profileImageBytes(_profileImageId!);
 
   List<dynamic> _favoriteAnime = [];
@@ -59,6 +60,7 @@ class AppStateProvider extends ChangeNotifier {
   String get birthDate => _birthDate;
   String get country => _country;
   String? get profileImageId => _profileImageId;
+  String? get profileImageUrl => _profileImageUrl;
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isDarkMode => _isDarkMode;
@@ -108,7 +110,10 @@ class AppStateProvider extends ChangeNotifier {
       await _applyAuthenticatedUser(user, syncCloud: false);
       if (_isLoggedIn && _userId != null) await _loadLocalAccountCache(_userId!);
       notifyListeners();
-      if (_isLoggedIn) unawaited(_syncAccountFromCloud());
+      if (_isLoggedIn) {
+        unawaited(_syncAccountFromCloud());
+        unawaited(_refreshFacebookProfileImage());
+      }
     } catch (error) {
       final prefs = await SharedPreferences.getInstance();
       final cachedUserId = prefs.getString(_lastUserIdKey);
@@ -142,7 +147,13 @@ class AppStateProvider extends ChangeNotifier {
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
     _isLoggedIn = _emailVerified;
-    if (_isLoggedIn) await FcmService.instance.setUser(_userId);
+    if (_isLoggedIn) {
+      try {
+        await FcmService.instance.setUser(_userId);
+      } catch (error) {
+        debugPrint('FCM user sync skipped after successful authentication: $error');
+      }
+    }
     if (syncCloud && _emailVerified) await _syncAccountFromCloud();
   }
 
@@ -282,6 +293,7 @@ class AppStateProvider extends ChangeNotifier {
     _userId = null;
     _profileDocumentId = null;
     _profileImageId = null;
+    _profileImageUrl = null;
     _isLoggedIn = false;
     _favoriteAnime = [];
     _favoriteComics = [];
@@ -327,6 +339,14 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<String> facebookOAuthUrl() => _appwrite.createFacebookOAuth2Token();
 
+  Future<void> _refreshFacebookProfileImage() async {
+    final url = await _appwrite.facebookProfileImageUrl();
+    if (url != null && url.isNotEmpty) {
+      _profileImageUrl = url;
+      notifyListeners();
+    }
+  }
+
   Future<void> completeFacebookLogin({required String userId, required String secret}) async {
     try {
       final user = await _appwrite.createFacebookSession(userId: userId, secret: secret);
@@ -335,6 +355,7 @@ class AppStateProvider extends ChangeNotifier {
       _animeHistory = [];
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      await _refreshFacebookProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {

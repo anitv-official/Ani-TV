@@ -111,7 +111,8 @@ class AppwriteService {
 
   Future<models.User> createFacebookSession({required String userId, required String secret}) async {
     try {
-      await account.createSession(userId: userId, secret: secret);
+      final session = await account.createSession(userId: userId, secret: secret);
+      await _rememberSession(session.secret);
       debugPrint('Facebook OAuth createSession success = true');
       return account.get();
     } on AppwriteException catch (error) {
@@ -123,6 +124,26 @@ class AppwriteService {
     } catch (error) {
       debugPrint('Facebook OAuth createSession success = false; error=${_safeOAuthMessage(error.toString())}');
       throw const FacebookAuthException('OAUTH_FAILED');
+    }
+  }
+
+  Future<String?> facebookProfileImageUrl() async {
+    try {
+      final session = await account.getSession(sessionId: 'current');
+      final token = session.providerAccessToken?.trim() ?? '';
+      if (token.isEmpty) return null;
+      final response = await http.get(Uri.https('graph.facebook.com', '/me/picture', {
+        'type': 'large',
+        'redirect': 'false',
+        'access_token': token,
+      }));
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      final decoded = jsonDecode(response.body);
+      final data = decoded is Map ? decoded['data'] : null;
+      final url = data is Map ? data['url']?.toString().trim() : null;
+      return url == null || url.isEmpty ? null : url;
+    } catch (_) {
+      return null;
     }
   }
 
