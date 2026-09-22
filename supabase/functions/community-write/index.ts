@@ -62,7 +62,9 @@ Deno.serve(async (req) => {
       case "create_post": {
         const content = typeof body.content === "string" ? body.content.trim() : "";
         const link = body.link == null ? null : requireString(body.link, "link", 2048);
-        const postType = body.post_type === "link" ? "link" : "text";
+        const postType = ["text", "image", "audio", "link", "mixed"].includes(body.post_type)
+          ? body.post_type
+          : "text";
         if (!content && !link) throw new MediaFunctionError("invalid_input", 400, "A post needs text or a link.");
         const post = await supabaseInsert(config, "community_posts", { author_id: identity.id, content, post_type: postType, link_url: link });
         return json(post);

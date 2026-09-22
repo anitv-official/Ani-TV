@@ -329,7 +329,11 @@ class _CommunityBodyState extends State<_CommunityBody> {
       return;
     }
     Navigator.push(context,
-        MaterialPageRoute(builder: (_) => UserProfileScreen(userId: userId)));
+        MaterialPageRoute(
+            builder: (_) => UserProfileScreen(
+                userId: userId,
+                isCurrentUser: true,
+                avatarFuture: context.read<AppStateProvider>().profileImageBytes)));
   }
 
   void _snack(BuildContext context, String message) =>

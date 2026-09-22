@@ -126,13 +126,20 @@ class SupabasePostRepository extends SupabaseRepositoryBase
       final result = await writeApi.invoke('create_post', {
         'content': draft.text.trim(),
         if (draft.link != null) 'link': draft.link,
-        'post_type': draft.link != null ? 'link' : 'text',
+        'post_type': draft.link != null
+            ? 'link'
+            : draft.imagePath != null
+                ? (draft.text.trim().isEmpty ? 'image' : 'mixed')
+                : draft.audioPath != null
+                    ? (draft.text.trim().isEmpty ? 'audio' : 'mixed')
+                    : 'text',
       });
-      final row = await client
-          .from('community_posts')
-          .select('*, community_profiles(*), community_post_media(*)')
-          .eq('id', result['id'].toString())
-          .single();
+      final profile = await writeApi.invoke('ensure_profile');
+      final row = <String, dynamic>{
+        ...result,
+        'community_profiles': profile,
+        'community_post_media': const <dynamic>[],
+      };
       return _postFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
       throw this.error(error);
@@ -169,11 +176,8 @@ class SupabaseCommentRepository extends SupabaseRepositoryBase
         'post_id': postId,
         'content': text.trim(),
       });
-      final row = await client
-          .from('community_comments')
-          .select('*, community_profiles(*)')
-          .eq('id', result['id'].toString())
-          .single();
+      final profile = await writeApi.invoke('ensure_profile');
+      final row = <String, dynamic>{...result, 'community_profiles': profile};
       return _commentFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
       throw this.error(error);

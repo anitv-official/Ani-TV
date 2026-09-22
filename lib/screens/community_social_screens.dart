@@ -1,13 +1,17 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../community/models/community_models.dart';
 import '../community/services/community_repository_factory.dart';
 import '../community/services/appwrite_community_identity.dart';
 import '../community/widgets/community_widgets.dart';
 import '../theme/app_theme.dart';
+import '../providers/app_state_provider.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  const UserProfileScreen({super.key, required this.userId});
+  const UserProfileScreen({super.key, required this.userId, this.isCurrentUser = false, this.avatarFuture});
   final String userId;
+  final bool isCurrentUser;
+  final Future<Uint8List>? avatarFuture;
   @override
   State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
@@ -59,10 +63,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   return ListView(children: [
                     _ProfileHeader(
                         profile: profile,
+                        avatarFuture: widget.avatarFuture,
                         onFriend: profile.friendStatus == FriendStatus.friends
                             ? null
-                            : _addFriend,
-                        onMessage: () => Navigator.push(
+                            : widget.isCurrentUser ? null : _addFriend,
+                        onMessage: widget.isCurrentUser ? null : () => Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (_) => ConversationScreen(
@@ -117,7 +122,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 class MyProfileScreen extends StatelessWidget {
   const MyProfileScreen({super.key});
   @override
-  Widget build(BuildContext context) => FutureBuilder<String?>(
+  Widget build(BuildContext context) {
+    final account = context.watch<AppStateProvider>();
+    return FutureBuilder<String?>(
       future: const AppwriteCommunityIdentity().currentUserId(),
       builder: (_, snapshot) {
         if (snapshot.hasError)
@@ -127,8 +134,12 @@ class MyProfileScreen extends StatelessWidget {
         if (userId == null || userId.isEmpty)
           return const Scaffold(
               body: Center(child: Text('سجّل الدخول أولًا لفتح ملفك الشخصي.')));
-        return UserProfileScreen(userId: userId);
+        return UserProfileScreen(
+            userId: userId,
+            isCurrentUser: true,
+            avatarFuture: account.profileImageBytes);
       });
+  }
 }
 
 class MessagesScreen extends StatefulWidget {
@@ -364,15 +375,22 @@ class _MessageBubble extends StatelessWidget {
 
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader(
-      {required this.profile, required this.onFriend, required this.onMessage});
+      {required this.profile,
+      required this.onFriend,
+      required this.onMessage,
+      this.avatarFuture});
   final CommunityProfile profile;
   final VoidCallback? onFriend;
-  final VoidCallback onMessage;
+  final VoidCallback? onMessage;
+  final Future<Uint8List>? avatarFuture;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
       child: Column(children: [
-        CommunityAvatar(author: profile.author, radius: 48),
+        CommunityAvatar(
+            author: profile.author,
+            radius: 48,
+            avatarFuture: avatarFuture),
         const SizedBox(height: 12),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text(profile.author.displayName,
@@ -396,18 +414,20 @@ class _ProfileHeader extends StatelessWidget {
         if (profile.birthDate.isNotEmpty)
           Text(profile.birthDate,
               style: const TextStyle(color: AppTheme.textMutedColor)),
-        const SizedBox(height: 14),
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          OutlinedButton.icon(
-              onPressed: onFriend,
-              icon: const Icon(Icons.person_add_alt_1_rounded),
-              label: Text(onFriend == null ? 'أصدقاء' : 'إضافة صديق')),
-          const SizedBox(width: 10),
-          FilledButton.icon(
-              onPressed: onMessage,
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              label: const Text('محادثة'))
-        ])
+        if (onFriend != null || onMessage != null) ...[
+          const SizedBox(height: 14),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            OutlinedButton.icon(
+                onPressed: onFriend,
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: const Text('إضافة صديق')),
+            const SizedBox(width: 10),
+            FilledButton.icon(
+                onPressed: onMessage,
+                icon: const Icon(Icons.chat_bubble_outline_rounded),
+                label: const Text('محادثة'))
+          ])
+        ]
       ]));
 }
 
