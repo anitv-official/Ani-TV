@@ -150,7 +150,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                         SnackBar(content: Text(error.toString())));
                                   }
                                 }
-                              },
+                              }),
                     if (profile.bio.isNotEmpty)
                       _InfoSection(
                           title: 'نبذة',

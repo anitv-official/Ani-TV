@@ -190,7 +190,7 @@ class CommunityPostItem extends StatelessWidget {
                     Navigator.pop(context);
                     onDelete?.call();
                   })
-          ]));
+          ])));
 }
 
 class _PostImage extends StatefulWidget {
