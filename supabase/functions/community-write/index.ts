@@ -39,6 +39,13 @@ async function member(config: ReturnType<typeof serviceConfig>, conversationId: 
   if (!rows.length) throw new MediaFunctionError("forbidden", 403, "You are not a member of this conversation.");
 }
 
+async function profileMap(config: ReturnType<typeof serviceConfig>, ids: string[]) {
+  const uniqueIds = [...new Set(ids.filter((id) => typeof id === "string" && id.length > 0))];
+  if (!uniqueIds.length) return new Map<string, any>();
+  const profiles = await supabaseGet(config, `community_profiles?user_id=in.(${uniqueIds.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,bio,is_verified,profile_image_reference&limit=100`);
+  return new Map(profiles.map((row) => [row.user_id, row]));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
   try {
@@ -74,6 +81,34 @@ Deno.serve(async (req) => {
         const profiles = ids.length ? await supabaseGet(config, `community_profiles?user_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,bio,is_verified,profile_image_reference&limit=100`) : [];
         const byId = new Map(profiles.map((row) => [row.user_id, row]));
         return json({ requests: requests.map((row) => ({ ...row, requester_profile: byId.get(row.requester_id) ?? {} })) });
+      }
+      case "mark_notification_read": {
+        const notificationId = requireString(body.notification_id, "notification id", 80);
+        const updated = await supabaseUpdate(config, "community_notifications", `id=eq.${encodeURIComponent(notificationId)}&recipient_id=eq.${encodeURIComponent(identity.id)}`, { is_read: true, read_at: new Date().toISOString() });
+        return json(updated ?? { id: notificationId, is_read: true });
+      }
+      case "list_conversations": {
+        const memberships = await supabaseGet(config, `community_conversation_members?user_id=eq.${encodeURIComponent(identity.id)}&select=conversation_id,last_read_at&limit=100`);
+        if (!memberships.length) return json({ conversations: [] });
+        const ids = memberships.map((row) => row.conversation_id).filter((id) => typeof id === "string");
+        const conversations = await supabaseGet(config, `community_conversations?id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=id,updated_at&order=updated_at.desc&limit=100`);
+        const members = await supabaseGet(config, `community_conversation_members?conversation_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=conversation_id,user_id&limit=200`);
+        const participantIds = members.filter((row) => row.user_id !== identity.id).map((row) => row.user_id);
+        const profiles = await profileMap(config, participantIds);
+        const lastMessages = await supabaseGet(config, `community_messages?conversation_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&deleted_at=is.null&select=id,conversation_id,sender_id,content,media_reference,created_at&order=created_at.desc&limit=100`);
+        const latest = new Map<string, any>();
+        for (const message of lastMessages) if (!latest.has(message.conversation_id)) latest.set(message.conversation_id, message);
+        return json({ conversations: conversations.map((conversation) => {
+          const member = members.find((row) => row.conversation_id === conversation.id && row.user_id !== identity.id);
+          const message = latest.get(conversation.id);
+          return { ...conversation, participant: profiles.get(member?.user_id) ?? {}, last_message: message ?? null };
+        }) });
+      }
+      case "list_messages": {
+        const conversationId = requireString(body.conversation_id, "conversation id", 80);
+        await member(config, conversationId, identity.id);
+        const messages = await supabaseGet(config, `community_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&deleted_at=is.null&select=id,conversation_id,sender_id,content,media_reference,message_type,created_at&order=created_at.asc&limit=100`);
+        return json({ messages });
       }
       case "list_notifications": {
         const notifications = await supabaseGet(config, `community_notifications?recipient_id=eq.${encodeURIComponent(identity.id)}&select=id,type,friend_request_id,is_read,created_at,actor_id&order=created_at.desc&limit=50`);
@@ -131,6 +166,7 @@ Deno.serve(async (req) => {
       case "send_friend_request": {
         const recipient = requireString(body.user_id, "user id", 128);
         if (recipient === identity.id) throw new MediaFunctionError("invalid_input", 400, "You cannot send a friend request to yourself.");
+        await ensureProfile(config, { id: recipient });
         const existing = await supabaseGet(config, `community_friend_requests?or=(and(requester_id.eq.${encodeURIComponent(identity.id)},recipient_id.eq.${encodeURIComponent(recipient)}),and(requester_id.eq.${encodeURIComponent(recipient)},recipient_id.eq.${encodeURIComponent(identity.id)}))&status=in.(pending,accepted)&select=id,requester_id,status&order=created_at.desc&limit=1`);
         if (existing.length) {
           if (existing[0].status === "accepted") return json({ status: "friends" });
@@ -147,6 +183,7 @@ Deno.serve(async (req) => {
       case "open_conversation": {
         const otherUserId = requireString(body.user_id, "user id", 128);
         if (otherUserId === identity.id) throw new MediaFunctionError("invalid_input", 400, "You cannot message yourself.");
+        await ensureProfile(config, { id: otherUserId });
         const mine = await supabaseGet(config, `community_conversation_members?user_id=eq.${encodeURIComponent(identity.id)}&select=conversation_id&limit=100`);
         const ids = mine.map((row) => row.conversation_id).filter((id) => typeof id === "string");
         if (ids.length) {

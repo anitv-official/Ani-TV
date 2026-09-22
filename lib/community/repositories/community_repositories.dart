@@ -34,6 +34,7 @@ abstract class LikeRepository {
 abstract class NotificationRepository {
   Future<List<CommunityNotification>> fetchNotifications();
   Future<int> unreadCount();
+  Future<void> markRead(String notificationId);
 }
 
 abstract class MediaRepository {

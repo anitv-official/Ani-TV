@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -323,14 +324,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
   String? pendingImage;
   late Future<List<CommunityMessage>> future;
   List<CommunityMessage> messages = [];
+  String? currentUserId;
+  Timer? refreshTimer;
   @override
   void initState() {
     super.initState();
     future = chat.messages(widget.conversation.id);
+    _loadIdentity();
+    refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _refresh());
+  }
+
+  Future<void> _loadIdentity() async {
+    final id = await const AppwriteCommunityIdentity().currentUserId();
+    if (mounted) setState(() => currentUserId = id);
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final latest = await chat.messages(widget.conversation.id);
+      if (!mounted) return;
+      final byId = {for (final message in messages) message.id: message};
+      for (final message in latest) byId[message.id] = message;
+      final merged = byId.values.toList()
+        ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+      if (merged.length != messages.length ||
+          merged.any((message) => !messages.any((old) => old.id == message.id))) {
+        setState(() => messages = merged);
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    refreshTimer?.cancel();
     input.dispose();
     scroll.dispose();
     super.dispose();
@@ -402,7 +428,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
                           itemCount: messages.length,
                           itemBuilder: (_, index) =>
-                              _MessageBubble(message: messages[index]))),
+                              _MessageBubble(
+                                  message: messages[index],
+                                  currentUserId: currentUserId))),
               SafeArea(
                   child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
@@ -441,11 +469,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+  const _MessageBubble({required this.message, required this.currentUserId});
   final CommunityMessage message;
+  final String? currentUserId;
   @override
   Widget build(BuildContext context) {
-    final mine = message.senderId == 'guest';
+    final mine = currentUserId != null && message.senderId == currentUserId;
     return Align(
         alignment: mine
             ? AlignmentDirectional.centerEnd

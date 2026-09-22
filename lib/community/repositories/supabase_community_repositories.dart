@@ -459,28 +459,21 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
   }
   @override
   Future<List<Conversation>> conversations() async {
-    final me = await requireUser();
     try {
-      final members = await client
-          .from('community_conversation_members')
-          .select('conversation_id')
-          .eq('user_id', me);
-      final ids =
-          (members as List).map((row) => row['conversation_id']).toList();
-      if (ids.isEmpty) return [];
-      final rows = await client
-          .from('community_conversations')
-          .select('*')
-          .inFilter('id', ids)
-          .order('updated_at', ascending: false);
-      return (rows as List)
-          .map((row) => Conversation(
-              id: row['id'].toString(),
-              participant: const PostAuthor(
-                  id: '', username: 'community', displayName: 'Community'),
-              lastMessage: '',
-              updatedAt: DateTime.parse(row['updated_at'].toString())))
-          .toList();
+      final result = await writeApi.invoke('list_conversations');
+      final rows = (result['conversations'] as List?) ?? const [];
+      return rows.map((value) {
+        final row = Map<String, dynamic>.from(value as Map);
+        final participant = Map<String, dynamic>.from(
+            (row['participant'] as Map?) ?? const {});
+        final last = Map<String, dynamic>.from(
+            (row['last_message'] as Map?) ?? const {});
+        return Conversation(
+            id: row['id'].toString(),
+            participant: _authorFromProfile(participant),
+            lastMessage: last['content']?.toString() ?? '',
+            updatedAt: DateTime.parse(row['updated_at'].toString()));
+      }).toList();
     } catch (error) {
       throw this.error(error);
     }
@@ -488,15 +481,11 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
 
   @override
   Future<List<CommunityMessage>> messages(String conversationId) async {
-    await _assertMember(conversationId);
     try {
-      final rows = await client
-          .from('community_messages')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .isFilter('deleted_at', null)
-          .order('created_at')
-          .range(0, 99);
+      final result = await writeApi.invoke('list_messages', {
+        'conversation_id': conversationId,
+      });
+      final rows = (result['messages'] as List?) ?? const [];
       return (rows as List).map((row) {
         final map = Map<String, dynamic>.from(row as Map);
         return CommunityMessage(
@@ -518,7 +507,6 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
       {String? mediaReference}) async {
     if (text.trim().isEmpty && (mediaReference == null || mediaReference.isEmpty))
       throw const ValidationError('Message cannot be empty.');
-    await _assertMember(conversationId);
     try {
       final result = await writeApi.invoke('send_message', {
         'conversation_id': conversationId,
@@ -539,16 +527,6 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
     }
   }
 
-  Future<void> _assertMember(String conversationId) async {
-    final me = await requireUser();
-    final rows = await client
-        .from('community_conversation_members')
-        .select('conversation_id')
-        .eq('conversation_id', conversationId)
-        .eq('user_id', me);
-    if ((rows as List).isEmpty)
-      throw const PermissionError('You are not a member of this conversation.');
-  }
 }
 
 class SupabaseNotificationRepository extends SupabaseRepositoryBase
@@ -571,12 +549,16 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
             type: type,
             title: type == NotificationType.friendRequest
                 ? 'طلب صداقة من $actorName'
-                : type == NotificationType.comment
-                    ? 'تعليق جديد من $actorName'
-                    : 'إعجاب جديد من $actorName',
+                : type == NotificationType.friendRequestAccepted
+                    ? '$actorName قبل طلب صداقتك'
+                    : type == NotificationType.comment
+                        ? 'تعليق جديد من $actorName'
+                        : 'إعجاب جديد من $actorName',
             body: type == NotificationType.friendRequest
                 ? 'يمكنك قبول الطلب أو رفضه.'
-                : 'لديك تفاعل جديد على منشورك.',
+                : type == NotificationType.friendRequestAccepted
+                    ? 'أصبحتم أصدقاء الآن.'
+                    : 'لديك تفاعل جديد على منشورك.',
             createdAt: DateTime.parse(map['created_at'].toString()),
             isRead: map['is_read'] == true,
             friendRequestId: map['friend_request_id']?.toString());
@@ -592,6 +574,17 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
       final result = await writeApi.invoke('list_notifications');
       final rows = (result['notifications'] as List?) ?? const [];
       return rows.where((row) => row is Map && row['is_read'] != true).length;
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
+
+  @override
+  Future<void> markRead(String notificationId) async {
+    try {
+      await writeApi.invoke('mark_notification_read', {
+        'notification_id': notificationId,
+      });
     } catch (error) {
       throw this.error(error);
     }
@@ -740,6 +733,14 @@ CommunityProfile _profileFromRow(Map<String, dynamic> row) {
       friendStatus: FriendStatus.none);
 }
 
+PostAuthor _authorFromProfile(Map<String, dynamic> row) => PostAuthor(
+    id: row['user_id']?.toString() ?? '',
+    username: row['username']?.toString() ?? 'user',
+    displayName: row['display_name']?.toString() ??
+        row['username']?.toString() ?? 'User',
+    avatarPath: row['profile_image_reference']?.toString(),
+    isVerified: row['is_verified'] == true);
+
 CommunityComment _commentFromRow(Map<String, dynamic> row) {
   final profile = _profileFromRow(Map<String, dynamic>.from(
       (row['community_profiles'] as Map?) ?? const {}));
@@ -755,6 +756,8 @@ NotificationType _notificationType(String value) => value == 'comment'
     ? NotificationType.comment
     : value == 'friend_request'
         ? NotificationType.friendRequest
+        : value == 'friend_request_accepted'
+            ? NotificationType.friendRequestAccepted
         : NotificationType.reaction;
 
 class SupabaseCommunityRealtimeRepository extends SupabaseRepositoryBase

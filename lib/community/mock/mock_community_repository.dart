@@ -287,6 +287,8 @@ class MockNotificationRepository implements NotificationRepository {
   @override
   Future<int> unreadCount() async =>
       _items.where((item) => !item.isRead).length;
+  @override
+  Future<void> markRead(String notificationId) async {}
 }
 
 class MockMediaRepository implements MediaRepository {

@@ -16,6 +16,7 @@ class _CommunityNotificationsScreenState
     extends State<CommunityNotificationsScreen> {
   final repository = CommunityRepositoryFactory.notifications();
   final friends = CommunityRepositoryFactory.friends();
+  final Set<String> _markingRead = <String>{};
   late Future<List<CommunityNotification>> future;
   @override
   void initState() {
@@ -53,9 +54,14 @@ class _CommunityNotificationsScreenState
               final item = items[index];
               final icon = item.type == NotificationType.friendRequest
                   ? Icons.person_add_alt_1_rounded
+                  : item.type == NotificationType.friendRequestAccepted
+                      ? Icons.person_add_alt_1_rounded
                   : item.type == NotificationType.comment
                       ? Icons.mode_comment_outlined
                       : Icons.favorite_border_rounded;
+              if (!item.isRead && _markingRead.add(item.id)) {
+                repository.markRead(item.id).catchError((_) {});
+              }
               return ListTile(
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
