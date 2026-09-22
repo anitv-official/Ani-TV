@@ -216,7 +216,7 @@ class AppStateProvider extends ChangeNotifier {
       if (_profileImageId?.isNotEmpty == true) {
         try {
           await _appwrite.makeProfileImagePublic(
-              userId: userId, fileId: _profileImageId);
+              userId: userId, fileId: _profileImageId!);
         } catch (_) {}
       }
       await _storeSocialProfileImage();
