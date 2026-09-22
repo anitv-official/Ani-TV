@@ -15,11 +15,11 @@ class AppwriteService {
     client
       ..setEndpoint(_endpoint)
       ..setProject(_projectId);
-      account = Account(client);
-      databases = Databases(client);
-      storage = Storage(client);
-      functions = Functions(client);
-      messaging = Messaging(client);
+    account = Account(client);
+    databases = Databases(client);
+    storage = Storage(client);
+    functions = Functions(client);
+    messaging = Messaging(client);
   }
 
   static final AppwriteService instance = AppwriteService._internal();
@@ -30,9 +30,11 @@ class AppwriteService {
   static const String profilesTableId = '6aa58dec001acc5ce962';
   static const String favoritesTableId = '6aa58e3a003b23556872';
   static const String profileImagesBucketId = '6aa592fc0003195a524b';
-  static const String emailVerificationUrl = 'https://anitv-tau.vercel.app/verify-email';
+  static const String emailVerificationUrl =
+      'https://anitv-tau.vercel.app/verify-email';
   static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
-  static const String usernameLoginEndpoint = 'https://anitv-username-login.nyc.appwrite.run';
+  static const String usernameLoginEndpoint =
+      'https://anitv-username-login.nyc.appwrite.run';
   static const String _sessionSecretKey = 'anitv_appwrite_session_secret';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
@@ -54,13 +56,21 @@ class AppwriteService {
             client.setSession(saved);
             return await account.get();
           } on AppwriteException catch (restoreError) {
-            if (restoreError.code == 401) await _secureStorage.delete(key: _sessionSecretKey);
+            if (restoreError.code == 401)
+              await _secureStorage.delete(key: _sessionSecretKey);
           }
         }
         return null;
       }
       rethrow;
     }
+  }
+
+  /// Creates a short-lived Appwrite JWT for Community Edge Functions.
+  /// This does not replace or alter the existing Appwrite session flow.
+  Future<String> createCommunityJwt() async {
+    final jwt = await account.createJWT();
+    return jwt.jwt;
   }
 
   Future<bool> isFacebookSession() async {
@@ -84,10 +94,18 @@ class AppwriteService {
     }
   }
 
-  Future<models.User> register({required String email, required String password, required String name}) async {
-    await account.create(userId: ID.unique(), email: email.trim(), password: password, name: name.trim());
+  Future<models.User> register(
+      {required String email,
+      required String password,
+      required String name}) async {
+    await account.create(
+        userId: ID.unique(),
+        email: email.trim(),
+        password: password,
+        name: name.trim());
     try {
-      final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
+      final session = await account.createEmailPasswordSession(
+          email: email.trim(), password: password);
       await _rememberSession(session.secret);
       return account.get();
     } catch (error) {
@@ -98,8 +116,10 @@ class AppwriteService {
     }
   }
 
-  Future<models.User> login({required String email, required String password}) async {
-    final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
+  Future<models.User> login(
+      {required String email, required String password}) async {
+    final session = await account.createEmailPasswordSession(
+        email: email.trim(), password: password);
     await _rememberSession(session.secret);
     return account.get();
   }
@@ -118,14 +138,17 @@ class AppwriteService {
       _logFacebookOAuthException('createOAuth2Token failure', error);
       throw const FacebookAuthException('TOKEN_FAILED');
     } catch (error) {
-      debugPrint('Facebook OAuth createOAuth2Token failure: ${_safeOAuthMessage(error.toString())}');
+      debugPrint(
+          'Facebook OAuth createOAuth2Token failure: ${_safeOAuthMessage(error.toString())}');
       throw const FacebookAuthException('TOKEN_FAILED');
     }
   }
 
-  Future<models.User> createFacebookSession({required String userId, required String secret}) async {
+  Future<models.User> createFacebookSession(
+      {required String userId, required String secret}) async {
     try {
-      final session = await account.createSession(userId: userId, secret: secret);
+      final session =
+          await account.createSession(userId: userId, secret: secret);
       await _rememberSession(session.secret);
       debugPrint('Facebook OAuth createSession success = true');
       return account.get();
@@ -133,17 +156,21 @@ class AppwriteService {
       _logFacebookOAuthException('createSession failure', error);
       debugPrint('Facebook OAuth createSession success = false');
       final errorCode = error.code ?? -1;
-      if (errorCode == 0 || errorCode >= 500) throw const FacebookAuthException('NETWORK');
+      if (errorCode == 0 || errorCode >= 500)
+        throw const FacebookAuthException('NETWORK');
       throw const FacebookAuthException('SESSION_FAILED');
     } catch (error) {
-      debugPrint('Facebook OAuth createSession success = false; error=${_safeOAuthMessage(error.toString())}');
+      debugPrint(
+          'Facebook OAuth createSession success = false; error=${_safeOAuthMessage(error.toString())}');
       throw const FacebookAuthException('OAUTH_FAILED');
     }
   }
 
   Future<String> createGoogleOAuth2Token() async {
-    const success = 'appwrite-callback-6aa4295900094d600163://auth/google-success';
-    const failure = 'appwrite-callback-6aa4295900094d600163://auth/google-failure';
+    const success =
+        'appwrite-callback-6aa4295900094d600163://auth/google-success';
+    const failure =
+        'appwrite-callback-6aa4295900094d600163://auth/google-failure';
     try {
       final url = await account.createOAuth2Token(
         provider: enums.OAuthProvider.google,
@@ -152,7 +179,8 @@ class AppwriteService {
       );
       return url.toString();
     } on AppwriteException catch (error) {
-      debugPrint('Google OAuth token failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
+      debugPrint(
+          'Google OAuth token failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
       throw const GoogleAuthException('TOKEN_FAILED');
     } catch (error) {
       debugPrint('Google OAuth token failure: type=${error.runtimeType}');
@@ -160,16 +188,20 @@ class AppwriteService {
     }
   }
 
-  Future<models.User> createGoogleSession({required String userId, required String secret}) async {
+  Future<models.User> createGoogleSession(
+      {required String userId, required String secret}) async {
     try {
-      final session = await account.createSession(userId: userId, secret: secret);
+      final session =
+          await account.createSession(userId: userId, secret: secret);
       await _rememberSession(session.secret);
       return account.get();
     } on AppwriteException catch (error) {
-      debugPrint('Google OAuth createSession failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
+      debugPrint(
+          'Google OAuth createSession failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
       throw const GoogleAuthException('SESSION_FAILED');
     } catch (error) {
-      debugPrint('Google OAuth createSession failure: type=${error.runtimeType}');
+      debugPrint(
+          'Google OAuth createSession failure: type=${error.runtimeType}');
       throw const GoogleAuthException('SESSION_FAILED');
     }
   }
@@ -180,7 +212,8 @@ class AppwriteService {
       final providerUid = session.providerUid?.trim() ?? '';
       final token = session.providerAccessToken?.trim() ?? '';
       if (providerUid.isEmpty && token.isEmpty) return null;
-      final response = await http.get(Uri.https('graph.facebook.com', providerUid.isEmpty ? '/me/picture' : '/$providerUid/picture', {
+      final response = await http.get(Uri.https('graph.facebook.com',
+          providerUid.isEmpty ? '/me/picture' : '/$providerUid/picture', {
         'type': 'large',
         'redirect': 'false',
         if (token.isNotEmpty) 'access_token': token,
@@ -196,7 +229,10 @@ class AppwriteService {
   }
 
   Future<String?> storeFacebookProfileImage({required String userId}) async {
-    return _storeRemoteProfileImage(userId: userId, url: await facebookProfileImageUrl(), filename: 'facebook-profile.jpg');
+    return _storeRemoteProfileImage(
+        userId: userId,
+        url: await facebookProfileImageUrl(),
+        filename: 'facebook-profile.jpg');
   }
 
   Future<String?> googleProfileImageUrl() async {
@@ -204,7 +240,9 @@ class AppwriteService {
       final session = await account.getSession(sessionId: 'current');
       final token = session.providerAccessToken?.trim() ?? '';
       if (token.isEmpty) return null;
-      final response = await http.get(Uri.parse('https://www.googleapis.com/oauth2/v2/userinfo'), headers: {'Authorization': 'Bearer $token'});
+      final response = await http.get(
+          Uri.parse('https://www.googleapis.com/oauth2/v2/userinfo'),
+          headers: {'Authorization': 'Bearer $token'});
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
       final body = jsonDecode(response.body);
       final url = body is Map ? body['picture']?.toString().trim() : null;
@@ -215,23 +253,36 @@ class AppwriteService {
   }
 
   Future<String?> storeGoogleProfileImage({required String userId}) async {
-    return _storeRemoteProfileImage(userId: userId, url: await googleProfileImageUrl(), filename: 'google-profile.jpg');
+    return _storeRemoteProfileImage(
+        userId: userId,
+        url: await googleProfileImageUrl(),
+        filename: 'google-profile.jpg');
   }
 
-  Future<String?> _storeRemoteProfileImage({required String userId, required String? url, required String filename}) async {
+  Future<String?> _storeRemoteProfileImage(
+      {required String userId,
+      required String? url,
+      required String filename}) async {
     if (url == null || url.isEmpty) return null;
     final response = await http.get(Uri.parse(url));
-    if (response.statusCode < 200 || response.statusCode >= 300 || response.bodyBytes.isEmpty) return null;
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        response.bodyBytes.isEmpty) return null;
     final file = await storage.createFile(
       bucketId: profileImagesBucketId,
       fileId: ID.unique(),
       file: InputFile.fromBytes(bytes: response.bodyBytes, filename: filename),
-      permissions: [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))],
+      permissions: [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId))
+      ],
     );
     return file.$id;
   }
 
-  Future<models.User> loginWithUsername({required String username, required String password}) async {
+  Future<models.User> loginWithUsername(
+      {required String username, required String password}) async {
     final normalized = username.trim().toLowerCase();
     late http.Response response;
     try {
@@ -248,17 +299,24 @@ class AppwriteService {
     try {
       body = jsonDecode(response.body);
     } catch (_) {
-      throw UsernameLoginException(response.statusCode >= 400 ? 'SERVER_ERROR' : 'SERVER_ERROR');
+      throw UsernameLoginException(
+          response.statusCode >= 400 ? 'SERVER_ERROR' : 'SERVER_ERROR');
     }
     if (body is! Map) throw const UsernameLoginException('SERVER_ERROR');
     final code = body['code']?.toString();
-    if (response.statusCode < 200 || response.statusCode >= 300 || body['ok'] != true) {
-      throw UsernameLoginException(code ?? (response.statusCode == 401 ? 'INVALID_CREDENTIALS' : 'SERVER_ERROR'));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        body['ok'] != true) {
+      throw UsernameLoginException(code ??
+          (response.statusCode == 401
+              ? 'INVALID_CREDENTIALS'
+              : 'SERVER_ERROR'));
     }
 
     final userId = body['userId']?.toString() ?? '';
     final secret = body['secret']?.toString() ?? '';
-    if (userId.isEmpty || secret.isEmpty) throw const UsernameLoginException('SERVER_ERROR');
+    if (userId.isEmpty || secret.isEmpty)
+      throw const UsernameLoginException('SERVER_ERROR');
 
     // The Function already created the user's Appwrite session. Install its
     // session secret on the client; do not call createSession a second time.
@@ -272,7 +330,8 @@ class AppwriteService {
     }
   }
 
-  Future<bool> checkUsernameAvailability(String username, {String? currentDocumentId}) async {
+  Future<bool> checkUsernameAvailability(String username,
+      {String? currentDocumentId}) async {
     final normalized = username.trim().toLowerCase();
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(normalized)) return false;
     final response = await http.post(
@@ -281,7 +340,8 @@ class AppwriteService {
       body: jsonEncode({
         'action': 'check_username',
         'username': normalized,
-        if (currentDocumentId != null && currentDocumentId.isNotEmpty) 'currentDocumentId': currentDocumentId,
+        if (currentDocumentId != null && currentDocumentId.isNotEmpty)
+          'currentDocumentId': currentDocumentId,
       }),
     );
     dynamic body;
@@ -290,7 +350,11 @@ class AppwriteService {
     } catch (_) {
       throw const UsernameAvailabilityException();
     }
-    if (response.statusCode < 200 || response.statusCode >= 300 || body is! Map || body['ok'] != true || body['available'] is! bool) {
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        body is! Map ||
+        body['ok'] != true ||
+        body['available'] is! bool) {
       throw const UsernameAvailabilityException();
     }
     return body['available'] as bool;
@@ -300,12 +364,14 @@ class AppwriteService {
     try {
       await account.createVerification(url: emailVerificationUrl);
     } on AppwriteException catch (error) {
-      debugPrint('Appwrite createVerification failed: code=${error.code}, type=${error.type}, message=${error.message}');
+      debugPrint(
+          'Appwrite createVerification failed: code=${error.code}, type=${error.type}, message=${error.message}');
       rethrow;
     }
   }
 
-  Future<models.User> confirmEmailVerification({required String userId, required String secret}) async {
+  Future<models.User> confirmEmailVerification(
+      {required String userId, required String secret}) async {
     await account.updateVerification(userId: userId, secret: secret);
     return account.get();
   }
@@ -319,23 +385,41 @@ class AppwriteService {
     }
   }
 
-  Future<models.Target> createPushTarget({required String targetId, required String identifier, String? providerId}) => account.createPushTarget(targetId: targetId, identifier: identifier, providerId: providerId);
-  Future<models.Target> updatePushTarget({required String targetId, required String identifier}) => account.updatePushTarget(targetId: targetId, identifier: identifier);
-  Future<void> deletePushTarget(String targetId) async => await account.deletePushTarget(targetId: targetId);
-  Future<void> subscribePushTarget({required String topicId, required String subscriberId, required String targetId}) async {
-    await messaging.createSubscriber(topicId: topicId, subscriberId: subscriberId, targetId: targetId);
+  Future<models.Target> createPushTarget(
+          {required String targetId,
+          required String identifier,
+          String? providerId}) =>
+      account.createPushTarget(
+          targetId: targetId, identifier: identifier, providerId: providerId);
+  Future<models.Target> updatePushTarget(
+          {required String targetId, required String identifier}) =>
+      account.updatePushTarget(targetId: targetId, identifier: identifier);
+  Future<void> deletePushTarget(String targetId) async =>
+      await account.deletePushTarget(targetId: targetId);
+  Future<void> subscribePushTarget(
+      {required String topicId,
+      required String subscriberId,
+      required String targetId}) async {
+    await messaging.createSubscriber(
+        topicId: topicId, subscriberId: subscriberId, targetId: targetId);
   }
 
   /// Delegates account deletion to the existing trusted Appwrite Function.
   /// The Function owns the server key and validates resource ownership.
   Future<void> deleteCurrentAccount({required String password}) async {
     final user = await getCurrentUser();
-    if (user == null || user.$id.isEmpty) throw const AccountDeletionException('NO_SESSION');
-    if (user.email.trim().isEmpty) throw const AccountDeletionException('NO_EMAIL');
+    if (user == null || user.$id.isEmpty)
+      throw const AccountDeletionException('NO_SESSION');
+    if (user.email.trim().isEmpty)
+      throw const AccountDeletionException('NO_EMAIL');
 
     final execution = await functions.createExecution(
       functionId: usernameLoginFunctionId,
-      body: jsonEncode({'action': 'delete_account', 'userId': user.$id, 'password': password}),
+      body: jsonEncode({
+        'action': 'delete_account',
+        'userId': user.$id,
+        'password': password
+      }),
       xasync: false,
     );
     Map<String, dynamic> body = const {};
@@ -344,18 +428,30 @@ class AppwriteService {
       if (decoded is Map) body = Map<String, dynamic>.from(decoded);
     } catch (_) {}
     if (execution.responseStatusCode != 200 || body['ok'] != true) {
-      throw AccountDeletionException(body['code']?.toString() ?? 'DELETE_ERROR');
+      throw AccountDeletionException(
+          body['code']?.toString() ?? 'DELETE_ERROR');
     }
     await _secureStorage.delete(key: _sessionSecretKey);
     client.setSession('');
   }
 
   Future<void> ping() async => client.ping();
-  Future<models.User> updateName(String name) async => account.updateName(name: name.trim());
-  Future<models.User> updatePassword({required String password, String? oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
-  Future<models.User> updateEmail({required String email, required String password}) async => account.updateEmail(email: email.trim(), password: password);
-  Future<void> sendPasswordRecovery(String email, String redirectUrl) async => account.createRecovery(email: email.trim(), url: redirectUrl);
-  Future<models.Token> completePasswordRecovery({required String userId, required String secret, required String password}) async => account.updateRecovery(userId: userId, secret: secret, password: password);
+  Future<models.User> updateName(String name) async =>
+      account.updateName(name: name.trim());
+  Future<models.User> updatePassword(
+          {required String password, String? oldPassword}) async =>
+      account.updatePassword(password: password, oldPassword: oldPassword);
+  Future<models.User> updateEmail(
+          {required String email, required String password}) async =>
+      account.updateEmail(email: email.trim(), password: password);
+  Future<void> sendPasswordRecovery(String email, String redirectUrl) async =>
+      account.createRecovery(email: email.trim(), url: redirectUrl);
+  Future<models.Token> completePasswordRecovery(
+          {required String userId,
+          required String secret,
+          required String password}) async =>
+      account.updateRecovery(
+          userId: userId, secret: secret, password: password);
 
   Future<models.Document?> getProfile(String userId) async {
     final rows = await _listProfileRows();
@@ -399,18 +495,30 @@ class AppwriteService {
     final normalized = normalizeUsername(username);
     final existing = await getProfile(userId);
     if (existing != null) {
-      final existingUsername = normalizeUsername((existing.data['username'] ?? '').toString());
+      final existingUsername =
+          normalizeUsername((existing.data['username'] ?? '').toString());
       if (existingUsername.isEmpty && normalized.isNotEmpty) {
-        if (!await isUsernameAvailable(normalized, currentDocumentId: existing.$id)) {
+        if (!await isUsernameAvailable(normalized,
+            currentDocumentId: existing.$id)) {
           throw const UsernameTakenException();
         }
-        return updateProfile(documentId: existing.$id, username: normalized, displayName: displayName, birthDate: birthDate, country: country);
+        return updateProfile(
+            documentId: existing.$id,
+            username: normalized,
+            displayName: displayName,
+            birthDate: birthDate,
+            country: country);
       }
       if (normalized.isNotEmpty && existingUsername != normalized) {
         throw const UsernameTakenException();
       }
       if (displayName != null || birthDate != null || country != null) {
-        return updateProfile(documentId: existing.$id, username: existingUsername, displayName: displayName, birthDate: birthDate, country: country);
+        return updateProfile(
+            documentId: existing.$id,
+            username: existingUsername,
+            displayName: displayName,
+            birthDate: birthDate,
+            country: country);
       }
       return existing;
     }
@@ -438,7 +546,8 @@ class AppwriteService {
         },
       );
       final body = response.data;
-      if (body is! Map) throw const FormatException('Invalid profile row response');
+      if (body is! Map)
+        throw const FormatException('Invalid profile row response');
       return _profileRowToDocument(Map<String, dynamic>.from(body));
     } on AppwriteException catch (error) {
       if (error.code == 409 || (error.type ?? '').contains('duplicate')) {
@@ -448,7 +557,13 @@ class AppwriteService {
     }
   }
 
-  Future<models.Document> updateProfile({required String documentId, required String username, String? profileImageId, String? displayName, String? birthDate, String? country}) async {
+  Future<models.Document> updateProfile(
+      {required String documentId,
+      required String username,
+      String? profileImageId,
+      String? displayName,
+      String? birthDate,
+      String? country}) async {
     final response = await client.call(
       HttpMethod.patch,
       path: '/tablesdb/$databaseId/tables/$profilesTableId/rows/$documentId',
@@ -464,57 +579,94 @@ class AppwriteService {
       },
     );
     final body = response.data;
-    if (body is! Map) throw const FormatException('Invalid profile row response');
+    if (body is! Map)
+      throw const FormatException('Invalid profile row response');
     return _profileRowToDocument(Map<String, dynamic>.from(body));
   }
 
-  Future<bool> isUsernameAvailable(String username, {String? currentDocumentId}) async {
+  Future<bool> isUsernameAvailable(String username,
+      {String? currentDocumentId}) async {
     final value = normalizeUsername(username);
     if (!RegExp(r'^[a-z0-9_]{3,24}$').hasMatch(value)) return false;
-    return checkUsernameAvailability(value, currentDocumentId: currentDocumentId);
+    return checkUsernameAvailability(value,
+        currentDocumentId: currentDocumentId);
   }
 
-  Future<models.Document> updateUsername({required String documentId, required String username}) => updateProfile(documentId: documentId, username: username);
+  Future<models.Document> updateUsername(
+          {required String documentId, required String username}) =>
+      updateProfile(documentId: documentId, username: username);
 
-  Future<String> uploadProfileImage({required String userId, required String path}) async {
+  Future<String> uploadProfileImage(
+      {required String userId, required String path}) async {
     final file = await storage.createFile(
       bucketId: profileImagesBucketId,
       fileId: ID.unique(),
       file: InputFile.fromPath(path: path),
-      permissions: [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))],
+      permissions: [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId))
+      ],
     );
     return file.$id;
   }
 
-  Future<Uint8List> profileImageBytes(String fileId) => storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
-  Future<void> deleteProfileImage(String fileId) async { if (fileId.isNotEmpty) await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId); }
+  Future<Uint8List> profileImageBytes(String fileId) =>
+      storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
+  Future<void> deleteProfileImage(String fileId) async {
+    if (fileId.isNotEmpty)
+      await storage.deleteFile(bucketId: profileImagesBucketId, fileId: fileId);
+  }
 
   Future<List<models.Document>> getFavorites(String userId) async {
     await _assertCurrentUser(userId);
-    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [Query.equal('userId', userId), Query.limit(5000)]);
+    final result = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: favoritesTableId,
+        queries: [Query.equal('userId', userId), Query.limit(5000)]);
     return result.documents;
   }
-  Future<models.Document?> findFavorite({required String userId, required String itemId, String? source}) async {
+
+  Future<models.Document?> findFavorite(
+      {required String userId, required String itemId, String? source}) async {
     await _assertCurrentUser(userId);
-    final result = await databases.listDocuments(databaseId: databaseId, collectionId: favoritesTableId, queries: [
-      Query.equal('userId', userId), Query.equal('itemId', itemId),
-      if (source != null && source.isNotEmpty) Query.equal('source', source), Query.limit(1),
-    ]);
+    final result = await databases.listDocuments(
+        databaseId: databaseId,
+        collectionId: favoritesTableId,
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('itemId', itemId),
+          if (source != null && source.isNotEmpty)
+            Query.equal('source', source),
+          Query.limit(1),
+        ]);
     return result.documents.isEmpty ? null : result.documents.first;
   }
-  Future<models.Document> createFavorite({required String userId, required Map<String, dynamic> data}) async {
+
+  Future<models.Document> createFavorite(
+      {required String userId, required Map<String, dynamic> data}) async {
     await _assertCurrentUser(userId);
-    return databases.createDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: ID.unique(), data: {'userId': userId, ...data});
+    return databases.createDocument(
+        databaseId: databaseId,
+        collectionId: favoritesTableId,
+        documentId: ID.unique(),
+        data: {'userId': userId, ...data});
   }
-  Future<void> deleteFavorite({required String userId, required String documentId}) async {
+
+  Future<void> deleteFavorite(
+      {required String userId, required String documentId}) async {
     await _assertCurrentUser(userId);
-    await databases.deleteDocument(databaseId: databaseId, collectionId: favoritesTableId, documentId: documentId);
+    await databases.deleteDocument(
+        databaseId: databaseId,
+        collectionId: favoritesTableId,
+        documentId: documentId);
   }
 
   Future<void> _assertCurrentUser(String expectedUserId) async {
     final user = await getCurrentUser();
     if (user == null || user.$id != expectedUserId) {
-      throw AppwriteException('The requested data does not belong to the current user.', 401);
+      throw AppwriteException(
+          'The requested data does not belong to the current user.', 401);
     }
   }
 }
@@ -522,50 +674,76 @@ class AppwriteService {
 String authErrorMessage(Object error, {required bool registering}) {
   if (error is FacebookAuthException) {
     switch (error.code) {
-      case 'CANCELLED': return 'تم إلغاء تسجيل الدخول باستخدام Facebook.';
-      case 'NETWORK': return 'تعذر الاتصال بخدمة Facebook. حاول مرة أخرى.';
+      case 'CANCELLED':
+        return 'تم إلغاء تسجيل الدخول باستخدام Facebook.';
+      case 'NETWORK':
+        return 'تعذر الاتصال بخدمة Facebook. حاول مرة أخرى.';
       case 'TOKEN_FAILED':
       case 'SESSION_FAILED':
-      default: return 'تعذر تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.';
+      default:
+        return 'تعذر تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.';
     }
   }
   if (error is AccountCreatedButSessionUnavailableException) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
   }
   if (error is UsernameTakenException) return 'اسم المستخدم مأخوذ بالفعل';
-  if (error is EmailAlreadyUsedException) return 'هذا البريد الإلكتروني مستخدم بالفعل في حساب آخر.';
+  if (error is EmailAlreadyUsedException)
+    return 'هذا البريد الإلكتروني مستخدم بالفعل في حساب آخر.';
   if (error is GoogleAuthException) {
     switch (error.code) {
-      case 'TOKEN_FAILED': return 'تعذر فتح تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
-      case 'SESSION_FAILED': return 'تعذر إنشاء جلسة Google. حاول مرة أخرى.';
-      default: return 'تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
+      case 'TOKEN_FAILED':
+        return 'تعذر فتح تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
+      case 'SESSION_FAILED':
+        return 'تعذر إنشاء جلسة Google. حاول مرة أخرى.';
+      default:
+        return 'تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
     }
   }
   if (error is UsernameLoginException) {
     switch (error.code) {
-      case 'INVALID_CREDENTIALS': return 'بيانات الدخول غير صحيحة.';
-      case 'INVALID_INPUT': return 'تحقق من البيانات المدخلة.';
+      case 'INVALID_CREDENTIALS':
+        return 'بيانات الدخول غير صحيحة.';
+      case 'INVALID_INPUT':
+        return 'تحقق من البيانات المدخلة.';
       case 'PROFILE_ERROR':
       case 'USER_ERROR':
       case 'SESSION_ERROR':
-      case 'SERVER_ERROR': return 'حدث خطأ في الخادم. حاول مرة أخرى.';
-      default: return 'حدث خطأ في الخادم. حاول مرة أخرى.';
+      case 'SERVER_ERROR':
+        return 'حدث خطأ في الخادم. حاول مرة أخرى.';
+      default:
+        return 'حدث خطأ في الخادم. حاول مرة أخرى.';
     }
   }
   if (error is AppwriteException) {
     switch (error.code) {
-      case 401: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-      case 404: return registering ? 'تعذر إنشاء الحساب بالبيانات المدخلة.' : 'لم يتم العثور على حساب بهذا البريد الإلكتروني.';
-      case 409: return registering ? 'هذا البريد الإلكتروني مستخدم بالفعل. جرّب تسجيل الدخول أو استخدم بريدًا آخر.' : 'بيانات الدخول غير صحيحة.';
-      case 400: return registering ? 'تحقق من البيانات المدخلة.' : 'تحقق من البيانات المدخلة.';
+      case 401:
+        return registering
+            ? 'تعذر إنشاء الحساب بالبيانات المدخلة.'
+            : 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+      case 404:
+        return registering
+            ? 'تعذر إنشاء الحساب بالبيانات المدخلة.'
+            : 'لم يتم العثور على حساب بهذا البريد الإلكتروني.';
+      case 409:
+        return registering
+            ? 'هذا البريد الإلكتروني مستخدم بالفعل. جرّب تسجيل الدخول أو استخدم بريدًا آخر.'
+            : 'بيانات الدخول غير صحيحة.';
+      case 400:
+        return registering
+            ? 'تحقق من البيانات المدخلة.'
+            : 'تحقق من البيانات المدخلة.';
       case 408:
       case 429:
       case 500:
       case 502:
-      case 503: return 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
+      case 503:
+        return 'تعذر الاتصال بالخادم، حاول مرة أخرى.';
     }
   }
-  return registering ? 'حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.' : 'حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.';
+  return registering
+      ? 'حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.'
+      : 'حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.';
 }
 
 class UsernameLoginException implements Exception {
@@ -591,10 +769,12 @@ class FacebookAuthException implements Exception {
   final String code;
   const FacebookAuthException(this.code);
 }
+
 class GoogleAuthException implements Exception {
   final String code;
   const GoogleAuthException(this.code);
 }
+
 void _logFacebookOAuthException(String stage, AppwriteException error) {
   debugPrint(
     'Facebook OAuth $stage: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}, message=${_safeOAuthMessage(error.message)}',
@@ -604,7 +784,9 @@ void _logFacebookOAuthException(String stage, AppwriteException error) {
 String _safeOAuthMessage(String? value) {
   final message = (value ?? '').trim();
   if (message.isEmpty) return '[empty]';
-  if (RegExp(r'(secret|token|password|authorization|cookie|userid|user id)', caseSensitive: false).hasMatch(message)) return '[redacted]';
+  if (RegExp(r'(secret|token|password|authorization|cookie|userid|user id)',
+          caseSensitive: false)
+      .hasMatch(message)) return '[redacted]';
   return message;
 }
 
@@ -613,9 +795,11 @@ String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. ح
 class UsernameTakenException implements Exception {
   const UsernameTakenException();
 }
+
 class EmailAlreadyUsedException implements Exception {
   const EmailAlreadyUsedException();
 }
+
 class UsernameValidation {
   static final RegExp pattern = RegExp(r'^[a-z0-9_]{3,24}$');
   static String normalize(String value) => value.trim().toLowerCase();

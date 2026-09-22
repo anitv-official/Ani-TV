@@ -12,6 +12,7 @@ class CommunityFeedProvider extends ChangeNotifier {
   String query = '';
   Object? error;
   Future<void>? _request;
+  DateTime? _cursor;
 
   List<CommunityPost> get visiblePosts => List.unmodifiable(posts);
 
@@ -29,6 +30,7 @@ class CommunityFeedProvider extends ChangeNotifier {
     if (refresh) {
       posts.clear();
       hasMore = true;
+      _cursor = null;
     }
     if (!hasMore) return;
     loading = posts.isEmpty;
@@ -36,10 +38,13 @@ class CommunityFeedProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final next =
-          await repository.fetchPosts(offset: posts.length, query: query);
+      final next = await repository.fetchPosts(
+          offset: _cursor == null ? posts.length : 0,
+          query: query,
+          before: _cursor);
       final existing = posts.map((post) => post.id).toSet();
       posts.addAll(next.where((post) => existing.add(post.id)));
+      if (next.isNotEmpty) _cursor = next.last.createdAt;
       hasMore = next.length == 8;
     } catch (value) {
       error = value;

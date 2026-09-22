@@ -9,43 +9,35 @@ class CommunityRepositoryFactory {
   static final CommunityIdentityProvider identity =
       const AppwriteCommunityIdentity();
   static CommunityRepository community() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseCommunityRepository(identity: identity)
           : MockCommunityRepository();
   static ProfileRepository profile() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseProfileRepository(identity: identity)
           : MockProfileRepository(MockCommunityRepository());
   static FriendRepository friends() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseFriendRepository(identity: identity)
           : MockFriendRepository();
   static ChatRepository chat() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseChatRepository(identity: identity)
           : MockChatRepository();
   static NotificationRepository notifications() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseNotificationRepository(identity: identity)
           : MockNotificationRepository();
   static VerificationRepository verification() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseVerificationRepository(identity: identity)
           : MockVerificationRepository();
   static MediaRepository media() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseMediaRepository(identity: identity)
           : BackblazeMediaRepository();
   static ShareRepository share() =>
-      CommunityBackend.dataSource == CommunityDataSource.supabase &&
-              CommunityBackend.isSupabaseConfigured
+      CommunityBackend.dataSource == CommunityDataSource.supabase
           ? SupabaseShareRepository()
           : MockShareRepository();
 }

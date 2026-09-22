@@ -2,7 +2,7 @@ import '../models/community_models.dart';
 
 abstract class CommunityRepository {
   Future<List<CommunityPost>> fetchPosts(
-      {int offset = 0, int limit = 8, String query = ''});
+      {int offset = 0, int limit = 8, String query = '', DateTime? before});
   Future<CommunityPost> publishPost(
       {required String text,
       String? imagePath,
@@ -16,7 +16,7 @@ abstract class CommunityRepository {
 
 abstract class PostRepository {
   Future<List<CommunityPost>> fetchPosts(
-      {int offset = 0, int limit = 8, String query = ''});
+      {int offset = 0, int limit = 8, String query = '', DateTime? before});
   Future<CommunityPost> create(CreatePostDraft draft);
 }
 

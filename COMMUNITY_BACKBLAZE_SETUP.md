@@ -1,6 +1,6 @@
 # AniTV Community — Manual Backblaze B2 Setup Later
 
-This document is a future manual setup guide only. Backblaze B2 is **not connected** in the current implementation, and no B2 credential belongs in Flutter, GitHub, Supabase public tables, assets, or `.env` files shipped to the application.
+This document records the manual B2 secret and bucket requirements for the deployed Community Edge Functions. B2 credentials remain server-only; no B2 credential belongs in Flutter, GitHub source, Supabase public tables, assets, or `.env` files shipped to the application.
 
 ## 1. What will be needed
 
@@ -63,7 +63,7 @@ Flutter MediaRepository
   → storage metadata saved in Supabase
 ```
 
-The existing `BackblazeMediaRepository` placeholder in `lib/community/services/community_media_storage.dart` is the integration boundary. Replace its `StorageNotConfiguredError` behavior only after the secure endpoint exists.
+The deployed `community-media-upload`, `community-media-complete`, `community-media-url`, and `community-media-delete` Edge Functions are the secure integration boundary. The Flutter client never receives B2 credentials.
 
 ## 6. Secure download flow
 
@@ -115,7 +115,7 @@ The implementation sequence will be:
 3. Add server-side integration tests for authorization and expiry.
 4. Implement `BackblazeMediaRepository` against those functions.
 5. Keep the existing `MediaRepository` interface unchanged.
-6. Switch the factory from placeholder to the real repository only after tests pass.
+6. Keep production on Supabase mode; use `COMMUNITY_DATA_SOURCE=mock` only for offline tests.
 7. Keep Mock mode available for offline development.
 
 Do not perform these steps in the Flutter repository alone. The current project intentionally stops before credentials, B2 API calls, and production upload behavior.

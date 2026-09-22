@@ -4,10 +4,12 @@ import 'package:anitv/community/services/community_backend_config.dart';
 import 'package:anitv/community/services/community_media_storage.dart';
 
 void main() {
-  test('default build remains in Mock mode without Supabase dart-defines', () {
-    expect(CommunityBackend.dataSource, CommunityDataSource.mock);
-    expect(CommunityBackend.supabaseUrl, isEmpty);
-    expect(CommunityBackend.supabasePublishableKey, isEmpty);
+  test('production build defaults to Supabase with an explicit Mock override',
+      () {
+    expect(CommunityBackend.dataSource, CommunityDataSource.supabase);
+    expect(CommunityBackend.supabaseUrl, contains('supabase.co'));
+    expect(
+        CommunityBackend.supabasePublishableKey, startsWith('sb_publishable_'));
   });
 
   test('backend errors expose safe user-facing categories', () {

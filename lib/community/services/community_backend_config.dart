@@ -7,11 +7,13 @@ abstract class CommunityIdentityProvider {
 }
 
 abstract class CommunityBackend {
-  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const supabaseUrl = String.fromEnvironment('SUPABASE_URL',
+      defaultValue: 'https://wmzeydetzfndkpgqwfjd.supabase.co');
   static const supabasePublishableKey =
-      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+      String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY',
+          defaultValue: 'sb_publishable_qu45fDy7kiXAW-n_Ox1mjA_BfMHZN5K');
   static const modeName =
-      String.fromEnvironment('COMMUNITY_DATA_SOURCE', defaultValue: 'mock');
+      String.fromEnvironment('COMMUNITY_DATA_SOURCE', defaultValue: 'supabase');
 
   static CommunityDataSource get dataSource =>
       modeName.toLowerCase() == 'supabase'

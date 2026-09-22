@@ -55,3 +55,28 @@ jobs:
 
       - name: Run News Engine unit tests
         run: node --test index.test.js
+
+  community-media-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+
+      - name: Check Community media functions
+        run: |
+          deno check community-media-upload/index.ts
+          deno check community-media-complete/index.ts
+          deno check community-media-url/index.ts
+          deno check community-media-delete/index.ts
+
+      - name: Check no B2 credentials are committed
+        run: |
+          ! grep -R -n -E 'B2_APPLICATION_KEY=[^$]|B2_KEY_ID=[^$]|SUPABASE_SERVICE_ROLE_KEY=[^$]' .

@@ -3,9 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../models/community_models.dart';
+import '../services/community_media_api.dart';
 
 class VerifiedBadge extends StatelessWidget {
   const VerifiedBadge({super.key, this.size = 16});
@@ -171,16 +173,46 @@ class CommunityPostItem extends StatelessWidget {
           ])));
 }
 
-class _PostImage extends StatelessWidget {
+class _PostImage extends StatefulWidget {
   const _PostImage({required this.media});
   final PostMedia media;
   @override
+  State<_PostImage> createState() => _PostImageState();
+}
+
+class _PostImageState extends State<_PostImage> {
+  Future<String>? secureUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.media.isLocal && widget.media.url == null) {
+      secureUrl = CommunityMediaApi().secureUrl(widget.media);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final image = media.path.startsWith('http')
-        ? Image.network(media.path,
+    if (widget.media.isLocal || widget.media.url != null) {
+      return _image(widget.media.url ?? widget.media.path);
+    }
+    return FutureBuilder<String>(
+        future: secureUrl,
+        builder: (_, snapshot) => snapshot.hasData
+            ? _image(snapshot.data!)
+            : snapshot.hasError
+                ? const _MediaError()
+                : const SizedBox(
+                    height: 220,
+                    child: Center(child: CircularProgressIndicator())));
+  }
+
+  Widget _image(String path) {
+    final image = path.startsWith('http')
+        ? Image.network(path,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const _MediaError())
-        : Image.file(File(media.path),
+        : Image.file(File(path),
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => const _MediaError());
     return ClipRRect(
@@ -244,66 +276,103 @@ class _MockAudioPlayer extends StatefulWidget {
 }
 
 class _MockAudioPlayerState extends State<_MockAudioPlayer> {
-  Timer? timer;
-  double progress = 0;
-  bool playing = false;
+  final player = AudioPlayer();
+  Future<String>? secureUrl;
+  bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.media.isLocal && widget.media.url == null) {
+      secureUrl = CommunityMediaApi().secureUrl(widget.media);
+    }
+  }
+
   @override
   void dispose() {
-    timer?.cancel();
+    player.dispose();
     super.dispose();
   }
 
-  void toggle() {
-    if (playing) {
-      timer?.cancel();
-    } else {
-      timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-        if (!mounted) return;
-        setState(() {
-          progress = (progress + .02).clamp(0, 1);
-          if (progress >= 1) {
-            playing = false;
-            timer?.cancel();
-          }
-        });
-      });
+  Future<void> toggle() async {
+    try {
+      if (player.playing) {
+        await player.pause();
+        return;
+      }
+      setState(() => loading = true);
+      final source = widget.media.isLocal
+          ? widget.media.path
+          : widget.media.url ?? await secureUrl!;
+      if (widget.media.isLocal) {
+        await player.setFilePath(source);
+      } else {
+        await player.setUrl(source);
+      }
+      await player.play();
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تعذر تشغيل المقطع الصوتي.')));
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
-    setState(() => playing = !playing);
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.borderColor)),
-      child: Row(children: [
-        IconButton(
-            onPressed: toggle,
-            icon: Icon(playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: AppTheme.primaryColor),
-            tooltip: playing ? 'إيقاف مؤقت' : 'تشغيل'),
-        Expanded(
-            child: Column(children: [
-          LinearProgressIndicator(
-              value: progress,
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(4),
-              color: AppTheme.primaryColor,
-              backgroundColor: AppTheme.borderColor),
-          const SizedBox(height: 5),
-          Row(children: [
-            Text(_duration(widget.media.duration * progress),
-                style: const TextStyle(
-                    color: AppTheme.textMutedColor, fontSize: 11)),
-            const Spacer(),
-            Text(_duration(widget.media.duration),
-                style: const TextStyle(
-                    color: AppTheme.textMutedColor, fontSize: 11))
-          ])
-        ]))
-      ]));
+  Widget build(BuildContext context) => StreamBuilder<PlayerState>(
+      stream: player.playerStateStream,
+      builder: (context, snapshot) {
+        final playing = snapshot.data?.playing == true;
+        return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.borderColor)),
+            child: Row(children: [
+              IconButton(
+                  onPressed: loading ? null : toggle,
+                  icon: loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator())
+                      : Icon(
+                          playing
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          color: AppTheme.primaryColor),
+                  tooltip: playing ? 'إيقاف مؤقت' : 'تشغيل'),
+              Expanded(
+                  child: Column(children: [
+                StreamBuilder<Duration>(
+                    stream: player.positionStream,
+                    builder: (_, position) => LinearProgressIndicator(
+                        value: (player.duration?.inMilliseconds ??
+                                    widget.media.duration.inMilliseconds) ==
+                                0
+                            ? 0
+                            : (position.data ?? Duration.zero).inMilliseconds /
+                                (player.duration ?? widget.media.duration)
+                                    .inMilliseconds,
+                        minHeight: 4,
+                        borderRadius: BorderRadius.circular(4),
+                        color: AppTheme.primaryColor,
+                        backgroundColor: AppTheme.borderColor)),
+                const SizedBox(height: 5),
+                Row(children: [
+                  Text(_duration(player.position),
+                      style: const TextStyle(
+                          color: AppTheme.textMutedColor, fontSize: 11)),
+                  const Spacer(),
+                  Text(_duration(widget.media.duration),
+                      style: const TextStyle(
+                          color: AppTheme.textMutedColor, fontSize: 11))
+                ])
+              ]))
+            ]));
+      });
 }
 
 class _ActionButton extends StatelessWidget {

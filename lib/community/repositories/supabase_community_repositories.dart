@@ -3,6 +3,7 @@ import '../models/community_models.dart';
 import 'community_repositories.dart';
 import '../services/appwrite_community_identity.dart';
 import '../services/community_backend_config.dart';
+import '../services/community_media_api.dart';
 
 class SupabaseRepositoryBase {
   SupabaseRepositoryBase(
@@ -20,26 +21,62 @@ class SupabaseRepositoryBase {
 
 class SupabaseCommunityRepository extends SupabaseRepositoryBase
     implements CommunityRepository {
-  SupabaseCommunityRepository({super.client, super.identity});
-  final SupabasePostRepository _posts = SupabasePostRepository();
-  final SupabaseCommentRepository _comments = SupabaseCommentRepository();
+  SupabaseCommunityRepository({super.client, super.identity})
+      : _posts = SupabasePostRepository(client: client, identity: identity),
+        _comments =
+            SupabaseCommentRepository(client: client, identity: identity);
+  final SupabasePostRepository _posts;
+  final SupabaseCommentRepository _comments;
   @override
   Future<List<CommunityPost>> fetchPosts(
-          {int offset = 0, int limit = 8, String query = ''}) =>
-      _posts.fetchPosts(offset: offset, limit: limit, query: query);
+          {int offset = 0,
+          int limit = 8,
+          String query = '',
+          DateTime? before}) =>
+      _posts.fetchPosts(
+          offset: offset, limit: limit, query: query, before: before);
   @override
   Future<CommunityPost> publishPost(
-          {required String text,
-          String? imagePath,
-          String? link,
-          String? audioPath,
-          Duration audioDuration = Duration.zero}) =>
-      _posts.create(CreatePostDraft(
-          text: text,
-          imagePath: imagePath,
-          link: link,
-          audioPath: audioPath,
-          audioDuration: audioDuration));
+      {required String text,
+      String? imagePath,
+      String? link,
+      String? audioPath,
+      Duration audioDuration = Duration.zero}) async {
+    final draft = CreatePostDraft(
+        text: text,
+        imagePath: imagePath,
+        link: link,
+        audioPath: audioPath,
+        audioDuration: audioDuration);
+    final post = await _posts.create(draft);
+    if (imagePath == null && audioPath == null) return post;
+    try {
+      final api = CommunityMediaApi();
+      final media = imagePath != null
+          ? await api.uploadFile(
+              postId: post.id,
+              path: imagePath,
+              mediaType: MediaType.image,
+              mimeType: _mimeFor(imagePath),
+            )
+          : await api.uploadFile(
+              postId: post.id,
+              path: audioPath!,
+              mediaType: MediaType.audio,
+              mimeType: _mimeFor(audioPath),
+              duration: audioDuration,
+            );
+      return post.copyWith(media: [
+        media
+      ], type: media.type == MediaType.image ? PostType.image : PostType.audio);
+    } catch (_) {
+      try {
+        await client.from('community_posts').delete().eq('id', post.id);
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
   @override
   Future<CommunityPost> toggleLike(CommunityPost post) =>
       SupabaseLikeRepository(client: client, identity: identity).toggle(post);
@@ -56,15 +93,21 @@ class SupabasePostRepository extends SupabaseRepositoryBase
   SupabasePostRepository({super.client, super.identity});
   @override
   Future<List<CommunityPost>> fetchPosts(
-      {int offset = 0, int limit = 8, String query = ''}) async {
+      {int offset = 0,
+      int limit = 8,
+      String query = '',
+      DateTime? before}) async {
     try {
-      final rows = await client
+      var request = client
           .from('community_posts')
           .select('*, community_profiles(*), community_post_media(*)')
           .isFilter('deleted_at', null)
-          .ilike('content', query.trim().isEmpty ? '%' : '%${query.trim()}%')
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+          .ilike('content', query.trim().isEmpty ? '%' : '%${query.trim()}%');
+      if (before != null)
+        request = request.lt('created_at', before.toUtc().toIso8601String());
+      final rows = await request.order('created_at', ascending: false).range(
+          before == null ? offset : 0,
+          (before == null ? offset : 0) + limit - 1);
       return (rows as List)
           .map((row) => _postFromRow(Map<String, dynamic>.from(row as Map)))
           .toList();
@@ -449,24 +492,55 @@ class SupabaseVerificationRepository extends SupabaseRepositoryBase
 
 class SupabaseMediaRepository extends SupabaseRepositoryBase
     implements MediaRepository {
-  SupabaseMediaRepository({super.client, super.identity});
+  SupabaseMediaRepository({super.client, super.identity})
+      : api = CommunityMediaApi();
+  final CommunityMediaApi api;
+
+  Future<PostMedia> uploadForPost({
+    required String postId,
+    required String path,
+    required MediaType type,
+    required String mimeType,
+    Duration duration = Duration.zero,
+  }) =>
+      api.uploadFile(
+          postId: postId,
+          path: path,
+          mediaType: type,
+          mimeType: mimeType,
+          duration: duration);
+
   @override
-  Future<PostMedia> uploadImage(String path) =>
-      throw const StorageNotConfiguredError(
-          'Backblaze B2 secure upload is not configured yet.');
+  Future<PostMedia> uploadImage(String path) => throw const ValidationError(
+      'A post id is required before uploading media.');
   @override
   Future<PostMedia> uploadAudio(String path,
           {Duration duration = Duration.zero}) =>
-      throw const StorageNotConfiguredError(
-          'Backblaze B2 secure upload is not configured yet.');
+      throw const ValidationError(
+          'A post id is required before uploading media.');
   @override
   Future<void> deleteMedia(String mediaId) =>
-      throw const StorageNotConfiguredError(
-          'Backblaze B2 secure delete is not configured yet.');
+      api.delete(PostMedia(id: mediaId, type: MediaType.image, path: ''));
   @override
-  Future<String> getMediaUrl(PostMedia media) =>
-      throw const StorageNotConfiguredError(
-          'Backblaze B2 secure download is not configured yet.');
+  Future<String> getMediaUrl(PostMedia media) => api.secureUrl(media);
+}
+
+String _mimeFor(String path) {
+  final extension = path.split('.').last.toLowerCase();
+  return switch (extension) {
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'gif' => 'image/gif',
+    'mp3' => 'audio/mpeg',
+    'm4a' => 'audio/mp4',
+    'aac' => 'audio/aac',
+    'ogg' => 'audio/ogg',
+    'wav' => 'audio/wav',
+    'webm' => 'audio/webm',
+    _ =>
+      throw const ValidationError('The selected media type is not supported.'),
+  };
 }
 
 class SupabaseShareRepository implements ShareRepository {

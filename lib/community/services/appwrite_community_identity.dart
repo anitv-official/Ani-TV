@@ -8,10 +8,13 @@ class AppwriteCommunityIdentity implements CommunityIdentityProvider {
     final user = await AppwriteService.instance.getCurrentUser();
     return user?.$id;
   }
+
+  Future<String> createJwt() => AppwriteService.instance.createCommunityJwt();
 }
 
-/// The client sends no user-id override to RLS. A trusted server/Edge Function
-/// must mint a JWT containing `appwrite_user_id` before protected writes work.
+/// The client sends no user-id override for protected media operations. A
+/// trusted Edge Function validates this JWT against Appwrite and derives the
+/// authoritative user ID before touching Supabase metadata.
 class AppwriteIdentityBridge {
   const AppwriteIdentityBridge();
   String? validate(String? appwriteUserId) =>

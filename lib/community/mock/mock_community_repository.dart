@@ -119,7 +119,10 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<List<CommunityPost>> fetchPosts(
-      {int offset = 0, int limit = 8, String query = ''}) async {
+      {int offset = 0,
+      int limit = 8,
+      String query = '',
+      DateTime? before}) async {
     await Future<void>.delayed(const Duration(milliseconds: 260));
     final q = query.trim().toLowerCase();
     final filtered = q.isEmpty
@@ -129,7 +132,9 @@ class MockCommunityRepository implements CommunityRepository {
                 '${post.text} ${post.author.username} ${post.author.displayName}'
                     .toLowerCase()
                     .contains(q))
-            .toList();
+            .toList()
+      ..removeWhere(
+          (post) => before != null && !post.createdAt.isBefore(before));
     if (offset >= filtered.length) return [];
     return filtered.skip(offset).take(limit).toList();
   }
@@ -218,8 +223,12 @@ class MockPostRepository implements PostRepository {
   final MockCommunityRepository source;
   @override
   Future<List<CommunityPost>> fetchPosts(
-          {int offset = 0, int limit = 8, String query = ''}) =>
-      source.fetchPosts(offset: offset, limit: limit, query: query);
+          {int offset = 0,
+          int limit = 8,
+          String query = '',
+          DateTime? before}) =>
+      source.fetchPosts(
+          offset: offset, limit: limit, query: query, before: before);
   @override
   Future<CommunityPost> create(CreatePostDraft draft) => source.publishPost(
       text: draft.text,

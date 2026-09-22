@@ -7,7 +7,7 @@ Community now has a real Supabase PostgreSQL schema and production repository im
 The app selects the data source through `COMMUNITY_DATA_SOURCE`:
 
 ```text
-COMMUNITY_DATA_SOURCE=mock       # default, safe local development mode
+COMMUNITY_DATA_SOURCE=mock       # explicit Mock mode for tests/offline development; production defaults to Supabase
 COMMUNITY_DATA_SOURCE=supabase   # requires SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY
 ```
 
@@ -111,7 +111,7 @@ The existing notification infrastructure is separate from `community_notificatio
 
 ## Media and Backblaze B2
 
-`community_media_storage.dart` defines `StorageProvider`, `StorageConfig`, `MediaUploadRequest`, `MediaUploadResult`, and `MediaDeleteRequest`. `BackblazeMediaRepository` is a placeholder that throws `StorageNotConfiguredError` and performs no network call. `SupabaseMediaRepository` has the same safe behavior in Supabase mode.
+`community_media_storage.dart` defines `StorageProvider`, `StorageConfig`, `MediaUploadRequest`, `MediaUploadResult`, and `MediaDeleteRequest`. `SupabaseMediaRepository` now calls the deployed Community media Edge Functions for presigned upload, completion, private URL, and deletion. The legacy `BackblazeMediaRepository` remains only as a safe Mock-mode contract and never receives credentials.
 
 The intended future flow is:
 
@@ -127,7 +127,7 @@ No B2 credentials, fake credentials, B2 API calls, public-bucket assumptions, or
 
 ## Running the two modes
 
-Mock mode is the default and requires no network configuration:
+Mock mode is explicit and requires no network configuration:
 
 ```bash
 flutter run
@@ -146,6 +146,6 @@ This does not create a Supabase Auth session. The Appwrite identity bridge must 
 
 ## Tests and verification
 
-The project passed Flutter analysis with only existing nonfatal style information and passed the full test suite with **31 tests** after backend tests were added. Tests cover the previous feed/profile/chat functionality plus Mock/Supabase mode defaults, safe error categories, migration credential audit, and B2 placeholder behavior.
+The project passed Flutter analysis with only existing nonfatal style information and passed the full test suite with **31 tests** after backend tests were added. Tests cover the previous feed/profile/chat functionality plus Mock/Supabase mode defaults, safe error categories, migration credential audit, and B2 Edge Function contract and secret-name audit.
 
 The Supabase project was inspected after migration: all Community tables exist with RLS enabled, foreign keys and primary keys are present, Community Realtime tables are published, and the old notification infrastructure tables are present. Supabase advisories identified and were addressed for Community: identity function execution, media policy overlap, and missing Community foreign-key indexes. Remaining advisory notices concern intentionally server-only legacy notification tables and unused indexes on an empty new database.
