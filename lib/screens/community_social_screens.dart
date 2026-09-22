@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../community/models/community_models.dart';
 import '../community/services/community_repository_factory.dart';
 import '../community/services/appwrite_community_identity.dart';
