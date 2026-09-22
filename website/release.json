@@ -1,15 +1,15 @@
 {
-  "tag_name": "v1.3.0",
-  "name": "AniTV 1.3.0",
-  "version": "1.3.0",
-  "published_at": "2026-09-22T05:06:13Z",
-  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.3.0",
-  "body": "تحسينات واجهة التطبيق، إصلاحات التشغيل والمصادر، وتحسينات الحسابات والملف الشخصي.",
-  "deployment_id": "anitv-v1.3.0",
+  "tag_name": "v1.3.1",
+  "name": "AniTV 1.3.1",
+  "version": "1.3.1",
+  "published_at": "2026-09-22T18:34:32Z",
+  "html_url": "https://github.com/anitv-official/Ani-TV/releases/tag/v1.3.1",
+  "body": "إصلاح تسجيل الدخول عبر Google وFacebook، تحسين قبول ورفض طلبات الصداقة، إصلاح وصول الرسائل وتحديث المحادثات، وإصدار Android جديد مبني وموقّع عبر GitHub Actions.",
+  "deployment_id": "anitv-v1.3.1",
   "assets": [
     {
-      "name": "anitv-v1.3.0.apk",
-      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.3.0/anitv-v1.3.0.apk"
+      "name": "AniTV-v1.3.1.apk",
+      "browser_download_url": "https://github.com/anitv-official/Ani-TV/releases/download/v1.3.1/AniTV-v1.3.1.apk"
     }
   ]
 }
