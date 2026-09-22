@@ -7,7 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../models/community_models.dart';
-import '../services/community_media_api.dart';
+import '../services/community_media_cache.dart';
 import '../../services/appwrite_service.dart';
 
 class VerifiedBadge extends StatelessWidget {
@@ -201,25 +201,20 @@ class _PostImage extends StatefulWidget {
 }
 
 class _PostImageState extends State<_PostImage> {
-  Future<String>? secureUrl;
+  Future<File>? cachedFile;
 
   @override
   void initState() {
     super.initState();
-    if (!widget.media.isLocal && widget.media.url == null) {
-      secureUrl = CommunityMediaApi().secureUrl(widget.media);
-    }
+    cachedFile = CommunityMediaCache.instance.get(widget.media);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.media.isLocal || widget.media.url != null) {
-      return _image(widget.media.url ?? widget.media.path);
-    }
-    return FutureBuilder<String>(
-        future: secureUrl,
+    return FutureBuilder<File>(
+        future: cachedFile,
         builder: (_, snapshot) => snapshot.hasData
-            ? _image(snapshot.data!)
+            ? _image(snapshot.data!.path)
             : snapshot.hasError
                 ? const _MediaError()
                 : const SizedBox(
@@ -297,15 +292,13 @@ class _MockAudioPlayer extends StatefulWidget {
 
 class _MockAudioPlayerState extends State<_MockAudioPlayer> {
   final player = AudioPlayer();
-  Future<String>? secureUrl;
+  Future<File>? cachedFile;
   bool loading = false;
 
   @override
   void initState() {
     super.initState();
-    if (!widget.media.isLocal && widget.media.url == null) {
-      secureUrl = CommunityMediaApi().secureUrl(widget.media);
-    }
+    cachedFile = CommunityMediaCache.instance.get(widget.media);
   }
 
   @override
@@ -321,14 +314,8 @@ class _MockAudioPlayerState extends State<_MockAudioPlayer> {
         return;
       }
       setState(() => loading = true);
-      final source = widget.media.isLocal
-          ? widget.media.path
-          : widget.media.url ?? await secureUrl!;
-      if (widget.media.isLocal) {
-        await player.setFilePath(source);
-      } else {
-        await player.setUrl(source);
-      }
+      final source = await cachedFile!;
+      await player.setFilePath(source.path);
       await player.play();
     } catch (_) {
       if (mounted)
