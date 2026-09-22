@@ -31,6 +31,7 @@ class AppStateProvider extends ChangeNotifier {
   String _country = '';
   bool _isLoggedIn = false;
   bool _emailVerified = false;
+  bool _isFacebookSession = false;
   bool _isDarkMode = true;
   String _languageCode = 'ar';
   AppPalette _palette = AppPalette.blue;
@@ -63,6 +64,7 @@ class AppStateProvider extends ChangeNotifier {
   String? get profileImageUrl => _profileImageUrl;
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
+  bool get isFacebookSession => _isFacebookSession;
   bool get isDarkMode => _isDarkMode;
   String get languageCode => _languageCode;
   AppPalette get palette => _palette;
@@ -102,6 +104,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final user = await _appwrite.getCurrentUser();
+      _isFacebookSession = user != null && await _appwrite.isFacebookSession();
       _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
       _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
@@ -143,7 +146,7 @@ class AppStateProvider extends ChangeNotifier {
     _displayName = (user.name as String?)?.trim() ?? '';
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
-    _isLoggedIn = _emailVerified;
+    _isLoggedIn = _emailVerified || _isFacebookSession;
     if (_isLoggedIn) {
       try {
         await FcmService.instance.setUser(_userId);
@@ -287,6 +290,7 @@ class AppStateProvider extends ChangeNotifier {
     _birthDate = '';
     _country = '';
     _emailVerified = false;
+    _isFacebookSession = false;
     _userId = null;
     _profileDocumentId = null;
     _profileImageId = null;
@@ -301,6 +305,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> login({required String email, required String password}) async {
     try {
+      _isFacebookSession = false;
       final user = await _appwrite.login(email: email, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
@@ -320,6 +325,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> loginWithUsername({required String username, required String password}) async {
     try {
+      _isFacebookSession = false;
       final user = await _appwrite.loginWithUsername(username: username, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
@@ -347,6 +353,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> completeFacebookLogin({required String userId, required String secret}) async {
     try {
       final user = await _appwrite.createFacebookSession(userId: userId, secret: secret);
+      _isFacebookSession = true;
       _favoriteAnime = [];
       _favoriteComics = [];
       _animeHistory = [];

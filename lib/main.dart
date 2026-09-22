@@ -98,6 +98,7 @@ class _MyAppState extends State<MyApp> {
   String? _lastContentLink;
   bool _verificationInProgress = false;
   bool _facebookCallbackInProgress = false;
+  String? _lastFacebookCallback;
 
   @override
   void initState() {
@@ -140,11 +141,17 @@ class _MyAppState extends State<MyApp> {
       final userIdPresent = userId != null && userId.isNotEmpty;
       final secretPresent = secret != null && secret.isNotEmpty;
       debugPrint('Facebook OAuth callback received = true; userId present = $userIdPresent; secret present = $secretPresent');
-      if (!isSuccess || !userIdPresent || !secretPresent || _facebookCallbackInProgress) {
+      if (!isSuccess || !userIdPresent || !secretPresent) {
         debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
         ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
         return;
       }
+      final callbackKey = '$userId:$secret';
+      if (_lastFacebookCallback == callbackKey || _facebookCallbackInProgress) {
+        debugPrint('Facebook OAuth duplicate callback ignored = true');
+        return;
+      }
+      _lastFacebookCallback = callbackKey;
       _facebookCallbackInProgress = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         try {

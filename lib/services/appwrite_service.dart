@@ -63,6 +63,15 @@ class AppwriteService {
     }
   }
 
+  Future<bool> isFacebookSession() async {
+    try {
+      final session = await account.getSession(sessionId: 'current');
+      return session.provider.toLowerCase() == 'facebook';
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _rememberSession(String secret) async {
     if (secret.trim().isNotEmpty) {
       client.setSession(secret);
@@ -130,12 +139,13 @@ class AppwriteService {
   Future<String?> facebookProfileImageUrl() async {
     try {
       final session = await account.getSession(sessionId: 'current');
+      final providerUid = session.providerUid?.trim() ?? '';
       final token = session.providerAccessToken?.trim() ?? '';
-      if (token.isEmpty) return null;
-      final response = await http.get(Uri.https('graph.facebook.com', '/me/picture', {
+      if (providerUid.isEmpty && token.isEmpty) return null;
+      final response = await http.get(Uri.https('graph.facebook.com', providerUid.isEmpty ? '/me/picture' : '/$providerUid/picture', {
         'type': 'large',
         'redirect': 'false',
-        'access_token': token,
+        if (token.isNotEmpty) 'access_token': token,
       }));
       if (response.statusCode < 200 || response.statusCode >= 300) return null;
       final decoded = jsonDecode(response.body);
