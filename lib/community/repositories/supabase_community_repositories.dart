@@ -505,7 +505,8 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
             senderId: map['sender_id'].toString(),
             text: map['content']?.toString() ?? '',
             sentAt: DateTime.parse(map['created_at'].toString()),
-            status: MessageStatus.sent);
+            status: MessageStatus.sent,
+            mediaReference: map['media_reference']?.toString());
       }).toList();
     } catch (error) {
       throw this.error(error);
@@ -513,15 +514,16 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
   }
 
   @override
-  Future<CommunityMessage> sendMessage(
-      String conversationId, String text) async {
-    if (text.trim().isEmpty)
+  Future<CommunityMessage> sendMessage(String conversationId, String text,
+      {String? mediaReference}) async {
+    if (text.trim().isEmpty && (mediaReference == null || mediaReference.isEmpty))
       throw const ValidationError('Message cannot be empty.');
     await _assertMember(conversationId);
     try {
       final result = await writeApi.invoke('send_message', {
         'conversation_id': conversationId,
         'content': text.trim(),
+        if (mediaReference != null) 'media_reference': mediaReference,
       });
       final row = Map<String, dynamic>.from(result);
       return CommunityMessage(
@@ -530,7 +532,8 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
           senderId: row['sender_id'].toString(),
           text: row['content'].toString(),
           sentAt: DateTime.parse(row['created_at'].toString()),
-          status: MessageStatus.sent);
+          status: MessageStatus.sent,
+          mediaReference: row['media_reference']?.toString());
     } catch (error) {
       throw this.error(error);
     }

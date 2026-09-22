@@ -71,12 +71,16 @@ class CommunityPostItem extends StatelessWidget {
       required this.onLike,
       required this.onComment,
       required this.onProfile,
-      required this.onShare});
+      required this.onShare,
+      this.canDelete = false,
+      this.onDelete});
   final CommunityPost post;
   final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onProfile;
   final VoidCallback onShare;
+  final bool canDelete;
+  final VoidCallback? onDelete;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -176,8 +180,17 @@ class CommunityPostItem extends StatelessWidget {
             ListTile(
                 leading: const Icon(Icons.flag_outlined),
                 title: const Text('الإبلاغ'),
-                onTap: () => Navigator.pop(context))
-          ])));
+                onTap: () => Navigator.pop(context)),
+            if (canDelete)
+              ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded,
+                      color: Colors.redAccent),
+                  title: const Text('حذف المنشور'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onDelete?.call();
+                  })
+          ]));
 }
 
 class _PostImage extends StatefulWidget {

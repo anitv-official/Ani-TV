@@ -62,7 +62,8 @@ abstract class ChatRepository {
   Future<Conversation> openConversation(String userId, PostAuthor participant);
   Future<List<Conversation>> conversations();
   Future<List<CommunityMessage>> messages(String conversationId);
-  Future<CommunityMessage> sendMessage(String conversationId, String text);
+  Future<CommunityMessage> sendMessage(String conversationId, String text,
+      {String? mediaReference});
 }
 
 abstract class VerificationRepository {

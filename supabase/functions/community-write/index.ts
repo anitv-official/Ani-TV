@@ -160,9 +160,11 @@ Deno.serve(async (req) => {
       }
       case "send_message": {
         const conversationId = requireString(body.conversation_id, "conversation id", 80);
-        const content = text(body.content, "message", 5000);
+        const content = typeof body.content === "string" ? body.content.trim() : "";
+        const mediaReference = body.media_reference == null ? null : requireString(body.media_reference, "media reference", 256);
+        if (!content && !mediaReference) throw new MediaFunctionError("invalid_input", 400, "A message needs text or an image.");
         await member(config, conversationId, identity.id);
-        const message = await supabaseInsert(config, "community_messages", { conversation_id: conversationId, sender_id: identity.id, content, message_type: "text" });
+        const message = await supabaseInsert(config, "community_messages", { conversation_id: conversationId, sender_id: identity.id, content, media_reference: mediaReference, message_type: mediaReference ? "image" : "text" });
         await supabaseUpdate(config, "community_conversations", `id=eq.${encodeURIComponent(conversationId)}`, { updated_at: new Date().toISOString() });
         return json(message);
       }

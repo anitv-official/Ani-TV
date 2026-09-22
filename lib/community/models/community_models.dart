@@ -92,13 +92,15 @@ class CommunityMessage {
   final String text;
   final DateTime sentAt;
   final MessageStatus status;
+  final String? mediaReference;
   const CommunityMessage(
       {required this.id,
       required this.conversationId,
       required this.senderId,
       required this.text,
       required this.sentAt,
-      this.status = MessageStatus.read});
+      this.status = MessageStatus.read,
+      this.mediaReference});
 }
 
 class PostMedia {

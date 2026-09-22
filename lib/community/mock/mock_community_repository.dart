@@ -444,15 +444,16 @@ class MockChatRepository implements ChatRepository {
   }
 
   @override
-  Future<CommunityMessage> sendMessage(
-      String conversationId, String text) async {
+  Future<CommunityMessage> sendMessage(String conversationId, String text,
+      {String? mediaReference}) async {
     final message = CommunityMessage(
         id: 'message-${DateTime.now().microsecondsSinceEpoch}',
         conversationId: conversationId,
         senderId: 'guest',
         text: text.trim(),
         sentAt: DateTime.now(),
-        status: MessageStatus.sent);
+        status: MessageStatus.sent,
+        mediaReference: mediaReference);
     (messagesData[conversationId] ??= []).add(message);
     return message;
   }

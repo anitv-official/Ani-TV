@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../community/models/community_models.dart';
@@ -187,7 +188,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           onLike: () => _toggleLike(post),
                           onComment: () => _showComments(post),
                           onProfile: () {},
-                          onShare: () {}))
+                          onShare: () {},
+                          canDelete: widget.isCurrentUser,
+                          onDelete: () async {
+                            try {
+                              await community.deletePost(post.id);
+                              if (mounted) {
+                                setState(() => loadedPosts
+                                    .removeWhere((item) => item.id == post.id));
+                              }
+                            } catch (error) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(error.toString())));
+                              }
+                            }
+                          }))
                   ]);
                 });
           }));
@@ -304,6 +320,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final chat = CommunityRepositoryFactory.chat();
   final input = TextEditingController();
   final scroll = ScrollController();
+  String? pendingImage;
   late Future<List<CommunityMessage>> future;
   List<CommunityMessage> messages = [];
   @override
@@ -321,12 +338,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _send() async {
     final value = input.text.trim();
-    if (value.isEmpty) return;
-    final message = await chat.sendMessage(widget.conversation.id, value);
+    if (value.isEmpty && pendingImage == null) return;
+    String? mediaReference;
+    if (pendingImage != null) {
+      final userId = await const AppwriteCommunityIdentity().currentUserId();
+      if (userId == null) return;
+      mediaReference = await AppwriteService.instance
+          .uploadChatImage(userId: userId, path: pendingImage!);
+    }
+    final message = await chat.sendMessage(widget.conversation.id, value,
+        mediaReference: mediaReference);
     if (!mounted) return;
     setState(() {
       messages.add(message);
       input.clear();
+      pendingImage = null;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (scroll.hasClients)
@@ -383,6 +409,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       child: Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            IconButton(
+                                onPressed: () async {
+                                  final result = await FilePicker.platform
+                                      .pickFiles(type: FileType.image);
+                                  final path = result?.files.single.path;
+                                  if (path != null && mounted) {
+                                    setState(() => pendingImage = path);
+                                  }
+                                },
+                                icon: const Icon(Icons.image_outlined)),
                             Expanded(
                                 child: TextField(
                                     controller: input,
@@ -426,6 +462,24 @@ class _MessageBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16)),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              if (message.mediaReference != null &&
+                  message.mediaReference!.isNotEmpty)
+                FutureBuilder<Uint8List>(
+                    future: AppwriteService.instance
+                        .profileImageBytes(message.mediaReference!),
+                    builder: (_, snapshot) => snapshot.hasData
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(snapshot.data!,
+                                width: 190, height: 190, fit: BoxFit.cover))
+                        : const SizedBox(
+                            width: 190,
+                            height: 120,
+                            child: Center(
+                                child: CircularProgressIndicator(strokeWidth: 2)))),
+              if (message.mediaReference != null && message.text.isNotEmpty)
+                const SizedBox(height: 6),
+              if (message.text.isNotEmpty)
               Text(message.text,
                   style: const TextStyle(color: Colors.white, height: 1.4)),
               const SizedBox(height: 4),

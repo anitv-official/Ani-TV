@@ -94,6 +94,20 @@ class CommunityFeedProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deletePost(String postId) async {
+    final index = posts.indexWhere((post) => post.id == postId);
+    if (index < 0) return;
+    final removed = posts.removeAt(index);
+    notifyListeners();
+    try {
+      await repository.deletePost(postId);
+    } catch (_) {
+      posts.insert(index, removed);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<List<CommunityComment>> comments(String postId) =>
       repository.fetchComments(postId);
   Future<CommunityComment> addComment(String postId, String text) async {

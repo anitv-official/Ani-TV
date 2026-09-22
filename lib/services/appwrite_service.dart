@@ -611,6 +611,20 @@ class AppwriteService {
     return file.$id;
   }
 
+  Future<String> uploadChatImage(
+      {required String userId, required String path}) async {
+    final file = await storage.createFile(
+        bucketId: profileImagesBucketId,
+        fileId: ID.unique(),
+        file: InputFile.fromPath(path: path),
+        permissions: [
+          Permission.read(Role.any()),
+          Permission.update(Role.user(userId)),
+          Permission.delete(Role.user(userId))
+        ]);
+    return file.$id;
+  }
+
   Future<Uint8List> profileImageBytes(String fileId) =>
       storage.getFileView(bucketId: profileImagesBucketId, fileId: fileId);
   Future<void> makeProfileImagePublic(
