@@ -236,6 +236,7 @@ class _CommunityBodyState extends State<_CommunityBody> {
                       radius: 25,
                       avatarFuture: account.profileImageBytes,
                       onTap: () => _openMyProfile(context),
+                  ),
                   Positioned(
                     bottom: -1,
                     right: -2,
