@@ -32,6 +32,8 @@ class AppStateProvider extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool _emailVerified = false;
   bool _isFacebookSession = false;
+  bool _hasPassword = false;
+  bool _facebookEmailLinked = false;
   bool _isDarkMode = true;
   String _languageCode = 'ar';
   AppPalette _palette = AppPalette.blue;
@@ -65,6 +67,8 @@ class AppStateProvider extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isFacebookSession => _isFacebookSession;
+  bool get hasPassword => _hasPassword;
+  bool get facebookEmailLinked => _facebookEmailLinked;
   bool get isDarkMode => _isDarkMode;
   String get languageCode => _languageCode;
   AppPalette get palette => _palette;
@@ -105,6 +109,7 @@ class AppStateProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final user = await _appwrite.getCurrentUser();
       _isFacebookSession = user != null && await _appwrite.isFacebookSession();
+      _facebookEmailLinked = _isFacebookSession && (prefs.getBool('facebook_email_linked_${user!.$id}') ?? false);
       _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
       _isDarkMode = prefs.getBool('dark_mode_$themeScope') ?? true;
@@ -146,6 +151,7 @@ class AppStateProvider extends ChangeNotifier {
     _displayName = (user.name as String?)?.trim() ?? '';
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
+    _hasPassword = ((user.passwordUpdate as String?) ?? '').isNotEmpty;
     _isLoggedIn = _emailVerified || _isFacebookSession;
     if (_isLoggedIn) {
       try {
@@ -202,6 +208,7 @@ class AppStateProvider extends ChangeNotifier {
       _birthDate = (data['birthdate'] ?? '').toString();
       _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
+      await _storeFacebookProfileImage();
       await _cache.writeProfile(userId, {
         'profileDocumentId': _profileDocumentId,
         'username': _username,
@@ -291,6 +298,8 @@ class AppStateProvider extends ChangeNotifier {
     _country = '';
     _emailVerified = false;
     _isFacebookSession = false;
+    _hasPassword = false;
+    _facebookEmailLinked = false;
     _userId = null;
     _profileDocumentId = null;
     _profileImageId = null;
@@ -377,6 +386,7 @@ class AppStateProvider extends ChangeNotifier {
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
       await _refreshFacebookProfileImage();
+      await _storeFacebookProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
@@ -607,10 +617,26 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _storeFacebookProfileImage() async {
+    if (!_isFacebookSession || _userId == null || _profileImageId?.isNotEmpty == true) return;
+    try {
+      final imageId = await _appwrite.storeFacebookProfileImage(userId: _userId!);
+      if (imageId == null || imageId.isEmpty) return;
+      final documentId = await _ensureCurrentProfileId();
+      await _appwrite.updateProfile(documentId: documentId, username: _username, profileImageId: imageId);
+      _profileImageId = imageId;
+      await _writeCurrentProfileCache();
+      notifyListeners();
+    } catch (error) {
+      debugPrint('Facebook profile image storage skipped: ${error.runtimeType}');
+    }
+  }
+
   Future<void> updatePassword({required String password, required String oldPassword}) async => _appwrite.updatePassword(password: password, oldPassword: oldPassword);
   Future<void> setFacebookPassword(String password) async {
     if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
     await _appwrite.updatePassword(password: password);
+    _hasPassword = true;
     notifyListeners();
   }
 
@@ -620,6 +646,9 @@ class AppStateProvider extends ChangeNotifier {
       final user = await _appwrite.updateEmail(email: email, password: password);
       _email = user.email.trim();
       _emailVerified = user.emailVerification == true;
+      _facebookEmailLinked = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('facebook_email_linked_$_userId', true);
       notifyListeners();
       await _appwrite.sendEmailVerification();
     } on AppwriteException catch (error) {

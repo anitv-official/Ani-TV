@@ -147,7 +147,6 @@ class _MyAppState extends State<MyApp> {
           return;
         }
         debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
-        ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
         return;
       }
       final callbackKey = '$userId:$secret';
@@ -168,7 +167,6 @@ class _MyAppState extends State<MyApp> {
           navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
         } catch (error) {
           debugPrint('Facebook OAuth createSession success = false; callback processing failed: ${error.runtimeType}');
-          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
           final navigator = appNavigatorKey.currentState;
           if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
         } finally {
