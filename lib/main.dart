@@ -97,6 +97,7 @@ class _MyAppState extends State<MyApp> {
   String? _lastVerificationLink;
   String? _lastContentLink;
   bool _verificationInProgress = false;
+  bool _facebookCallbackInProgress = false;
 
   @override
   void initState() {
@@ -133,6 +134,38 @@ class _MyAppState extends State<MyApp> {
     if (uri == null) return;
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
+    final isFacebookCallback = uri.scheme == 'appwrite-callback-6aa4295900094d600163' && uri.host == 'auth';
+    if (isFacebookCallback) {
+      final isSuccess = uri.path == '/success';
+      final userIdPresent = userId != null && userId.isNotEmpty;
+      final secretPresent = secret != null && secret.isNotEmpty;
+      debugPrint('Facebook OAuth callback received = true; userId present = $userIdPresent; secret present = $secretPresent');
+      if (!isSuccess || !userIdPresent || !secretPresent || _facebookCallbackInProgress) {
+        debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
+        ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
+        return;
+      }
+      _facebookCallbackInProgress = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final context = appNavigatorKey.currentContext;
+          final navigator = appNavigatorKey.currentState;
+          if (context == null || navigator == null) throw StateError('Navigator unavailable');
+          final provider = context.read<AppStateProvider>();
+          await provider.completeFacebookLogin(userId: userId, secret: secret);
+          debugPrint('Facebook OAuth createSession success = true');
+          navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+        } catch (error) {
+          debugPrint('Facebook OAuth createSession success = false; callback processing failed: ${error.runtimeType}');
+          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+        } finally {
+          _facebookCallbackInProgress = false;
+        }
+      });
+      return;
+    }
     final isVerificationCallback = (uri.scheme == 'anitv' && uri.host == 'verify-email') ||
         (uri.scheme == 'https' && uri.host == 'anitv-tau.vercel.app' && uri.path == '/verify-email');
     if (isVerificationCallback && userId != null && secret != null && userId.isNotEmpty && secret.isNotEmpty) {

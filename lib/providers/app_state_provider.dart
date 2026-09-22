@@ -325,9 +325,11 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loginWithFacebook() async {
+  Future<String> facebookOAuthUrl() => _appwrite.createFacebookOAuth2Token();
+
+  Future<void> completeFacebookLogin({required String userId, required String secret}) async {
     try {
-      final user = await _appwrite.loginWithFacebook();
+      final user = await _appwrite.createFacebookSession(userId: userId, secret: secret);
       _favoriteAnime = [];
       _favoriteComics = [];
       _animeHistory = [];

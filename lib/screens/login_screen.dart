@@ -44,13 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final provider = context.read<AppStateProvider>();
-      await provider.loginWithFacebook();
-      if (!mounted) return;
-      if (!provider.emailVerified && provider.email.isNotEmpty) {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => EmailVerificationScreen(email: provider.email)), (_) => false);
-      } else {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
-      }
+      final url = await provider.facebookOAuthUrl();
+      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!opened && mounted) _show('تعذر فتح تسجيل الدخول باستخدام Facebook.');
     } catch (error) {
       if (mounted) ToastUtils.show(authErrorMessage(error, registering: false), backgroundColor: AppTheme.errorColor);
     } finally { if (mounted) setState(() => _loading = false); }

@@ -90,33 +90,38 @@ class AppwriteService {
     return account.get();
   }
 
-  Future<models.User> loginWithFacebook() async {
+  Future<String> createFacebookOAuth2Token() async {
     const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
     const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
     try {
-      await account.createOAuth2Session(
+      final url = await account.createOAuth2Token(
         provider: enums.OAuthProvider.facebook,
         success: success,
         failure: failure,
       );
-      final user = await account.get();
-      try {
-        final session = await account.getSession(sessionId: 'current');
-        await _rememberSession(session.secret);
-      } catch (_) {
-        // account.get() is the source of truth; session persistence is best effort.
-      }
-      return user;
+      return url.toString();
     } on AppwriteException catch (error) {
-      final details = '${error.type} ${error.message}'.toLowerCase();
-      if (details.contains('cancel')) throw const FacebookAuthException('CANCELLED');
+      _logFacebookOAuthException('createOAuth2Token failure', error);
+      throw const FacebookAuthException('TOKEN_FAILED');
+    } catch (error) {
+      debugPrint('Facebook OAuth createOAuth2Token failure: ${_safeOAuthMessage(error.toString())}');
+      throw const FacebookAuthException('TOKEN_FAILED');
+    }
+  }
+
+  Future<models.User> createFacebookSession({required String userId, required String secret}) async {
+    try {
+      await account.createSession(userId: userId, secret: secret);
+      debugPrint('Facebook OAuth createSession success = true');
+      return account.get();
+    } on AppwriteException catch (error) {
+      _logFacebookOAuthException('createSession failure', error);
+      debugPrint('Facebook OAuth createSession success = false');
       final errorCode = error.code ?? -1;
       if (errorCode == 0 || errorCode >= 500) throw const FacebookAuthException('NETWORK');
-      throw const FacebookAuthException('OAUTH_FAILED');
+      throw const FacebookAuthException('SESSION_FAILED');
     } catch (error) {
-      if (error.toString().toLowerCase().contains('cancel')) {
-        throw const FacebookAuthException('CANCELLED');
-      }
+      debugPrint('Facebook OAuth createSession success = false; error=${_safeOAuthMessage(error.toString())}');
       throw const FacebookAuthException('OAUTH_FAILED');
     }
   }
@@ -413,6 +418,8 @@ String authErrorMessage(Object error, {required bool registering}) {
     switch (error.code) {
       case 'CANCELLED': return 'تم إلغاء تسجيل الدخول باستخدام Facebook.';
       case 'NETWORK': return 'تعذر الاتصال بخدمة Facebook. حاول مرة أخرى.';
+      case 'TOKEN_FAILED':
+      case 'SESSION_FAILED':
       default: return 'تعذر تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.';
     }
   }
@@ -469,6 +476,19 @@ class AccountCreatedButSessionUnavailableException implements Exception {
 class FacebookAuthException implements Exception {
   final String code;
   const FacebookAuthException(this.code);
+}
+
+void _logFacebookOAuthException(String stage, AppwriteException error) {
+  debugPrint(
+    'Facebook OAuth $stage: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}, message=${_safeOAuthMessage(error.message)}',
+  );
+}
+
+String _safeOAuthMessage(String? value) {
+  final message = (value ?? '').trim();
+  if (message.isEmpty) return '[empty]';
+  if (RegExp(r'(secret|token|password|authorization|cookie|userid|user id)', caseSensitive: false).hasMatch(message)) return '[redacted]';
+  return message;
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';
