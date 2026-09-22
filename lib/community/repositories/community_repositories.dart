@@ -68,3 +68,10 @@ abstract class ShareRepository {
   Future<ShareReceipt> shareExternally(CommunityPost post);
   Future<ShareReceipt> shareToUser(CommunityPost post, String userId);
 }
+
+abstract class CommunityRealtimeRepository {
+  Stream<List<CommunityMessage>> watchMessages(String conversationId);
+  Stream<List<CommunityNotification>> watchNotifications(String userId);
+  Stream<List<CommunityComment>> watchComments(String postId);
+  Stream<List<CommunityPost>> watchLikes(String postId);
+}

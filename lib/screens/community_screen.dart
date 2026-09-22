@@ -4,10 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import '../community/mock/mock_community_repository.dart';
 import '../community/models/community_models.dart';
 import '../community/state/community_feed_provider.dart';
 import '../community/widgets/community_widgets.dart';
+import '../community/services/community_repository_factory.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
 import 'community_social_screens.dart';
@@ -18,8 +18,9 @@ class CommunityScreen extends StatelessWidget {
   final bool embedded;
   @override
   Widget build(BuildContext context) => ChangeNotifierProvider(
-      create: (_) =>
-          CommunityFeedProvider(repository: MockCommunityRepository())..load(),
+      create: (_) => CommunityFeedProvider(
+          repository: CommunityRepositoryFactory.community())
+        ..load(),
       child: _CommunityBody(embedded: embedded));
 }
 

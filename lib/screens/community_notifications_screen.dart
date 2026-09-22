@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../community/mock/mock_community_repository.dart';
 import '../community/models/community_models.dart';
+import '../community/services/community_repository_factory.dart';
 import '../community/widgets/community_widgets.dart';
 import '../l10n/community_strings.dart';
 import '../theme/app_theme.dart';
@@ -14,7 +14,7 @@ class CommunityNotificationsScreen extends StatefulWidget {
 
 class _CommunityNotificationsScreenState
     extends State<CommunityNotificationsScreen> {
-  final repository = MockNotificationRepository();
+  final repository = CommunityRepositoryFactory.notifications();
   late Future<List<CommunityNotification>> future;
   @override
   void initState() {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../community/mock/mock_community_repository.dart';
 import '../community/models/community_models.dart';
+import '../community/services/community_repository_factory.dart';
 import '../community/widgets/community_widgets.dart';
 import '../theme/app_theme.dart';
 
@@ -12,8 +12,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final profiles = MockProfileRepository(MockCommunityRepository());
-  final friends = MockFriendRepository();
+  final profiles = CommunityRepositoryFactory.profile();
+  final friends = CommunityRepositoryFactory.friends();
   late Future<CommunityProfile> profileFuture;
   late Future<List<CommunityPost>> postsFuture;
   @override
@@ -121,7 +121,7 @@ class MessagesScreen extends StatefulWidget {
 }
 
 class _MessagesScreenState extends State<MessagesScreen> {
-  final chat = MockChatRepository();
+  final chat = CommunityRepositoryFactory.chat();
   late Future<List<Conversation>> future;
   @override
   void initState() {
@@ -199,7 +199,7 @@ class ConversationScreen extends StatefulWidget {
 }
 
 class _ConversationScreenState extends State<ConversationScreen> {
-  final chat = MockChatRepository();
+  final chat = CommunityRepositoryFactory.chat();
   final input = TextEditingController();
   final scroll = ScrollController();
   late Future<List<CommunityMessage>> future;

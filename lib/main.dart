@@ -24,12 +24,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'utils/toast_utils.dart';
 import 'services/fcm_service.dart';
 import 'services/download_service.dart';
+import 'community/services/community_backend_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   DownloadService.initialize();
+  await _initializeCommunityBackend();
   WebViewPlatform.instance =
       WebViewPlatform.instance ?? AndroidWebViewPlatform();
 
@@ -70,6 +73,20 @@ void main() async {
   // Firebase/FCM is optional infrastructure and must never prevent the app
   // shell from rendering when a device is offline or its push setup is stale.
   unawaited(_initializePushServices());
+}
+
+Future<void> _initializeCommunityBackend() async {
+  if (CommunityBackend.dataSource != CommunityDataSource.supabase ||
+      CommunityBackend.supabaseUrl.isEmpty ||
+      CommunityBackend.supabasePublishableKey.isEmpty) return;
+  try {
+    await Supabase.initialize(
+      url: CommunityBackend.supabaseUrl,
+      anonKey: CommunityBackend.supabasePublishableKey,
+    );
+  } catch (error) {
+    debugPrint('Community Supabase startup skipped: ${error.runtimeType}');
+  }
 }
 
 Future<void> _initializePushServices() async {
