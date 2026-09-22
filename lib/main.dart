@@ -142,6 +142,10 @@ class _MyAppState extends State<MyApp> {
       final secretPresent = secret != null && secret.isNotEmpty;
       debugPrint('Facebook OAuth callback received = true; userId present = $userIdPresent; secret present = $secretPresent');
       if (!isSuccess || !userIdPresent || !secretPresent) {
+        if (_facebookCallbackInProgress || _lastFacebookCallback != null) {
+          debugPrint('Facebook OAuth late callback ignored = true');
+          return;
+        }
         debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
         ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.', backgroundColor: AppTheme.errorColor);
         return;

@@ -46,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String birthDate = '';
   String country = '';
   bool isLoggedIn = false;
+  bool isFacebookSession = false;
   bool isDarkMode = true;
   bool isLoading = true;
   bool _streamCellular = false;
@@ -76,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         birthDate = appStateProvider.birthDate;
         country = appStateProvider.country;
         isLoggedIn = appStateProvider.isLoggedIn;
+        isFacebookSession = appStateProvider.isFacebookSession;
         isDarkMode = appStateProvider.isDarkMode;
         isLoading = false;
       });
@@ -421,6 +423,103 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showSetFacebookPasswordDialog() {
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تعيين كلمة المرور'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة')),
+          TextField(controller: confirmation, obscureText: true, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+          TextButton(onPressed: () async {
+            if (password.text.length < 8 || password.text != confirmation.text) {
+              _showInfoDialog('كلمة المرور غير صالحة', 'يجب أن تتكون من 8 أحرف على الأقل وأن تتطابق القيمتان.');
+              return;
+            }
+            try {
+              await context.read<AppStateProvider>().setFacebookPassword(password.text);
+              if (mounted) Navigator.pop(dialogContext);
+              if (mounted) ToastUtils.show('تم تعيين كلمة المرور بنجاح', backgroundColor: AppTheme.primaryColor);
+            } catch (error) {
+              if (mounted) _showInfoDialog('تعذر تعيين كلمة المرور', authErrorMessage(error, registering: false));
+            }
+          }, child: const Text('حفظ')),
+        ],
+      ),
+    );
+  }
+
+  void _showLinkFacebookEmailDialog() {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ربط بريد إلكتروني'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
+          TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة مرور الحساب')),
+          const SizedBox(height: 8),
+          const Text('سيتم إرسال رسالة تحقق إلى البريد الجديد قبل اعتماده.', style: TextStyle(fontSize: 12)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+          TextButton(onPressed: () async {
+            final emailValue = emailController.text.trim();
+            if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(emailValue) || passwordController.text.isEmpty) {
+              _showInfoDialog('بيانات غير صالحة', 'أدخل بريدًا صحيحًا وكلمة مرور الحساب.');
+              return;
+            }
+            try {
+              await context.read<AppStateProvider>().linkFacebookEmail(email: emailValue, password: passwordController.text);
+              if (mounted) Navigator.pop(dialogContext);
+              if (mounted) ToastUtils.show('تم إرسال رسالة التحقق إلى البريد الجديد.', backgroundColor: AppTheme.primaryColor);
+            } catch (error) {
+              if (mounted) _showInfoDialog('تعذر ربط البريد', authErrorMessage(error, registering: false));
+            }
+          }, child: const Text('ربط البريد')),
+        ],
+      ),
+    );
+  }
+
+  void _showFacebookProfileDetailsDialog() {
+    DateTime? selectedDate;
+    String? selectedCountry;
+    const countries = ['السعودية','مصر','الإمارات','الكويت','قطر','الأردن','العراق','المغرب','الجزائر','تونس','ليبيا','فلسطين','اليمن','عُمان','البحرين','سوريا','لبنان','أخرى'];
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: const Text('إكمال بيانات الحساب'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            OutlinedButton.icon(onPressed: () async {
+              final date = await showDatePicker(context: dialogContext, firstDate: DateTime(1900), lastDate: DateTime.now(), initialDate: DateTime.now().subtract(const Duration(days: 6570)));
+              if (date != null) setDialogState(() => selectedDate = date);
+            }, icon: const Icon(Icons.cake_outlined), label: Text(selectedDate == null ? 'اختيار تاريخ الميلاد' : '${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}')),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(value: selectedCountry, decoration: const InputDecoration(labelText: 'الدولة'), items: countries.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setDialogState(() => selectedCountry = value)),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+            TextButton(onPressed: selectedDate == null || selectedCountry == null ? null : () async {
+              try {
+                final date = selectedDate!;
+                await context.read<AppStateProvider>().setFacebookProfileDetails(birthDate: '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}', country: selectedCountry!);
+                if (mounted) { setState(() { birthDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'; country = selectedCountry!; }); Navigator.pop(dialogContext); }
+              } catch (error) { if (mounted) _showInfoDialog('تعذر حفظ البيانات', error.toString().replaceFirst('Exception: ', '')); }
+            }, child: const Text('حفظ')),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showChangePasswordDialog() {
     final oldController = TextEditingController();
     final newController = TextEditingController();
@@ -521,11 +620,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'الحساب',
                     children: isLoggedIn
                         ? [
-                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}\nتاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate}\nالدولة: ${country.isEmpty ? 'غير متوفر' : country}\n\nتاريخ الميلاد والدولة ثابتان بعد إنشاء الحساب ولا يمكن تعديلهما.')),
+                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: isFacebookSession ? 'متصل بـ Facebook' : (email.isEmpty ? 'غير متوفر' : email), onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}\nتاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate}\nالدولة: ${country.isEmpty ? 'غير متوفر' : country}\n\nتاريخ الميلاد والدولة ثابتان بعد حفظهما ولا يمكن تعديلهما.')),
                             SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: displayName.isEmpty ? 'غير متوفر' : displayName, onTap: _showEditNameDialog),
                             SettingTile(icon: Icons.alternate_email, title: 'تغيير Username', subtitle: username.isEmpty ? 'غير متوفر' : '@$username', onTap: _showEditUsernameDialog),
-                            SettingTile(icon: Icons.lock_outline, title: 'تغيير كلمة المرور', onTap: _showChangePasswordDialog),
-                            SettingTile(icon: Icons.email_outlined, title: 'تغيير البريد الإلكتروني', onTap: _showChangeEmailDialog),
+                            if (isFacebookSession && (birthDate.isEmpty || country.isEmpty)) SettingTile(icon: Icons.assignment_outlined, title: 'إكمال الدولة وتاريخ الميلاد', subtitle: 'يمكن حفظهما مرة واحدة فقط', onTap: _showFacebookProfileDetailsDialog),
+                            SettingTile(icon: Icons.lock_outline, title: isFacebookSession ? 'تعيين كلمة المرور' : 'تغيير كلمة المرور', onTap: isFacebookSession ? _showSetFacebookPasswordDialog : _showChangePasswordDialog),
+                            SettingTile(icon: Icons.email_outlined, title: isFacebookSession ? 'ربط بريد إلكتروني' : 'تغيير البريد الإلكتروني', onTap: isFacebookSession ? _showLinkFacebookEmailDialog : _showChangeEmailDialog),
                             SettingTile(icon: Icons.delete_forever_outlined, title: 'حذف الحساب', subtitle: 'حذف نهائي لا يمكن التراجع عنه', onTap: _isDeletingAccount ? null : _deleteAccountFlow),
                           ]
                         : [
@@ -670,7 +770,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (isLoggedIn && username.isNotEmpty)
                   Text('@$username', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.w700)),
                 Text(
-                  isLoggedIn ? (email.isEmpty ? 'حساب متصل' : email) : 'سجّل الدخول لإدارة حسابك',
+                  isLoggedIn ? (isFacebookSession ? 'متصل بـ Facebook' : (email.isEmpty ? 'حساب متصل' : email)) : 'سجّل الدخول لإدارة حسابك',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12),

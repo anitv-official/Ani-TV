@@ -278,7 +278,8 @@ class AppwriteService {
 
   Future<void> ping() async => client.ping();
   Future<models.User> updateName(String name) async => account.updateName(name: name.trim());
-  Future<models.User> updatePassword({required String password, required String oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
+  Future<models.User> updatePassword({required String password, String? oldPassword}) async => account.updatePassword(password: password, oldPassword: oldPassword);
+  Future<models.User> updateEmail({required String email, required String password}) async => account.updateEmail(email: email.trim(), password: password);
   Future<void> sendPasswordRecovery(String email, String redirectUrl) async => account.createRecovery(email: email.trim(), url: redirectUrl);
   Future<models.Token> completePasswordRecovery({required String userId, required String secret, required String password}) async => account.updateRecovery(userId: userId, secret: secret, password: password);
 
@@ -458,6 +459,7 @@ String authErrorMessage(Object error, {required bool registering}) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
   }
   if (error is UsernameTakenException) return 'اسم المستخدم مأخوذ بالفعل';
+  if (error is EmailAlreadyUsedException) return 'هذا البريد الإلكتروني مستخدم بالفعل في حساب آخر.';
   if (error is UsernameLoginException) {
     switch (error.code) {
       case 'INVALID_CREDENTIALS': return 'بيانات الدخول غير صحيحة.';
@@ -527,7 +529,9 @@ String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. ح
 class UsernameTakenException implements Exception {
   const UsernameTakenException();
 }
-
+class EmailAlreadyUsedException implements Exception {
+  const EmailAlreadyUsedException();
+}
 class UsernameValidation {
   static final RegExp pattern = RegExp(r'^[a-z0-9_]{3,24}$');
   static String normalize(String value) => value.trim().toLowerCase();

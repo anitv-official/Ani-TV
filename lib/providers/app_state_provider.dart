@@ -577,7 +577,41 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setFacebookProfileDetails({required String birthDate, required String country}) async {
+    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    if (_birthDate.isNotEmpty && _country.isNotEmpty) throw Exception('لا يمكن تعديل هذه البيانات بعد حفظها.');
+    final savedBirthDate = _birthDate.isEmpty ? birthDate : _birthDate;
+    final savedCountry = _country.isEmpty ? country : _country;
+    final documentId = await _ensureCurrentProfileId();
+    await _appwrite.updateProfile(documentId: documentId, username: _username, birthDate: savedBirthDate, country: savedCountry);
+    _birthDate = savedBirthDate;
+    _country = savedCountry;
+    await _writeCurrentProfileCache();
+    notifyListeners();
+  }
+
   Future<void> updatePassword({required String password, required String oldPassword}) async => _appwrite.updatePassword(password: password, oldPassword: oldPassword);
+  Future<void> setFacebookPassword(String password) async {
+    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    await _appwrite.updatePassword(password: password);
+    notifyListeners();
+  }
+
+  Future<void> linkFacebookEmail({required String email, required String password}) async {
+    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    try {
+      final user = await _appwrite.updateEmail(email: email, password: password);
+      _email = user.email.trim();
+      _emailVerified = user.emailVerification == true;
+      notifyListeners();
+      await _appwrite.sendEmailVerification();
+    } on AppwriteException catch (error) {
+      if (error.code == 409 || (error.type ?? '').contains('already_exists')) {
+        throw const EmailAlreadyUsedException();
+      }
+      rethrow;
+    }
+  }
   Future<void> sendPasswordRecovery(String email) async => _appwrite.sendPasswordRecovery(email, 'https://anitv-tau.vercel.app/reset-password');
   Future<void> completePasswordRecovery({required String userId, required String secret, required String password}) async => _appwrite.completePasswordRecovery(userId: userId, secret: secret, password: password);
   Future<void> pingAppwrite() => _appwrite.ping();
