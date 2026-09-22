@@ -132,7 +132,15 @@ class _CommunityBodyState extends State<_CommunityBody> {
                                     : null))),
                     onShare: () => Share.share(post.text.isEmpty
                         ? 'منشور من مجتمع AniTV'
-                        : post.text));
+                        : post.text),
+                    canDelete: post.author.id == account.userId,
+                    onDelete: () async {
+                      try {
+                        await provider.deletePost(post.id);
+                      } catch (error) {
+                        if (context.mounted) _snack(context, error.toString());
+                      }
+                    });
               },
                       childCount: provider.posts.length +
                           (provider.loadingMore ? 1 : 0))),
