@@ -47,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String country = '';
   bool isLoggedIn = false;
   bool isFacebookSession = false;
+  bool isGoogleSession = false;
   bool hasPassword = false;
   bool facebookEmailLinked = false;
   bool isDarkMode = true;
@@ -80,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         country = appStateProvider.country;
         isLoggedIn = appStateProvider.isLoggedIn;
         isFacebookSession = appStateProvider.isFacebookSession;
+        isGoogleSession = appStateProvider.isGoogleSession;
         hasPassword = appStateProvider.hasPassword;
         facebookEmailLinked = appStateProvider.facebookEmailLinked;
         isDarkMode = appStateProvider.isDarkMode;
@@ -626,12 +628,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: 'الحساب',
                     children: isLoggedIn
                         ? [
-                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: isFacebookSession ? 'متصل بـ Facebook' : (email.isEmpty ? 'غير متوفر' : email), onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}\nتاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate}\nالدولة: ${country.isEmpty ? 'غير متوفر' : country}\n\nتاريخ الميلاد والدولة ثابتان بعد حفظهما ولا يمكن تعديلهما.')),
+                            SettingTile(icon: Icons.person_outline, title: 'بيانات الحساب', subtitle: isFacebookSession ? 'متصل بـ Facebook' : (isGoogleSession ? 'متصل بـ Google' : (email.isEmpty ? 'غير متوفر' : email)), onTap: () => _showInfoDialog('بيانات الحساب', 'Username: ${username.isEmpty ? 'غير متوفر' : username}\nالاسم الظاهر: ${displayName.isEmpty ? 'غير متوفر' : displayName}\nالبريد الإلكتروني: ${email.isEmpty ? 'غير متوفر' : email}\nتاريخ الميلاد: ${birthDate.isEmpty ? 'غير متوفر' : birthDate}\nالدولة: ${country.isEmpty ? 'غير متوفر' : country}\n\nتاريخ الميلاد والدولة ثابتان بعد حفظهما ولا يمكن تعديلهما.')),
                             SettingTile(icon: Icons.edit_outlined, title: 'تعديل الاسم الظاهر', subtitle: displayName.isEmpty ? 'غير متوفر' : displayName, onTap: _showEditNameDialog),
                             SettingTile(icon: Icons.alternate_email, title: 'تغيير Username', subtitle: username.isEmpty ? 'غير متوفر' : '@$username', onTap: _showEditUsernameDialog),
-                            if (isFacebookSession && (birthDate.isEmpty || country.isEmpty)) SettingTile(icon: Icons.assignment_outlined, title: 'إكمال الدولة وتاريخ الميلاد', subtitle: 'يمكن حفظهما مرة واحدة فقط', onTap: _showFacebookProfileDetailsDialog),
-                            SettingTile(icon: Icons.lock_outline, title: isFacebookSession && !hasPassword ? 'تعيين كلمة المرور' : 'تغيير كلمة المرور', onTap: isFacebookSession && !hasPassword ? _showSetFacebookPasswordDialog : _showChangePasswordDialog),
-                            SettingTile(icon: Icons.email_outlined, title: isFacebookSession && !facebookEmailLinked ? 'ربط بريد إلكتروني' : 'البريد الإلكتروني', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: isFacebookSession && !facebookEmailLinked ? _showLinkFacebookEmailDialog : null),
+                            if ((isFacebookSession || isGoogleSession) && (birthDate.isEmpty || country.isEmpty)) SettingTile(icon: Icons.assignment_outlined, title: 'إكمال الدولة وتاريخ الميلاد', subtitle: 'يمكن حفظهما مرة واحدة فقط', onTap: _showFacebookProfileDetailsDialog),
+                            SettingTile(icon: Icons.lock_outline, title: (isFacebookSession || isGoogleSession) && !hasPassword ? 'تعيين كلمة المرور' : 'تغيير كلمة المرور', onTap: (isFacebookSession || isGoogleSession) && !hasPassword ? _showSetFacebookPasswordDialog : _showChangePasswordDialog),
+                            SettingTile(icon: Icons.email_outlined, title: (isFacebookSession || isGoogleSession) && !facebookEmailLinked ? 'ربط بريد إلكتروني' : 'البريد الإلكتروني', subtitle: email.isEmpty ? 'غير متوفر' : email, onTap: (isFacebookSession || isGoogleSession) && !facebookEmailLinked ? _showLinkFacebookEmailDialog : null),
                             SettingTile(icon: Icons.delete_forever_outlined, title: 'حذف الحساب', subtitle: 'حذف نهائي لا يمكن التراجع عنه', onTap: _isDeletingAccount ? null : _deleteAccountFlow),
                           ]
                         : [
@@ -776,7 +778,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (isLoggedIn && username.isNotEmpty)
                   Text('@$username', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.w700)),
                 Text(
-                  isLoggedIn ? (isFacebookSession ? 'متصل بـ Facebook' : (email.isEmpty ? 'حساب متصل' : email)) : 'سجّل الدخول لإدارة حسابك',
+                  isLoggedIn ? (isFacebookSession ? 'متصل بـ Facebook' : (isGoogleSession ? 'متصل بـ Google' : (email.isEmpty ? 'حساب متصل' : email))) : 'سجّل الدخول لإدارة حسابك',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12),

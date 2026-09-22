@@ -144,7 +144,10 @@ class _MyAppState extends State<MyApp> {
       final userIdPresent = userId != null && userId.isNotEmpty;
       final secretPresent = secret != null && secret.isNotEmpty;
       if (!isSuccess || !userIdPresent || !secretPresent) {
-        if (!_googleCallbackInProgress) ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+        final authState = appNavigatorKey.currentContext?.read<AppStateProvider>();
+        if (!_googleCallbackInProgress && authState?.isLoggedIn != true && _lastGoogleCallback == null) {
+          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+        }
         return;
       }
       final callbackKey = '$userId:$secret';
@@ -160,9 +163,13 @@ class _MyAppState extends State<MyApp> {
           navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
         } catch (error) {
           debugPrint('Google OAuth callback failed: ${error.runtimeType}');
-          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+          if (appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn != true) {
+            ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+          }
           final navigator = appNavigatorKey.currentState;
-          if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          if (navigator != null && appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn != true) {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          }
         } finally {
           _googleCallbackInProgress = false;
         }
@@ -180,6 +187,7 @@ class _MyAppState extends State<MyApp> {
           return;
         }
         debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
+        if (appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn == true) return;
         return;
       }
       final callbackKey = '$userId:$secret';
@@ -201,7 +209,9 @@ class _MyAppState extends State<MyApp> {
         } catch (error) {
           debugPrint('Facebook OAuth createSession success = false; callback processing failed: ${error.runtimeType}');
           final navigator = appNavigatorKey.currentState;
-          if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          if (navigator != null && appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn != true) {
+            navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+          }
         } finally {
           _facebookCallbackInProgress = false;
         }

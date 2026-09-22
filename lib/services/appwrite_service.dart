@@ -64,11 +64,16 @@ class AppwriteService {
   }
 
   Future<bool> isFacebookSession() async {
+    return (await currentSessionProvider()) == 'facebook';
+  }
+
+  Future<String?> currentSessionProvider() async {
     try {
       final session = await account.getSession(sessionId: 'current');
-      return session.provider.toLowerCase() == 'facebook';
+      final provider = session.provider.trim().toLowerCase();
+      return provider.isEmpty ? null : provider;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
@@ -191,14 +196,36 @@ class AppwriteService {
   }
 
   Future<String?> storeFacebookProfileImage({required String userId}) async {
-    final url = await facebookProfileImageUrl();
+    return _storeRemoteProfileImage(userId: userId, url: await facebookProfileImageUrl(), filename: 'facebook-profile.jpg');
+  }
+
+  Future<String?> googleProfileImageUrl() async {
+    try {
+      final session = await account.getSession(sessionId: 'current');
+      final token = session.providerAccessToken?.trim() ?? '';
+      if (token.isEmpty) return null;
+      final response = await http.get(Uri.parse('https://www.googleapis.com/oauth2/v2/userinfo'), headers: {'Authorization': 'Bearer $token'});
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      final body = jsonDecode(response.body);
+      final url = body is Map ? body['picture']?.toString().trim() : null;
+      return url == null || url.isEmpty ? null : url;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> storeGoogleProfileImage({required String userId}) async {
+    return _storeRemoteProfileImage(userId: userId, url: await googleProfileImageUrl(), filename: 'google-profile.jpg');
+  }
+
+  Future<String?> _storeRemoteProfileImage({required String userId, required String? url, required String filename}) async {
     if (url == null || url.isEmpty) return null;
     final response = await http.get(Uri.parse(url));
     if (response.statusCode < 200 || response.statusCode >= 300 || response.bodyBytes.isEmpty) return null;
     final file = await storage.createFile(
       bucketId: profileImagesBucketId,
       fileId: ID.unique(),
-      file: InputFile.fromBytes(bytes: response.bodyBytes, filename: 'facebook-profile.jpg'),
+      file: InputFile.fromBytes(bytes: response.bodyBytes, filename: filename),
       permissions: [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))],
     );
     return file.$id;

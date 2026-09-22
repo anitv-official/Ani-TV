@@ -32,6 +32,7 @@ class AppStateProvider extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool _emailVerified = false;
   bool _isFacebookSession = false;
+  bool _isGoogleSession = false;
   bool _hasPassword = false;
   bool _facebookEmailLinked = false;
   bool _isDarkMode = true;
@@ -67,6 +68,8 @@ class AppStateProvider extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get emailVerified => _emailVerified;
   bool get isFacebookSession => _isFacebookSession;
+  bool get isGoogleSession => _isGoogleSession;
+  bool get isSocialSession => _isFacebookSession || _isGoogleSession;
   bool get hasPassword => _hasPassword;
   bool get facebookEmailLinked => _facebookEmailLinked;
   bool get isDarkMode => _isDarkMode;
@@ -108,7 +111,9 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final user = await _appwrite.getCurrentUser();
-      _isFacebookSession = user != null && await _appwrite.isFacebookSession();
+      final sessionProvider = user == null ? null : await _appwrite.currentSessionProvider();
+      _isFacebookSession = sessionProvider == 'facebook';
+      _isGoogleSession = sessionProvider == 'google';
       _facebookEmailLinked = _isFacebookSession && (prefs.getBool('facebook_email_linked_${user!.$id}') ?? false);
       _isOffline = false;
       final themeScope = user == null ? 'guest' : 'user_${user.$id}';
@@ -152,7 +157,7 @@ class AppStateProvider extends ChangeNotifier {
     _email = (user.email as String?)?.trim() ?? '';
     _emailVerified = user.emailVerification == true;
     _hasPassword = ((user.passwordUpdate as String?) ?? '').isNotEmpty;
-    _isLoggedIn = _emailVerified || _isFacebookSession;
+    _isLoggedIn = _emailVerified || isSocialSession;
     if (_isLoggedIn) {
       try {
         await FcmService.instance.setUser(_userId);
@@ -208,7 +213,7 @@ class AppStateProvider extends ChangeNotifier {
       _birthDate = (data['birthdate'] ?? '').toString();
       _country = (data['country'] ?? '').toString();
       _profileImageId = (data['profileImageId'] ?? '').toString();
-      await _storeFacebookProfileImage();
+      await _storeSocialProfileImage();
       await _cache.writeProfile(userId, {
         'profileDocumentId': _profileDocumentId,
         'username': _username,
@@ -298,6 +303,7 @@ class AppStateProvider extends ChangeNotifier {
     _country = '';
     _emailVerified = false;
     _isFacebookSession = false;
+    _isGoogleSession = false;
     _hasPassword = false;
     _facebookEmailLinked = false;
     _userId = null;
@@ -315,6 +321,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> login({required String email, required String password}) async {
     try {
       _isFacebookSession = false;
+      _isGoogleSession = false;
       final user = await _appwrite.login(email: email, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
@@ -335,6 +342,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> loginWithUsername({required String username, required String password}) async {
     try {
       _isFacebookSession = false;
+      _isGoogleSession = false;
       final user = await _appwrite.loginWithUsername(username: username, password: password);
       _favoriteAnime = [];
       _favoriteComics = [];
@@ -357,11 +365,13 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final user = await _appwrite.createGoogleSession(userId: userId, secret: secret);
       _isFacebookSession = false;
+      _isGoogleSession = true;
       _favoriteAnime = [];
       _favoriteComics = [];
       _animeHistory = [];
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      await _storeSocialProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
@@ -382,6 +392,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final user = await _appwrite.createFacebookSession(userId: userId, secret: secret);
       _isFacebookSession = true;
+      _isGoogleSession = false;
       _favoriteAnime = [];
       _favoriteComics = [];
       _animeHistory = [];
@@ -607,7 +618,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> setFacebookProfileDetails({required String birthDate, required String country}) async {
-    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    if (!isSocialSession) throw Exception('هذه العملية مخصصة للحسابات الاجتماعية.');
     if (_birthDate.isNotEmpty && _country.isNotEmpty) throw Exception('لا يمكن تعديل هذه البيانات بعد حفظها.');
     final savedBirthDate = _birthDate.isEmpty ? birthDate : _birthDate;
     final savedCountry = _country.isEmpty ? country : _country;
@@ -619,10 +630,12 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _storeFacebookProfileImage() async {
-    if (!_isFacebookSession || _userId == null || _profileImageId?.isNotEmpty == true) return;
+  Future<void> _storeSocialProfileImage() async {
+    if (!isSocialSession || _userId == null || _profileImageId?.isNotEmpty == true) return;
     try {
-      final imageId = await _appwrite.storeFacebookProfileImage(userId: _userId!);
+      final imageId = _isGoogleSession
+          ? await _appwrite.storeGoogleProfileImage(userId: _userId!)
+          : await _appwrite.storeFacebookProfileImage(userId: _userId!);
       if (imageId == null || imageId.isEmpty) return;
       final documentId = await _ensureCurrentProfileId();
       await _appwrite.updateProfile(documentId: documentId, username: _username, profileImageId: imageId);
@@ -630,20 +643,20 @@ class AppStateProvider extends ChangeNotifier {
       await _writeCurrentProfileCache();
       notifyListeners();
     } catch (error) {
-      debugPrint('Facebook profile image storage skipped: ${error.runtimeType}');
+      debugPrint('Social profile image storage skipped: provider=${_isGoogleSession ? 'google' : 'facebook'}');
     }
   }
 
   Future<void> updatePassword({required String password, required String oldPassword}) async => _appwrite.updatePassword(password: password, oldPassword: oldPassword);
   Future<void> setFacebookPassword(String password) async {
-    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    if (!isSocialSession) throw Exception('هذه العملية مخصصة للحسابات الاجتماعية.');
     await _appwrite.updatePassword(password: password);
     _hasPassword = true;
     notifyListeners();
   }
 
   Future<void> linkFacebookEmail({required String email, required String password}) async {
-    if (!_isFacebookSession) throw Exception('هذه العملية مخصصة لحساب Facebook.');
+    if (!isSocialSession) throw Exception('هذه العملية مخصصة للحسابات الاجتماعية.');
     try {
       final user = await _appwrite.updateEmail(email: email, password: password);
       _email = user.email.trim();
