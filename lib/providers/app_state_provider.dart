@@ -399,7 +399,7 @@ class AppStateProvider extends ChangeNotifier {
       _comicHistory = [];
       await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
       await _refreshFacebookProfileImage();
-      await _storeFacebookProfileImage();
+      await _storeSocialProfileImage();
       if (_isLoggedIn) await _loadHistory();
       notifyListeners();
     } catch (_) {
