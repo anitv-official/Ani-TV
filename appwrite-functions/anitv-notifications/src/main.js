@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
 const anime3rb = require('./adapters/anime3rb');
+const mangaSwat = require('./adapters/manga-swat');
 const genericPage = require('./adapters/generic-page');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
@@ -110,6 +111,7 @@ const sourceAdapter = (favorite) => {
   const itemId = String(favorite.itemId || '').trim();
   if (anime3rb.supports(source, itemId)) return anime3rb;
   if (anime4up.supports(source, itemId)) return anime4up;
+  if (mangaSwat.supports(source, itemId)) return mangaSwat;
   if (genericPage.supports(source, itemId, favorite.type)) return genericPage;
   return null;
 };
@@ -159,7 +161,9 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
       result.checked += 1;
       try {
         const contentType = String(favorite.type || 'anime').toLowerCase();
-        const latest = await withRetry(() => adapter === anime3rb
+        const latest = await withRetry(() => adapter === mangaSwat
+          ? adapter.latestChapter({ source: favorite.source, itemId })
+          : adapter === anime3rb
           ? adapter.latestEpisode({ source: favorite.source, itemId })
           : adapter === anime4up
           ? adapter.latestEpisode({ source: favorite.source, itemId })
@@ -170,7 +174,8 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
           result.skipped += 1;
           continue;
         }
-        const current = String(latest.number);
+        const current = String(latest.releaseKey || latest.number);
+        const displayNumber = String(latest.number ?? current);
         const isChapter = latest.kind === 'chapter' || contentType === 'manga' || contentType === 'comic';
         const previous = String(isChapter ? favorite.lastNotifiedChapter : favorite.lastNotifiedEpisode || '').trim();
         if (!previous) {
@@ -188,15 +193,15 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
         }
         const notificationType = isChapter ? 'chapter' : ['movie', 'series', 'drama'].includes(contentType) ? 'release' : 'episode';
         const source = String(favorite.source || adapter.id);
-        const notificationPayload = { userId, contentType, type: notificationType, notificationType, itemId, url: itemId, title, source, releaseKey: current, ...(notificationType === 'chapter' ? { chapter: current } : { episode: current }), deepLink: `anitv:///${notificationType}?url=${encodeURIComponent(itemId)}&source=${encodeURIComponent(source)}` };
+        const notificationPayload = { userId, contentType, type: notificationType, notificationType, itemId, url: itemId, title, source, releaseKey: current, ...(notificationType === 'chapter' ? { chapter: displayNumber } : { episode: displayNumber }), deepLink: `anitv:///${notificationType}?url=${encodeURIComponent(itemId)}&source=${encodeURIComponent(source)}` };
         if (!dryRun) {
           const claimed = await claimDelivery({ userId, source, itemId, type: notificationType, number: current });
           if (!claimed) { result.skipped += 1; continue; }
           try {
             const label = notificationType === 'chapter' ? 'فصل جديد' : notificationType === 'release' ? 'إصدار جديد' : 'حلقة جديدة';
             const noun = notificationType === 'chapter' ? 'الفصل' : notificationType === 'release' ? 'الإصدار' : 'الحلقة';
-            await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${current}`, data: notificationPayload, priority: 'high' }), 2);
-            await saveHistory({ userId, title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${current}`, type: notificationType === 'release' ? contentType : notificationType, itemId, source, payload: notificationPayload });
+            await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${displayNumber}`, data: notificationPayload, priority: 'high' }), 2);
+            await saveHistory({ userId, title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${displayNumber}`, type: notificationType === 'release' ? contentType : notificationType, itemId, source, payload: notificationPayload });
           } catch (deliveryError) {
             if (supabaseConfigured()) await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encodeURIComponent([userId, source, itemId, notificationType, current].join('|'))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'failed', attempts: 1, last_error: String(deliveryError.message || '').slice(0, 240) }) });
             throw deliveryError;
