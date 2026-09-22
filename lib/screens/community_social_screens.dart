@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../community/models/community_models.dart';
 import '../community/services/community_repository_factory.dart';
+import '../community/services/appwrite_community_identity.dart';
 import '../community/widgets/community_widgets.dart';
 import '../theme/app_theme.dart';
 
@@ -43,6 +44,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       body: FutureBuilder<CommunityProfile>(
           future: profileFuture,
           builder: (_, snapshot) {
+            if (snapshot.hasError)
+              return Center(
+                  child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text('تعذر تحميل الملف الشخصي.')));
             if (!snapshot.hasData)
               return const Center(child: CircularProgressIndicator());
             final profile = snapshot.data!;
@@ -111,7 +117,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 class MyProfileScreen extends StatelessWidget {
   const MyProfileScreen({super.key});
   @override
-  Widget build(BuildContext context) => const UserProfileScreen(userId: 'sora');
+  Widget build(BuildContext context) => FutureBuilder<String?>(
+      future: const AppwriteCommunityIdentity().currentUserId(),
+      builder: (_, snapshot) {
+        if (snapshot.hasError)
+          return const Scaffold(
+              body: Center(child: Text('تعذر التحقق من جلسة المستخدم.')));
+        final userId = snapshot.data;
+        if (userId == null || userId.isEmpty)
+          return const Scaffold(
+              body: Center(child: Text('سجّل الدخول أولًا لفتح ملفك الشخصي.')));
+        return UserProfileScreen(userId: userId);
+      });
 }
 
 class MessagesScreen extends StatefulWidget {

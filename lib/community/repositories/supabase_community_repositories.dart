@@ -211,6 +211,13 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
           .single();
       return _profileFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
+      if (error is PostgrestException && error.code == 'PGRST116') {
+        final current = await requireUser();
+        if (current == userId) {
+          final row = await writeApi.invoke('ensure_profile');
+          return _profileFromRow(row);
+        }
+      }
       throw this.error(error);
     }
   }

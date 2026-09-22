@@ -235,8 +235,7 @@ class _CommunityBodyState extends State<_CommunityBody> {
                       author: current,
                       radius: 25,
                       avatarFuture: account.profileImageBytes,
-                      onTap: () => _snack(context,
-                          'ملفك الاجتماعي سيتوفر في المرحلة الثانية.')),
+                      onTap: () => _openMyProfile(context),
                   Positioned(
                     bottom: -1,
                     right: -2,
@@ -290,23 +289,37 @@ class _CommunityBodyState extends State<_CommunityBody> {
   }
 
   Future<void> _showComposer(BuildContext context) async {
+    final provider = context.read<CommunityFeedProvider>();
     await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         showDragHandle: true,
         backgroundColor: AppTheme.surfaceColor,
-        builder: (_) => const _ComposerSheet());
+        builder: (_) => ChangeNotifierProvider.value(
+            value: provider, child: const _ComposerSheet()));
   }
 
   Future<void> _showComments(BuildContext context, CommunityPost post) async {
+    final provider = context.read<CommunityFeedProvider>();
     await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
         showDragHandle: true,
         backgroundColor: AppTheme.surfaceColor,
-        builder: (_) => _CommentsSheet(post: post));
+        builder: (_) => ChangeNotifierProvider.value(
+            value: provider, child: _CommentsSheet(post: post)));
+  }
+
+  void _openMyProfile(BuildContext context) {
+    final userId = context.read<AppStateProvider>().userId;
+    if (userId == null || userId.isEmpty) {
+      _snack(context, 'سجّل الدخول أولًا لفتح ملفك الشخصي.');
+      return;
+    }
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => UserProfileScreen(userId: userId)));
   }
 
   void _snack(BuildContext context, String message) =>

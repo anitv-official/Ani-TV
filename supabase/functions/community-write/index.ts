@@ -50,6 +50,8 @@ Deno.serve(async (req) => {
     const profile = await ensureProfile(config, identity);
 
     switch (action) {
+      case "ensure_profile":
+        return json(profile);
       case "create_post": {
         const content = typeof body.content === "string" ? body.content.trim() : "";
         const link = body.link == null ? null : requireString(body.link, "link", 2048);
