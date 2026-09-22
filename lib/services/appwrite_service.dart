@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import 'package:appwrite/src/enums.dart' show HttpMethod;
+import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -87,6 +88,37 @@ class AppwriteService {
     final session = await account.createEmailPasswordSession(email: email.trim(), password: password);
     await _rememberSession(session.secret);
     return account.get();
+  }
+
+  Future<models.User> loginWithFacebook() async {
+    const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
+    const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
+    try {
+      await account.createOAuth2Session(
+        provider: enums.OAuthProvider.facebook,
+        success: success,
+        failure: failure,
+      );
+      final user = await account.get();
+      try {
+        final session = await account.getSession(sessionId: 'current');
+        await _rememberSession(session.secret);
+      } catch (_) {
+        // account.get() is the source of truth; session persistence is best effort.
+      }
+      return user;
+    } on AppwriteException catch (error) {
+      final details = '${error.type} ${error.message}'.toLowerCase();
+      if (details.contains('cancel')) throw const FacebookAuthException('CANCELLED');
+      final errorCode = error.code ?? -1;
+      if (errorCode == 0 || errorCode >= 500) throw const FacebookAuthException('NETWORK');
+      throw const FacebookAuthException('OAUTH_FAILED');
+    } catch (error) {
+      if (error.toString().toLowerCase().contains('cancel')) {
+        throw const FacebookAuthException('CANCELLED');
+      }
+      throw const FacebookAuthException('OAUTH_FAILED');
+    }
   }
 
   Future<models.User> loginWithUsername({required String username, required String password}) async {
@@ -377,6 +409,13 @@ class AppwriteService {
 }
 
 String authErrorMessage(Object error, {required bool registering}) {
+  if (error is FacebookAuthException) {
+    switch (error.code) {
+      case 'CANCELLED': return 'تم إلغاء تسجيل الدخول باستخدام Facebook.';
+      case 'NETWORK': return 'تعذر الاتصال بخدمة Facebook. حاول مرة أخرى.';
+      default: return 'تعذر تسجيل الدخول باستخدام Facebook. حاول مرة أخرى.';
+    }
+  }
   if (error is AccountCreatedButSessionUnavailableException) {
     return 'تم إنشاء الحساب، لكن تعذر تسجيل الدخول تلقائيًا. سجّل الدخول باستخدام بياناتك.';
   }
@@ -425,6 +464,11 @@ class UsernameAvailabilityException implements Exception {
 class AccountCreatedButSessionUnavailableException implements Exception {
   final Object cause;
   const AccountCreatedButSessionUnavailableException(this.cause);
+}
+
+class FacebookAuthException implements Exception {
+  final String code;
+  const FacebookAuthException(this.code);
 }
 
 String logoutErrorMessage(Object error) => 'تعذر تسجيل الخروج. حاول مرة أخرى.';

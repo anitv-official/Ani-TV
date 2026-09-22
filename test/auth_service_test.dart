@@ -39,5 +39,16 @@ void main() {
       );
       expect(message, contains('البريد الإلكتروني مستخدم بالفعل'));
     });
+
+    test('maps Facebook OAuth cancellation and network failures', () {
+      expect(
+        authErrorMessage(const FacebookAuthException('CANCELLED'), registering: false),
+        contains('تم إلغاء تسجيل الدخول باستخدام Facebook'),
+      );
+      expect(
+        authErrorMessage(const FacebookAuthException('NETWORK'), registering: false),
+        contains('تعذر الاتصال بخدمة Facebook'),
+      );
+    });
   });
 }
