@@ -39,6 +39,8 @@ class AuthChoiceScreen extends StatelessWidget {
             const Text('أو', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
             const SizedBox(height: 10),
             const _FacebookChoiceButton(),
+            const SizedBox(height: 12),
+            const _GoogleChoiceButton(),
           ],
         ),
       ),
@@ -86,6 +88,53 @@ class _FacebookChoiceButtonState extends State<_FacebookChoiceButton> {
         style: IconButton.styleFrom(
           backgroundColor: const Color(0xFF1877F2),
           disabledBackgroundColor: const Color(0xFF1877F2).withOpacity(.55),
+          fixedSize: const Size(64, 64),
+          shape: const CircleBorder(),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleChoiceButton extends StatefulWidget {
+  const _GoogleChoiceButton();
+
+  @override
+  State<_GoogleChoiceButton> createState() => _GoogleChoiceButtonState();
+}
+
+class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
+  bool _loading = false;
+
+  Future<void> _signInWithGoogle() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await context.read<AppStateProvider>().loginWithGoogle();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(authErrorMessage(error, registering: false))));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: IconButton(
+        onPressed: _loading ? null : _signInWithGoogle,
+        tooltip: 'التسجيل باستخدام Google',
+        icon: _loading
+            ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Icon(Icons.account_circle, size: 30, color: Colors.white),
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.redAccent,
+          disabledBackgroundColor: Colors.redAccent.withOpacity(.55),
           fixedSize: const Size(64, 64),
           shape: const CircleBorder(),
         ),

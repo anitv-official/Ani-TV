@@ -323,6 +323,23 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    try {
+      _isFacebookSession = false;
+      final user = await _appwrite.loginWithGoogle();
+      _favoriteAnime = [];
+      _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
+      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      if (_isLoggedIn) await _loadHistory();
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
+    }
+  }
+
   Future<void> loginWithUsername({required String username, required String password}) async {
     try {
       _isFacebookSession = false;
