@@ -198,6 +198,20 @@ class AppwriteService {
     }
   }
 
+  Future<String?> storeFacebookProfileImage({required String userId}) async {
+    final url = await facebookProfileImageUrl();
+    if (url == null || url.isEmpty) return null;
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode < 200 || response.statusCode >= 300 || response.bodyBytes.isEmpty) return null;
+    final file = await storage.createFile(
+      bucketId: profileImagesBucketId,
+      fileId: ID.unique(),
+      file: InputFile.fromBytes(bytes: response.bodyBytes, filename: 'facebook-profile.jpg'),
+      permissions: [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))],
+    );
+    return file.$id;
+  }
+
   Future<models.User> loginWithUsername({required String username, required String password}) async {
     final normalized = username.trim().toLowerCase();
     late http.Response response;
