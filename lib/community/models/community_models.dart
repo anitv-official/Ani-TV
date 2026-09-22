@@ -209,3 +209,24 @@ class CreatePostDraft {
       (link?.trim().isNotEmpty ?? false) ||
       (audioPath?.trim().isNotEmpty ?? false);
 }
+
+class VerificationStatus {
+  final bool verified;
+  const VerificationStatus({this.verified = false});
+}
+
+class CommunityLike {
+  final String postId;
+  final String userId;
+  final bool active;
+  const CommunityLike(
+      {required this.postId, required this.userId, this.active = true});
+}
+
+class ShareReceipt {
+  final String postId;
+  final String? recipientId;
+  final bool external;
+  const ShareReceipt(
+      {required this.postId, this.recipientId, required this.external});
+}

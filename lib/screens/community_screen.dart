@@ -11,6 +11,7 @@ import '../community/widgets/community_widgets.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
 import 'community_social_screens.dart';
+import 'community_notifications_screen.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key, this.embedded = false});
@@ -182,6 +183,13 @@ class _CommunityBodyState extends State<_CommunityBody> {
                 onPressed: () => setState(() => searching = true),
                 icon: const Icon(Icons.search_rounded),
                 tooltip: 'بحث'),
+          IconButton(
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CommunityNotificationsScreen())),
+              icon: const Icon(Icons.notifications_none_rounded),
+              tooltip: 'الإشعارات'),
           Stack(
             clipBehavior: Clip.none,
             children: [

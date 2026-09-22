@@ -428,3 +428,18 @@ class MockChatRepository implements ChatRepository {
     return message;
   }
 }
+
+class MockVerificationRepository implements VerificationRepository {
+  @override
+  Future<VerificationStatus> statusFor(String userId) async =>
+      VerificationStatus(verified: userId == 'anitv');
+}
+
+class MockShareRepository implements ShareRepository {
+  @override
+  Future<ShareReceipt> shareExternally(CommunityPost post) async =>
+      ShareReceipt(postId: post.id, external: true);
+  @override
+  Future<ShareReceipt> shareToUser(CommunityPost post, String userId) async =>
+      ShareReceipt(postId: post.id, recipientId: userId, external: false);
+}

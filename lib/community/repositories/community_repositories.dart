@@ -59,3 +59,12 @@ abstract class ChatRepository {
   Future<List<CommunityMessage>> messages(String conversationId);
   Future<CommunityMessage> sendMessage(String conversationId, String text);
 }
+
+abstract class VerificationRepository {
+  Future<VerificationStatus> statusFor(String userId);
+}
+
+abstract class ShareRepository {
+  Future<ShareReceipt> shareExternally(CommunityPost post);
+  Future<ShareReceipt> shareToUser(CommunityPost post, String userId);
+}
