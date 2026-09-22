@@ -92,6 +92,7 @@ flutter:
   assets:
     - assets/animations/loading_animation.json
     - assets/images/anitv_logo_transparent.png
+    - assets/images/google_g_logo.svg
     - assets/icons/brightness.svg
     - assets/icons/episode.svg
     - assets/icons/forward.svg

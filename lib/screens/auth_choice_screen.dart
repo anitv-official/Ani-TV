@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state_provider.dart';
@@ -136,10 +137,10 @@ class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
         tooltip: 'التسجيل باستخدام Google',
         icon: _loading
             ? const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.account_circle, size: 30, color: Colors.white),
+            : SvgPicture.asset('assets/images/google_g_logo.svg', width: 30, height: 30),
         style: IconButton.styleFrom(
-          backgroundColor: Colors.redAccent,
-          disabledBackgroundColor: Colors.redAccent.withOpacity(.55),
+          backgroundColor: Colors.white,
+          disabledBackgroundColor: Colors.white.withOpacity(.55),
           fixedSize: const Size(64, 64),
           shape: const CircleBorder(),
         ),
