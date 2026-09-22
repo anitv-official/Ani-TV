@@ -7,7 +7,6 @@ import 'package:appwrite/src/enums.dart' show HttpMethod;
 import 'package:appwrite/enums.dart' as enums;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
 /// Shared Appwrite client for authentication and account cloud synchronization.
@@ -35,7 +34,6 @@ class AppwriteService {
   static const String usernameLoginFunctionId = '6aa5ed04000f66117651';
   static const String usernameLoginEndpoint = 'https://anitv-username-login.nyc.appwrite.run';
   static const String _sessionSecretKey = 'anitv_appwrite_session_secret';
-  static const String googleServerClientId = '552497307402-6dlcbsm7275mhcdsm99kgk15bqkjopec.apps.googleusercontent.com';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   final Client client = Client();
@@ -44,7 +42,6 @@ class AppwriteService {
   late final Storage storage;
   late final Functions functions;
   late final Messaging messaging;
-  Future<void>? _googleInitialization;
 
   Future<models.User?> getCurrentUser() async {
     try {
@@ -102,44 +99,6 @@ class AppwriteService {
     return account.get();
   }
 
-  Future<void> _initializeGoogleSignIn() {
-    return _googleInitialization ??= GoogleSignIn.instance.initialize(serverClientId: googleServerClientId);
-  }
-
-  Future<models.User> loginWithGoogle() async {
-    try {
-      await _initializeGoogleSignIn();
-      if (!GoogleSignIn.instance.supportsAuthenticate()) {
-        throw const GoogleAuthException('UNSUPPORTED');
-      }
-      final googleAccount = await GoogleSignIn.instance.authenticate();
-      final idToken = googleAccount.authentication.idToken;
-      if (idToken == null || idToken.isEmpty) throw const GoogleAuthException('NO_ID_TOKEN');
-      final response = await client.call(
-        HttpMethod.post,
-        path: '/account/sessions/id-token',
-        params: {'provider': 'google', 'token': idToken},
-        headers: const {'content-type': 'application/json'},
-      );
-      final session = models.Session.fromMap(response.data);
-      await _rememberSession(session.secret);
-      return account.get();
-    } on GoogleSignInException catch (error) {
-      debugPrint('Google sign-in failed: code=${error.code}');
-      if (error.code == GoogleSignInExceptionCode.canceled) throw const GoogleAuthException('CONFIGURATION');
-      throw const GoogleAuthException('SIGN_IN_FAILED');
-    } on AppwriteException catch (error) {
-      debugPrint('Google Appwrite session failed: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}, message=${_safeOAuthMessage(error.message)}');
-      if (error.code == 401 || error.code == 400) throw const GoogleAuthException('INVALID_ID_TOKEN');
-      throw const GoogleAuthException('APPWRITE_FAILED');
-    } on GoogleAuthException {
-      rethrow;
-    } catch (error) {
-      debugPrint('Google sign-in failed: type=${error.runtimeType}');
-      throw const GoogleAuthException('SIGN_IN_FAILED');
-    }
-  }
-
   Future<String> createFacebookOAuth2Token() async {
     const success = 'appwrite-callback-6aa4295900094d600163://auth/success';
     const failure = 'appwrite-callback-6aa4295900094d600163://auth/failure';
@@ -174,6 +133,39 @@ class AppwriteService {
     } catch (error) {
       debugPrint('Facebook OAuth createSession success = false; error=${_safeOAuthMessage(error.toString())}');
       throw const FacebookAuthException('OAUTH_FAILED');
+    }
+  }
+
+  Future<String> createGoogleOAuth2Token() async {
+    const success = 'appwrite-callback-6aa4295900094d600163://auth/google-success';
+    const failure = 'appwrite-callback-6aa4295900094d600163://auth/google-failure';
+    try {
+      final url = await account.createOAuth2Token(
+        provider: enums.OAuthProvider.google,
+        success: success,
+        failure: failure,
+      );
+      return url.toString();
+    } on AppwriteException catch (error) {
+      debugPrint('Google OAuth token failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
+      throw const GoogleAuthException('TOKEN_FAILED');
+    } catch (error) {
+      debugPrint('Google OAuth token failure: type=${error.runtimeType}');
+      throw const GoogleAuthException('TOKEN_FAILED');
+    }
+  }
+
+  Future<models.User> createGoogleSession({required String userId, required String secret}) async {
+    try {
+      final session = await account.createSession(userId: userId, secret: secret);
+      await _rememberSession(session.secret);
+      return account.get();
+    } on AppwriteException catch (error) {
+      debugPrint('Google OAuth createSession failure: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}');
+      throw const GoogleAuthException('SESSION_FAILED');
+    } catch (error) {
+      debugPrint('Google OAuth createSession failure: type=${error.runtimeType}');
+      throw const GoogleAuthException('SESSION_FAILED');
     }
   }
 
@@ -517,10 +509,8 @@ String authErrorMessage(Object error, {required bool registering}) {
   if (error is EmailAlreadyUsedException) return 'هذا البريد الإلكتروني مستخدم بالفعل في حساب آخر.';
   if (error is GoogleAuthException) {
     switch (error.code) {
-      case 'CONFIGURATION': return 'تعذر إعداد تسجيل الدخول باستخدام Google لهذا الإصدار. تحقق من إعداد OAuth في Google Cloud.';
-      case 'NO_ID_TOKEN':
-      case 'INVALID_ID_TOKEN': return 'تعذر التحقق من حساب Google. حاول مرة أخرى.';
-      case 'UNSUPPORTED': return 'تسجيل الدخول باستخدام Google غير مدعوم على هذا الجهاز.';
+      case 'TOKEN_FAILED': return 'تعذر فتح تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
+      case 'SESSION_FAILED': return 'تعذر إنشاء جلسة Google. حاول مرة أخرى.';
       default: return 'تعذر تسجيل الدخول باستخدام Google. حاول مرة أخرى.';
     }
   }

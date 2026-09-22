@@ -332,23 +332,6 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loginWithGoogle() async {
-    try {
-      _isFacebookSession = false;
-      final user = await _appwrite.loginWithGoogle();
-      _favoriteAnime = [];
-      _favoriteComics = [];
-      _animeHistory = [];
-      _comicHistory = [];
-      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
-      if (_isLoggedIn) await _loadHistory();
-      notifyListeners();
-    } catch (_) {
-      _clearUser();
-      rethrow;
-    }
-  }
-
   Future<void> loginWithUsername({required String username, required String password}) async {
     try {
       _isFacebookSession = false;
@@ -367,6 +350,25 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<String> facebookOAuthUrl() => _appwrite.createFacebookOAuth2Token();
+
+  Future<String> googleOAuthUrl() => _appwrite.createGoogleOAuth2Token();
+
+  Future<void> completeGoogleLogin({required String userId, required String secret}) async {
+    try {
+      final user = await _appwrite.createGoogleSession(userId: userId, secret: secret);
+      _isFacebookSession = false;
+      _favoriteAnime = [];
+      _favoriteComics = [];
+      _animeHistory = [];
+      _comicHistory = [];
+      await _applyAuthenticatedUser(user, syncCloud: user.emailVerification == true);
+      if (_isLoggedIn) await _loadHistory();
+      notifyListeners();
+    } catch (_) {
+      _clearUser();
+      rethrow;
+    }
+  }
 
   Future<void> _refreshFacebookProfileImage() async {
     final url = await _appwrite.facebookProfileImageUrl();

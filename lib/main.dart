@@ -99,6 +99,8 @@ class _MyAppState extends State<MyApp> {
   bool _verificationInProgress = false;
   bool _facebookCallbackInProgress = false;
   String? _lastFacebookCallback;
+  bool _googleCallbackInProgress = false;
+  String? _lastGoogleCallback;
 
   @override
   void initState() {
@@ -136,6 +138,37 @@ class _MyAppState extends State<MyApp> {
     final userId = uri.queryParameters['userId'];
     final secret = uri.queryParameters['secret'];
     final isFacebookCallback = uri.scheme == 'appwrite-callback-6aa4295900094d600163' && uri.host == 'auth';
+    final isGoogleCallback = isFacebookCallback && (uri.path == '/google-success' || uri.path == '/google-failure');
+    if (isGoogleCallback) {
+      final isSuccess = uri.path == '/google-success';
+      final userIdPresent = userId != null && userId.isNotEmpty;
+      final secretPresent = secret != null && secret.isNotEmpty;
+      if (!isSuccess || !userIdPresent || !secretPresent) {
+        if (!_googleCallbackInProgress) ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+        return;
+      }
+      final callbackKey = '$userId:$secret';
+      if (_lastGoogleCallback == callbackKey || _googleCallbackInProgress) return;
+      _lastGoogleCallback = callbackKey;
+      _googleCallbackInProgress = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          final context = appNavigatorKey.currentContext;
+          final navigator = appNavigatorKey.currentState;
+          if (context == null || navigator == null) throw StateError('Navigator unavailable');
+          await context.read<AppStateProvider>().completeGoogleLogin(userId: userId, secret: secret);
+          navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+        } catch (error) {
+          debugPrint('Google OAuth callback failed: ${error.runtimeType}');
+          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+          final navigator = appNavigatorKey.currentState;
+          if (navigator != null) navigator.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+        } finally {
+          _googleCallbackInProgress = false;
+        }
+      });
+      return;
+    }
     if (isFacebookCallback) {
       final isSuccess = uri.path == '/success';
       final userIdPresent = userId != null && userId.isNotEmpty;

@@ -116,9 +116,10 @@ class _GoogleChoiceButtonState extends State<_GoogleChoiceButton> {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      await context.read<AppStateProvider>().loginWithGoogle();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+      final url = await context.read<AppStateProvider>().googleOAuthUrl();
+      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر فتح تسجيل الدخول باستخدام Google.')));
       }
     } catch (error) {
       if (mounted) {
