@@ -126,7 +126,7 @@ class AppwriteService {
       return account.get();
     } on GoogleSignInException catch (error) {
       debugPrint('Google sign-in failed: code=${error.code}');
-      if (error.code == GoogleSignInExceptionCode.canceled) throw const GoogleAuthException('CANCELLED');
+      if (error.code == GoogleSignInExceptionCode.canceled) throw const GoogleAuthException('CONFIGURATION');
       throw const GoogleAuthException('SIGN_IN_FAILED');
     } on AppwriteException catch (error) {
       debugPrint('Google Appwrite session failed: code=${error.code ?? -1}, type=${_safeOAuthMessage(error.type)}, message=${_safeOAuthMessage(error.message)}');
@@ -517,7 +517,7 @@ String authErrorMessage(Object error, {required bool registering}) {
   if (error is EmailAlreadyUsedException) return 'هذا البريد الإلكتروني مستخدم بالفعل في حساب آخر.';
   if (error is GoogleAuthException) {
     switch (error.code) {
-      case 'CANCELLED': return 'تم إلغاء تسجيل الدخول باستخدام Google.';
+      case 'CONFIGURATION': return 'تعذر إعداد تسجيل الدخول باستخدام Google لهذا الإصدار. تحقق من إعداد OAuth في Google Cloud.';
       case 'NO_ID_TOKEN':
       case 'INVALID_ID_TOKEN': return 'تعذر التحقق من حساب Google. حاول مرة أخرى.';
       case 'UNSUPPORTED': return 'تسجيل الدخول باستخدام Google غير مدعوم على هذا الجهاز.';

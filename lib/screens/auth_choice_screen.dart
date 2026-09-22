@@ -38,9 +38,14 @@ class AuthChoiceScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Text('أو', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
             const SizedBox(height: 10),
-            const _FacebookChoiceButton(),
-            const SizedBox(height: 12),
-            const _GoogleChoiceButton(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                _FacebookChoiceButton(),
+                SizedBox(width: 18),
+                _GoogleChoiceButton(),
+              ],
+            ),
           ],
         ),
       ),
