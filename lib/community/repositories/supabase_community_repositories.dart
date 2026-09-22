@@ -428,10 +428,11 @@ class SupabaseFriendRepository extends SupabaseRepositoryBase
     try {
       final result = await writeApi.invoke('list_friends');
       final profiles = (result['friends'] as List?) ?? const [];
-      return profiles.map((row) {
+      return Future.wait(profiles.map((row) async {
         final profile = _profileFromRow(Map<String, dynamic>.from(row as Map));
-        return Friend(id: profile.author.id, user: profile.author);
-      }).toList();
+        final author = await _hydrateAuthor(profile.author);
+        return Friend(id: author.id, user: author);
+      }));
     } catch (error) {
       throw this.error(error);
     }
@@ -468,9 +469,10 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
             (row['participant'] as Map?) ?? const {});
         final last = Map<String, dynamic>.from(
             (row['last_message'] as Map?) ?? const {});
+        final hydratedParticipant = await _hydrateAuthor(_authorFromProfile(participant));
         return Conversation(
             id: row['id'].toString(),
-            participant: _authorFromProfile(participant),
+            participant: hydratedParticipant,
             lastMessage: last['content']?.toString() ?? '',
             updatedAt: DateTime.parse(row['updated_at'].toString()));
       }).toList();
@@ -740,6 +742,25 @@ PostAuthor _authorFromProfile(Map<String, dynamic> row) => PostAuthor(
         row['username']?.toString() ?? 'User',
     avatarPath: row['profile_image_reference']?.toString(),
     isVerified: row['is_verified'] == true);
+
+Future<PostAuthor> _hydrateAuthor(PostAuthor author) async {
+  try {
+    final document = await AppwriteService.instance.getProfile(author.id);
+    final data = document?.data ?? const <String, dynamic>{};
+    final username = data['username']?.toString().trim();
+    final displayName = data['displayname']?.toString().trim();
+    final imageId = data['profileImageId']?.toString().trim();
+    return PostAuthor(
+        id: author.id,
+        username: username?.isNotEmpty == true ? username! : author.username,
+        displayName:
+            displayName?.isNotEmpty == true ? displayName! : author.displayName,
+        avatarPath: imageId?.isNotEmpty == true ? imageId : author.avatarPath,
+        isVerified: author.isVerified);
+  } catch (_) {
+    return author;
+  }
+}
 
 CommunityComment _commentFromRow(Map<String, dynamic> row) {
   final profile = _profileFromRow(Map<String, dynamic>.from(

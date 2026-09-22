@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
         if (!requests.length) throw new MediaFunctionError("not_found", 404, "The friend request was not found.");
         const request = requests[0];
         await supabaseUpdate(config, "community_friend_requests", `id=eq.${encodeURIComponent(requestId)}&recipient_id=eq.${encodeURIComponent(identity.id)}&status=eq.pending`, { status: accept ? "accepted" : "rejected" });
+        await supabaseUpdate(config, "community_notifications", `friend_request_id=eq.${encodeURIComponent(requestId)}&recipient_id=eq.${encodeURIComponent(identity.id)}`, { is_read: true, read_at: new Date().toISOString() });
         if (!accept) return json({ status: "none" });
         const low = request.requester_id < request.recipient_id ? request.requester_id : request.recipient_id;
         const high = request.requester_id < request.recipient_id ? request.recipient_id : request.requester_id;

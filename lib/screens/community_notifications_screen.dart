@@ -17,6 +17,7 @@ class _CommunityNotificationsScreenState
   final repository = CommunityRepositoryFactory.notifications();
   final friends = CommunityRepositoryFactory.friends();
   final Set<String> _markingRead = <String>{};
+  final Set<String> _processingRequests = <String>{};
   late Future<List<CommunityNotification>> future;
   @override
   void initState() {
@@ -25,8 +26,24 @@ class _CommunityNotificationsScreenState
   }
 
   Future<void> _respond(String requestId, bool accept) async {
-    await friends.respondToRequest(requestId, accept: accept);
-    if (mounted) setState(() => future = repository.fetchNotifications());
+    if (_processingRequests.contains(requestId)) return;
+    setState(() => _processingRequests.add(requestId));
+    try {
+      await friends.respondToRequest(requestId, accept: accept);
+      await Future<void>.delayed(const Duration(milliseconds: 260));
+      if (mounted) {
+        setState(() {
+          _processingRequests.remove(requestId);
+          future = repository.fetchNotifications();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _processingRequests.remove(requestId));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
   }
 
   @override
@@ -62,41 +79,53 @@ class _CommunityNotificationsScreenState
               if (!item.isRead && _markingRead.add(item.id)) {
                 repository.markRead(item.id).catchError((_) {});
               }
-              return ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                leading: CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor.withOpacity(.16),
-                    child: Icon(icon,
-                        color: AppTheme.primaryColor,
-                        semanticLabel: item.title)),
-                title: Text(item.title,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight:
-                            item.isRead ? FontWeight.w500 : FontWeight.w800)),
-                subtitle: Text(item.body,
-                    style: const TextStyle(color: AppTheme.textSecondaryColor)),
-                trailing: item.type == NotificationType.friendRequest &&
-                        item.friendRequestId != null
-                    ? Wrap(spacing: 4, children: [
-                        IconButton(
-                            tooltip: 'قبول',
-                            onPressed: () =>
-                                _respond(item.friendRequestId!, true),
-                            icon: const Icon(Icons.check_circle_outline,
-                                color: Colors.greenAccent)),
-                        IconButton(
-                            tooltip: 'رفض',
-                            onPressed: () =>
-                                _respond(item.friendRequestId!, false),
-                            icon: const Icon(Icons.cancel_outlined,
-                                color: Colors.redAccent))
-                      ])
-                    : item.isRead
-                        ? null
-                        : const Icon(Icons.circle,
-                            size: 9, color: AppTheme.primaryColor),
+              final requestId = item.friendRequestId;
+              final processing = requestId != null &&
+                  _processingRequests.contains(requestId);
+              return AnimatedSize(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                child: processing
+                    ? const SizedBox(key: ValueKey('processing'), height: 8)
+                    : ListTile(
+                        key: ValueKey(item.id),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 6),
+                        leading: CircleAvatar(
+                            backgroundColor:
+                                AppTheme.primaryColor.withOpacity(.16),
+                            child: Icon(icon,
+                                color: AppTheme.primaryColor,
+                                semanticLabel: item.title)),
+                        title: Text(item.title,
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: item.isRead
+                                    ? FontWeight.w500
+                                    : FontWeight.w800)),
+                        subtitle: Text(item.body,
+                            style: const TextStyle(
+                                color: AppTheme.textSecondaryColor)),
+                        trailing: item.type == NotificationType.friendRequest &&
+                                requestId != null
+                            ? Wrap(spacing: 2, children: [
+                                IconButton(
+                                    tooltip: 'قبول',
+                                    onPressed: () => _respond(requestId, true),
+                                    icon: const Icon(
+                                        Icons.check_circle_outline,
+                                        color: Colors.greenAccent)),
+                                IconButton(
+                                    tooltip: 'رفض',
+                                    onPressed: () => _respond(requestId, false),
+                                    icon: const Icon(Icons.cancel_outlined,
+                                        color: Colors.redAccent))
+                              ])
+                            : item.isRead
+                                ? null
+                                : const Icon(Icons.circle,
+                                    size: 9, color: AppTheme.primaryColor),
+                      ),
               );
             },
           );

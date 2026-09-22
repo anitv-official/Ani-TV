@@ -38,13 +38,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     postsFuture = profiles.postsByUser(widget.userId);
   }
 
-  Future<void> _addFriend() async {
+  Future<FriendStatus> _addFriend() async {
     final status = await friends.sendRequest(widget.userId);
     if (mounted)
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(status == FriendStatus.pending
               ? 'تم إرسال طلب الصداقة.'
               : 'تم تحديث حالة الصداقة.')));
+    return status;
   }
 
   Future<void> _toggleLike(CommunityPost post) async {
@@ -123,14 +124,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   return ListView(children: [
                     _ProfileHeader(
                         profile: profile,
+                        showAddBadge: !widget.isCurrentUser &&
+                            profile.friendStatus != FriendStatus.friends,
                         avatarFuture: widget.avatarFuture ??
                             (profile.author.avatarPath == null
                                 ? null
                                 : AppwriteService.instance.profileImageBytes(
                                     profile.author.avatarPath!)),
-                        onFriend: profile.friendStatus == FriendStatus.friends
+                        onFriend: widget.isCurrentUser ||
+                                profile.friendStatus != FriendStatus.none
                             ? null
-                            : widget.isCurrentUser ? null : _addFriend,
+                            : _addFriend,
                         onMessage: widget.isCurrentUser
                             ? null
                             : () async {
@@ -530,62 +534,183 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
-class _ProfileHeader extends StatelessWidget {
+class _ProfileHeader extends StatefulWidget {
   const _ProfileHeader(
       {required this.profile,
       required this.onFriend,
       required this.onMessage,
+      this.showAddBadge = false,
       this.avatarFuture});
   final CommunityProfile profile;
-  final VoidCallback? onFriend;
+  final Future<FriendStatus> Function()? onFriend;
   final VoidCallback? onMessage;
+  final bool showAddBadge;
   final Future<Uint8List>? avatarFuture;
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
-      child: Column(children: [
+  State<_ProfileHeader> createState() => _ProfileHeaderState();
+}
+
+class _ProfileHeaderState extends State<_ProfileHeader> {
+  bool busy = false;
+  FriendStatus? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentStatus = status ?? widget.profile.friendStatus;
+    final canShowBadge = widget.showAddBadge &&
+        currentStatus != FriendStatus.friends && !busy;
+    final friendLabel = switch (currentStatus) {
+      FriendStatus.pending => 'تم إرسال الطلب',
+      FriendStatus.incoming => 'لديك طلب صداقة',
+      FriendStatus.friends => 'أصدقاء',
+      _ => 'إضافة صديق',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
+          decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryColor.withOpacity(.18),
+                    AppTheme.surfaceColor.withOpacity(.72)
+                  ]),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: AppTheme.primaryColor.withOpacity(.18))),
+          child: Column(children: [
         CommunityAvatar(
-            author: profile.author,
+            author: widget.profile.author,
             radius: 48,
-            avatarFuture: avatarFuture),
+            avatarFuture: widget.avatarFuture,
+            showAddBadge: canShowBadge),
         const SizedBox(height: 12),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(profile.author.displayName,
+          Text(widget.profile.author.displayName,
               style: const TextStyle(
                   color: Colors.white,
                   fontSize: 21,
                   fontWeight: FontWeight.w900)),
-          if (profile.author.isVerified) ...[
+          if (widget.profile.author.isVerified) ...[
             const SizedBox(width: 5),
             const VerifiedBadge(size: 18)
           ]
         ]),
         const SizedBox(height: 4),
-        Text('@${profile.author.username}',
+        Text('@${widget.profile.author.username}',
             style: const TextStyle(color: AppTheme.textSecondaryColor)),
-        if (profile.country.isNotEmpty)
-          Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(profile.country,
-                  style: const TextStyle(color: AppTheme.textMutedColor))),
-        if (profile.birthDate.isNotEmpty)
-          Text(profile.birthDate,
-              style: const TextStyle(color: AppTheme.textMutedColor)),
-        if (onFriend != null || onMessage != null) ...[
+        if (widget.profile.country.isNotEmpty ||
+            widget.profile.birthDate.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (widget.profile.country.isNotEmpty)
+                  _ProfileChip(
+                      icon: Icons.public_rounded,
+                      label: widget.profile.country),
+                if (widget.profile.birthDate.isNotEmpty)
+                  _ProfileChip(
+                      icon: Icons.cake_outlined,
+                      label: widget.profile.birthDate)
+              ])
+        ],
+        if (currentStatus != FriendStatus.none &&
+            currentStatus != FriendStatus.friends) ...[
+          const SizedBox(height: 10),
+          AnimatedSwitcher(
+              duration: const Duration(milliseconds: 240),
+              child: _StatusPill(
+                  key: ValueKey(currentStatus), status: currentStatus))
+        ],
+        if (widget.onFriend != null || widget.onMessage != null) ...[
           const SizedBox(height: 14),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             OutlinedButton.icon(
-                onPressed: onFriend,
-                icon: const Icon(Icons.person_add_alt_1_rounded),
-                label: const Text('إضافة صديق')),
+                onPressed: busy || widget.onFriend == null
+                    ? null
+                    : () async {
+                        setState(() => busy = true);
+                        try {
+                          final next = await widget.onFriend!.call();
+                          if (mounted) setState(() => status = next);
+                        } finally {
+                          if (mounted) setState(() => busy = false);
+                        }
+                      },
+                icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    child: busy
+                        ? const SizedBox(
+                            key: ValueKey('busy'),
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : Icon(
+                            currentStatus == FriendStatus.pending
+                                ? Icons.schedule_rounded
+                                : Icons.person_add_alt_1_rounded,
+                            key: ValueKey(currentStatus))),
+                label: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    child: Text(friendLabel, key: ValueKey(friendLabel)))),
             const SizedBox(width: 10),
             FilledButton.icon(
-                onPressed: onMessage,
+                onPressed: widget.onMessage,
                 icon: const Icon(Icons.chat_bubble_outline_rounded),
                 label: const Text('محادثة'))
           ])
         ]
+      ])));
+  }
+}
+
+class _ProfileChip extends StatelessWidget {
+  const _ProfileChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+          color: AppTheme.backgroundColor.withOpacity(.48),
+          borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: AppTheme.primaryColor),
+        const SizedBox(width: 5),
+        Text(label,
+            style: const TextStyle(
+                color: AppTheme.textSecondaryColor, fontSize: 11))
       ]));
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({super.key, required this.status});
+  final FriendStatus status;
+  @override
+  Widget build(BuildContext context) {
+    final incoming = status == FriendStatus.incoming;
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+            color: (incoming ? Colors.orangeAccent : AppTheme.primaryColor)
+                .withOpacity(.14),
+            borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(incoming ? Icons.person_add_alt_1_rounded : Icons.schedule_rounded,
+              size: 15,
+              color: incoming ? Colors.orangeAccent : AppTheme.primaryColor),
+          const SizedBox(width: 6),
+          Text(incoming ? 'لديك طلب صداقة' : 'طلب قيد الانتظار',
+              style: TextStyle(
+                  color: incoming ? Colors.orangeAccent : AppTheme.primaryColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800))
+        ]));
+  }
 }
 
 class _InfoSection extends StatelessWidget {

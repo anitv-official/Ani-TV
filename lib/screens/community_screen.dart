@@ -36,12 +36,14 @@ class _CommunityBodyState extends State<_CommunityBody> {
   final scroll = ScrollController();
   final search = TextEditingController();
   late Future<List<Friend>> _friendsFuture;
+  late Future<int> _unreadFuture;
   Timer? debounce;
   bool searching = false;
   @override
   void initState() {
     super.initState();
     _friendsFuture = CommunityRepositoryFactory.friends().friends();
+    _unreadFuture = CommunityRepositoryFactory.notifications().unreadCount();
     scroll.addListener(_onScroll);
   }
 
@@ -200,13 +202,43 @@ class _CommunityBodyState extends State<_CommunityBody> {
                 onPressed: () => setState(() => searching = true),
                 icon: const Icon(Icons.search_rounded),
                 tooltip: 'بحث'),
-          IconButton(
-              onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const CommunityNotificationsScreen())),
-              icon: const Icon(Icons.notifications_none_rounded),
-              tooltip: 'الإشعارات'),
+          FutureBuilder<int>(
+              future: _unreadFuture,
+              builder: (_, snapshot) => Stack(clipBehavior: Clip.none, children: [
+                    IconButton(
+                        onPressed: () async {
+                          await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CommunityNotificationsScreen()));
+                          if (mounted) {
+                            setState(() => _unreadFuture =
+                                CommunityRepositoryFactory.notifications()
+                                    .unreadCount());
+                          }
+                        },
+                        icon: const Icon(Icons.notifications_none_rounded),
+                        tooltip: 'الإشعارات'),
+                    if ((snapshot.data ?? 0) > 0)
+                      Positioned(
+                          top: 5,
+                          right: 5,
+                          child: Container(
+                              constraints: const BoxConstraints(minWidth: 15),
+                              height: 15,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 3),
+                              decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle),
+                              child: Text('${snapshot.data}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900))))
+                  ])),
           Stack(
             clipBehavior: Clip.none,
             children: [

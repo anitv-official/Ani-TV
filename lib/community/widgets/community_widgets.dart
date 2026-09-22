@@ -24,11 +24,13 @@ class CommunityAvatar extends StatelessWidget {
       required this.author,
       this.radius = 24,
       this.onTap,
-      this.avatarFuture});
+      this.avatarFuture,
+      this.showAddBadge = false});
   final PostAuthor author;
   final double radius;
   final VoidCallback? onTap;
   final Future<Uint8List>? avatarFuture;
+  final bool showAddBadge;
   static final Map<String, Future<Uint8List>> _imageCache = {};
   @override
   Widget build(BuildContext context) {
@@ -51,16 +53,40 @@ class CommunityAvatar extends StatelessWidget {
         ? fallback
         : FutureBuilder<Uint8List>(
             future: resolvedFuture,
-            builder: (_, snapshot) => snapshot.hasData
-                ? CircleAvatar(
-                    radius: radius,
-                    backgroundImage: MemoryImage(snapshot.data!))
-                : fallback);
+            builder: (_, snapshot) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                switchInCurve: Curves.easeOut,
+                child: snapshot.hasData
+                    ? CircleAvatar(
+                        key: const ValueKey('profile-image'),
+                        radius: radius,
+                        backgroundImage: MemoryImage(snapshot.data!),
+                        backgroundColor:
+                            AppTheme.primaryColor.withOpacity(.16))
+                    : SizedBox(key: const ValueKey('profile-fallback'), child: fallback)));
+    final content = showAddBadge
+        ? Stack(clipBehavior: Clip.none, children: [
+            avatar,
+            Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                    width: radius * .55,
+                    height: radius * .55,
+                    decoration: BoxDecoration(
+                        color: AppTheme.primaryColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: AppTheme.backgroundColor, width: 2)),
+                    child: Icon(Icons.person_add_alt_1_rounded,
+                        size: radius * .32, color: Colors.white)))
+          ])
+        : avatar;
     return Semantics(
         label: author.label,
         button: onTap != null,
         child: InkWell(
-            onTap: onTap, customBorder: const CircleBorder(), child: avatar));
+            onTap: onTap, customBorder: const CircleBorder(), child: content));
   }
 }
 
