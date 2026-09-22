@@ -1,5 +1,6 @@
 enum AppSection {
   latest,
+  community,
   anime,
   manga,
   drama,

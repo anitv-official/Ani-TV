@@ -17,6 +17,7 @@ import 'about_screen.dart';
 import 'novel_explore_screen.dart';
 import 'extensions_screen.dart';
 import 'youtube_screen.dart';
+import 'community_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -59,15 +60,25 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Row(children: [
           Icon(Icons.cloud_off_rounded, color: AppTheme.primaryColor),
           SizedBox(width: 10),
-          Expanded(child: Text('أنت غير متصل بالإنترنت', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+          Expanded(
+              child: Text('أنت غير متصل بالإنترنت',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w800))),
         ]),
-        content: Text('يمكنك متابعة المحتوى الذي سبق تنزيله حتى يعود اتصال الإنترنت.', style: TextStyle(color: AppTheme.textSecondaryColor, height: 1.5)),
+        content: Text(
+            'يمكنك متابعة المحتوى الذي سبق تنزيله حتى يعود اتصال الإنترنت.',
+            style: TextStyle(color: AppTheme.textSecondaryColor, height: 1.5)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('حسنًا')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('حسنًا')),
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(dialogContext);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen(embedded: false)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const DownloadsScreen(embedded: false)));
             },
             icon: const Icon(Icons.download_for_offline_rounded),
             label: const Text('التوجه إلى التنزيلات'),
@@ -85,7 +96,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final changelog = await AppVersionService.getChangelog();
       Future.delayed(const Duration(seconds: 2), () {
         if (!mounted) return;
-        UpdateBottomSheet.show(context: context, latestVersion: versionData?['version'], changelog: changelog);
+        UpdateBottomSheet.show(
+            context: context,
+            latestVersion: versionData?['version'],
+            changelog: changelog);
       });
     } catch (error) {
       debugPrint('Error checking for app update: $error');
@@ -102,12 +116,20 @@ class _HomeScreenState extends State<HomeScreen> {
           preloadedComics: widget.preloadedComics,
           preloadedFeaturedContent: widget.preloadedFeaturedContent,
         );
+      case AppSection.community:
+        return const CommunityScreen(embedded: true);
       case AppSection.anime:
-        return const ExploreScreen(initialIsAnime: true, embedded: true, title: 'لائحة الأنمي');
+        return const ExploreScreen(
+            initialIsAnime: true, embedded: true, title: 'لائحة الأنمي');
       case AppSection.manga:
-        return const ExploreScreen(initialIsAnime: false, embedded: true, title: 'لائحة المانجا');
+        return const ExploreScreen(
+            initialIsAnime: false, embedded: true, title: 'لائحة المانجا');
       case AppSection.drama:
-        return const ExploreScreen(initialIsAnime: true, embedded: true, sourceId: 'drama_slayer', title: 'لائحة الدراما');
+        return const ExploreScreen(
+            initialIsAnime: true,
+            embedded: true,
+            sourceId: 'drama_slayer',
+            title: 'لائحة الدراما');
       case AppSection.movies:
         return const ExploreScreen(
           embedded: true,
@@ -149,7 +171,9 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             children: [
               const AppFixedHeader(),
-              Expanded(child: KeyedSubtree(key: ValueKey(_section), child: _buildSection())),
+              Expanded(
+                  child: KeyedSubtree(
+                      key: ValueKey(_section), child: _buildSection())),
             ],
           ),
         ),
