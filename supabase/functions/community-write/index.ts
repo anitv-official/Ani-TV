@@ -52,6 +52,13 @@ Deno.serve(async (req) => {
     switch (action) {
       case "ensure_profile":
         return json(profile);
+      case "list_friends": {
+        const friendships = await supabaseGet(config, `community_friendships?or=(user_low_id.eq.${encodeURIComponent(identity.id)},user_high_id.eq.${encodeURIComponent(identity.id)})&select=user_low_id,user_high_id&limit=100`);
+        const ids = friendships.map((row) => row.user_low_id === identity.id ? row.user_high_id : row.user_low_id).filter((id) => typeof id === "string" && id.length > 0);
+        if (!ids.length) return json({ friends: [] });
+        const profiles = await supabaseGet(config, `community_profiles?user_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,bio,is_verified,profile_image_reference&limit=100`);
+        return json({ friends: profiles });
+      }
       case "create_post": {
         const content = typeof body.content === "string" ? body.content.trim() : "";
         const link = body.link == null ? null : requireString(body.link, "link", 2048);

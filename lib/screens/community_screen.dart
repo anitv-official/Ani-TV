@@ -34,11 +34,13 @@ class _CommunityBody extends StatefulWidget {
 class _CommunityBodyState extends State<_CommunityBody> {
   final scroll = ScrollController();
   final search = TextEditingController();
+  late Future<List<Friend>> _friendsFuture;
   Timer? debounce;
   bool searching = false;
   @override
   void initState() {
     super.initState();
+    _friendsFuture = CommunityRepositoryFactory.friends().friends();
     scroll.addListener(_onScroll);
   }
 
@@ -219,13 +221,16 @@ class _CommunityBodyState extends State<_CommunityBody> {
 
   Widget _profileStrip(BuildContext context, AppStateProvider account) {
     final current = _currentAuthor(account);
-    final friends = ['س', 'م', 'أ', 'ن'];
     return SizedBox(
       height: 92,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        children: [
+      child: FutureBuilder<List<Friend>>(
+          future: _friendsFuture,
+          builder: (context, snapshot) {
+            final friends = snapshot.data ?? const <Friend>[];
+            return ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              children: [
           Column(
             children: [
               Stack(
@@ -266,26 +271,30 @@ class _CommunityBodyState extends State<_CommunityBody> {
             ],
           ),
           const SizedBox(width: 18),
-          ...friends.map((letter) => Padding(
+          ...friends.map((friend) => Padding(
                 padding: const EdgeInsetsDirectional.only(end: 16),
                 child: Column(
                   children: [
-                    CircleAvatar(
+                    CommunityAvatar(
+                        author: friend.user,
                         radius: 25,
-                        backgroundColor: AppTheme.surfaceColor,
-                        child: Text(letter,
-                            style: const TextStyle(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w800))),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    UserProfileScreen(userId: friend.id)))),
                     const SizedBox(height: 4),
-                    const Text('عضو',
+                    Text(friend.user.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             color: AppTheme.textSecondaryColor, fontSize: 11)),
                   ],
                 ),
               )),
-        ],
-      ),
+              ],
+            );
+          }),
     );
   }
 

@@ -281,24 +281,10 @@ class SupabaseFriendRepository extends SupabaseRepositoryBase
 
   @override
   Future<List<Friend>> friends() async {
-    final me = await requireUser();
     try {
-      final rows = await client
-          .from('community_friendships')
-          .select('*')
-          .or('user_low_id.eq.$me,user_high_id.eq.$me');
-      final ids = (rows as List).map((row) {
-        final map = Map<String, dynamic>.from(row as Map);
-        return map['user_low_id'] == me
-            ? map['user_high_id']
-            : map['user_low_id'];
-      }).toList();
-      if (ids.isEmpty) return [];
-      final profiles = await client
-          .from('community_profiles')
-          .select('*')
-          .inFilter('user_id', ids);
-      return (profiles as List).map((row) {
+      final result = await writeApi.invoke('list_friends');
+      final profiles = (result['friends'] as List?) ?? const [];
+      return profiles.map((row) {
         final profile = _profileFromRow(Map<String, dynamic>.from(row as Map));
         return Friend(id: profile.author.id, user: profile.author);
       }).toList();
