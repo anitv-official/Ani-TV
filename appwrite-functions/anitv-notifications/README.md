@@ -53,7 +53,7 @@ Pass the secret only through this header; never place it in the body or logs:
 x-anitv-favorite-scan-secret: <value configured in Appwrite>
 ```
 
-`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes the relevant notification cursor without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. Anime4Up has a dedicated adapter; a conservative generic HTTPS-page adapter handles `anime`, `manga`, `comic`, `movie`, `series`, and `drama`. Unsupported or failed sources are recorded in `favorite_scan_errors` and do not send a notification.
+`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes the relevant notification cursor without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. Anime4Up has a dedicated adapter; Anime3rb has a dedicated public-HTML adapter; a conservative generic HTTPS-page adapter handles `anime`, `manga`, `comic`, `movie`, `series`, and `drama`. Anime3rb's current Cloudflare challenge is not solved or bypassed: if both the direct page and the same public reader fallback are challenged, the Favorite is recorded in `favorite_scan_errors` and no notification is sent. Unsupported or failed sources are recorded in `favorite_scan_errors` and do not send a notification.
 
 ### مستخدم محدد
 

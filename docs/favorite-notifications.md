@@ -6,6 +6,7 @@
 
 - `appwrite-functions/anitv-notifications/src/main.js`: وظيفة Appwrite الجديدة. تقرأ جدول Favorites باستخدام `TablesDB`، تفحص أحدث إصدار، تمنع التكرار بمفتاح ذري في `notification_deliveries`، ترسل عبر Appwrite Messaging المرتبط بمزود Firebase FCM، وتحدث `lastNotifiedEpisode` أو `lastNotifiedChapter` و`lastCheckedAt`.
 - `appwrite-functions/anitv-notifications/src/adapters/anime4up.js`: محول Anime4Up الموجود.
+- `appwrite-functions/anitv-notifications/src/adapters/anime3rb.js`: محول Anime3rb يقرأ روابط `/episode/...` من HTML العام، ويستخدم نفس قارئ `r.jina.ai` العام الموجود في تطبيق AniTV كـ fallback فقط. لا يحل Cloudflare Challenge ولا يتجاوزه؛ عند استمرار الحجب يسجل الخطأ ولا يرسل إشعارًا.
 - `appwrite-functions/anitv-notifications/src/adapters/generic-page.js`: محول محافظ للصفحات التي تحتوي على مؤشرات الحلقة/الفصل أو تاريخ الإصدار، لأن أسماء المصادر الأخرى وبنيتها غير معروفة من الكود وحده.
 - `supabase/migrations/20260918042700_create_notification_infrastructure.sql`: جداول التاريخ والتسليمات وملخصات التشغيل الموجودة.
 - `supabase/migrations/20260922170000_add_favorite_scan_errors.sql`: سجل مستقل لأخطاء مصادر Favorites لإعادة المحاولة في التشغيل التالي.

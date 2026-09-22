@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
+const anime3rb = require('./adapters/anime3rb');
 const genericPage = require('./adapters/generic-page');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
@@ -107,6 +108,7 @@ const saveScanError = async ({ favoriteRowId, userId, itemId, source, contentTyp
 const sourceAdapter = (favorite) => {
   const source = String(favorite.source || '').trim().toLowerCase();
   const itemId = String(favorite.itemId || '').trim();
+  if (anime3rb.supports(source, itemId)) return anime3rb;
   if (anime4up.supports(source, itemId)) return anime4up;
   if (genericPage.supports(source, itemId, favorite.type)) return genericPage;
   return null;
@@ -157,7 +159,9 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
       result.checked += 1;
       try {
         const contentType = String(favorite.type || 'anime').toLowerCase();
-        const latest = await withRetry(() => adapter === anime4up
+        const latest = await withRetry(() => adapter === anime3rb
+          ? adapter.latestEpisode({ source: favorite.source, itemId })
+          : adapter === anime4up
           ? adapter.latestEpisode({ source: favorite.source, itemId })
           : adapter.latestRelease({ source: favorite.source, itemId, type: contentType }), 2);
         const checkedAt = new Date().toISOString();
