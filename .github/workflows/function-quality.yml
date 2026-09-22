@@ -81,3 +81,24 @@ jobs:
       - name: Check no B2 credentials are committed
         run: |
           ! grep -R -n -E 'B2_APPLICATION_KEY=[^$]|B2_KEY_ID=[^$]|SUPABASE_SERVICE_ROLE_KEY=[^$]' .
+
+  favorite-notifications-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: appwrite-functions/anitv-notifications
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: appwrite-functions/anitv-notifications/package-lock.json
+      - name: Install function dependencies
+        run: npm ci --ignore-scripts
+      - name: Run Favorite Notifications tests
+        run: npm test
+      - name: Check function syntax
+        run: node --check src/main.js

@@ -143,11 +143,14 @@ class _MyAppState extends State<MyApp> {
 
   void _handleNotificationData(Map<String, String> data) {
     final url = (data['url'] ?? data['itemId'])?.toString();
-    final type = data['type']?.toString();
+    final type = data['notificationType']?.toString() ?? data['type']?.toString();
     if (url == null || url.isEmpty || type == null) return;
     final source = data['source']?.toLowerCase();
-    final normalizedType = type == 'new_content' ? (data['episode'] != null ? 'episode' : 'movie') : type;
-    _handleUri(Uri.tryParse('anitv://$normalizedType?url=${Uri.encodeComponent(url)}&source=${Uri.encodeComponent(source ?? '')}'));
+    final normalizedType = type == 'new_content'
+        ? (data['chapter'] != null ? 'chapter' : data['episode'] != null ? 'episode' : 'movie')
+        : type;
+    _handleUri(Uri.tryParse(
+        'anitv:///$normalizedType?url=${Uri.encodeComponent(url)}&source=${Uri.encodeComponent(source ?? '')}'));
   }
 
   void _handleUri(Uri? uri) {

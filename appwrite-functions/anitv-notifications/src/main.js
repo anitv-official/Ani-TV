@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { Client, ID, Messaging, TablesDB, Query } = require('node-appwrite');
 const anime4up = require('./adapters/anime4up');
+const genericPage = require('./adapters/generic-page');
 
 const FAVORITES_DATABASE_ID = '6aa58db9001a5f53312d';
 const FAVORITES_COLLECTION_ID = '6aa58e3a003b23556872';
@@ -78,18 +79,36 @@ const claimDelivery = async ({ userId, source, itemId, type, number }) => {
     await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encoded}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'pending', attempts: 0, last_error: null }) });
     return true;
   }
-  await supabaseRequest('notification_deliveries', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ dedupe_key: dedupeKey, user_id: userId, source, item_id: itemId, type, content_number: String(number), status: 'pending' }) });
-  return true;
+  try {
+    await supabaseRequest('notification_deliveries', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ dedupe_key: dedupeKey, user_id: userId, source, item_id: itemId, type, content_number: String(number), status: 'pending' }) });
+    return true;
+  } catch (error) {
+    if (String(error?.message || '').includes('409')) return false;
+    throw error;
+  }
 };
 const saveHistory = async ({ userId, title, body, type, itemId, source, payload }) => {
   if (!supabaseConfigured()) return;
   await supabaseRequest('notification_history', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ user_id: userId, title, body, type, item_id: itemId, source, url: itemId, payload }) });
+};
+const saveScanError = async ({ favoriteRowId, userId, itemId, source, contentType, errorMessage }) => {
+  if (!supabaseConfigured()) return;
+  try {
+    await supabaseRequest('favorite_scan_errors', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ favorite_row_id: favoriteRowId, user_id: userId, item_id: itemId, source, content_type: contentType, error_message: String(errorMessage || 'Unknown source error').slice(0, 500) }),
+    });
+  } catch (_) {
+    // A logging outage must not hide the original source failure or stop the scan.
+  }
 };
 
 const sourceAdapter = (favorite) => {
   const source = String(favorite.source || '').trim().toLowerCase();
   const itemId = String(favorite.itemId || '').trim();
   if (anime4up.supports(source, itemId)) return anime4up;
+  if (genericPage.supports(source, itemId, favorite.type)) return genericPage;
   return null;
 };
 
@@ -132,11 +151,15 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
       const adapter = sourceAdapter(favorite);
       if (!userId || !itemId || !adapter) {
         result.unsupported += 1;
+        await saveScanError({ favoriteRowId: document.$id, userId, itemId, source: favorite.source, contentType: favorite.type, errorMessage: !userId ? 'Favorite is missing userId' : !itemId ? 'Favorite is missing itemId' : `Unsupported source or content type: ${favorite.source || 'unknown'} / ${favorite.type || 'unknown'}` });
         continue;
       }
       result.checked += 1;
       try {
-        const latest = await withRetry(() => adapter.latestEpisode({ source: favorite.source, itemId }), 2);
+        const contentType = String(favorite.type || 'anime').toLowerCase();
+        const latest = await withRetry(() => adapter === anime4up
+          ? adapter.latestEpisode({ source: favorite.source, itemId })
+          : adapter.latestRelease({ source: favorite.source, itemId, type: contentType }), 2);
         const checkedAt = new Date().toISOString();
         if (!latest) {
           if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
@@ -144,35 +167,42 @@ async function runFavoriteScan({ rows, messaging, payload, log, error }) {
           continue;
         }
         const current = String(latest.number);
-        const previous = String(favorite.lastNotifiedEpisode || '').trim();
+        const isChapter = latest.kind === 'chapter' || contentType === 'manga' || contentType === 'comic';
+        const previous = String(isChapter ? favorite.lastNotifiedChapter : favorite.lastNotifiedEpisode || '').trim();
         if (!previous) {
-          if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+          if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { ...(isChapter ? { lastNotifiedChapter: current } : { lastNotifiedEpisode: current }), lastCheckedAt: checkedAt } });
           result.initialized += 1;
           continue;
         }
-        if (Number(latest.number) <= Number(previous)) {
+        const currentNumber = Number(current);
+        const previousNumber = Number(previous);
+        const unchangedOrOlder = current === previous || (Number.isFinite(currentNumber) && Number.isFinite(previousNumber) && currentNumber <= previousNumber) || (!Number.isFinite(currentNumber) && !Number.isFinite(previousNumber) && current <= previous);
+        if (unchangedOrOlder) {
           if (!dryRun) await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastCheckedAt: checkedAt } });
           result.skipped += 1;
           continue;
         }
-        const notificationType = String(favorite.contentType || favorite.type || 'anime').toLowerCase().includes('chapter') ? 'chapter' : 'episode';
+        const notificationType = isChapter ? 'chapter' : ['movie', 'series', 'drama'].includes(contentType) ? 'release' : 'episode';
         const source = String(favorite.source || adapter.id);
-        const notificationPayload = { type: notificationType, itemId, url: itemId, title, source, episode: current };
+        const notificationPayload = { userId, contentType, type: notificationType, notificationType, itemId, url: itemId, title, source, releaseKey: current, ...(notificationType === 'chapter' ? { chapter: current } : { episode: current }), deepLink: `anitv:///${notificationType}?url=${encodeURIComponent(itemId)}&source=${encodeURIComponent(source)}` };
         if (!dryRun) {
           const claimed = await claimDelivery({ userId, source, itemId, type: notificationType, number: current });
           if (!claimed) { result.skipped += 1; continue; }
           try {
-            await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, data: notificationPayload, priority: 'high' }), 2);
-            await saveHistory({ userId, title: `حلقة جديدة: ${title}`, body: `تمت إضافة الحلقة ${current}`, type: notificationType, itemId, source, payload: notificationPayload });
+            const label = notificationType === 'chapter' ? 'فصل جديد' : notificationType === 'release' ? 'إصدار جديد' : 'حلقة جديدة';
+            const noun = notificationType === 'chapter' ? 'الفصل' : notificationType === 'release' ? 'الإصدار' : 'الحلقة';
+            await withRetry(() => messaging.createPush({ messageId: ID.unique(), users: [userId], title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${current}`, data: notificationPayload, priority: 'high' }), 2);
+            await saveHistory({ userId, title: `${label}: ${title}`, body: `تمت إضافة ${noun} ${current}`, type: notificationType === 'release' ? contentType : notificationType, itemId, source, payload: notificationPayload });
           } catch (deliveryError) {
             if (supabaseConfigured()) await supabaseRequest(`notification_deliveries?dedupe_key=eq.${encodeURIComponent([userId, source, itemId, notificationType, current].join('|'))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: 'failed', attempts: 1, last_error: String(deliveryError.message || '').slice(0, 240) }) });
             throw deliveryError;
           }
-          await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { lastNotifiedEpisode: current, lastCheckedAt: checkedAt } });
+          await rows.updateRow({ databaseId: FAVORITES_DATABASE_ID, tableId: FAVORITES_COLLECTION_ID, rowId: document.$id, data: { ...(isChapter ? { lastNotifiedChapter: current } : { lastNotifiedEpisode: current }), lastCheckedAt: checkedAt } });
         }
         result.notified += 1;
       } catch (scanError) {
         result.errors += 1;
+        await saveScanError({ favoriteRowId: document.$id, userId, itemId, source: favorite.source, contentType: favorite.type, errorMessage: scanError?.message });
         error(`favorite source error; document=${document.$id}; type=${scanError?.name || 'unknown'}; message=${String(scanError?.message || '').slice(0, 160)}`);
       }
     }

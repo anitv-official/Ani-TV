@@ -753,6 +753,8 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                   'image_url': widget.anime['image_url'] ?? '',
                   'url': widget.url,
                   'rating': widget.anime['rating'],
+                  'source': widget.anime['source'] ?? widget.anime['source_id'] ?? '',
+                  'source_id': widget.anime['source_id'] ?? '',
                }, true);
                ToastUtils.show('تمت الإضافة إلى المفضلة', backgroundColor: AppTheme.primaryColor);
             }

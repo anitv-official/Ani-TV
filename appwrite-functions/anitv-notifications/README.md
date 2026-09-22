@@ -1,6 +1,6 @@
 # AniTV Notifications Function
 
-Function مستقلة لإرسال Push Notifications عبر **Appwrite Messaging → FCM**. لا تعدّل Function تسجيل الدخول/حذف الحساب الحالية.
+Function مستقلة لقراءة Favorites من Appwrite وإرسال Push Notifications عبر **Appwrite Messaging → مزود Firebase FCM**. لا تعدّل Function تسجيل الدخول/حذف الحساب الحالية.
 
 ## Runtime and entrypoint
 
@@ -53,7 +53,7 @@ Pass the secret only through this header; never place it in the body or logs:
 x-anitv-favorite-scan-secret: <value configured in Appwrite>
 ```
 
-`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes `lastNotifiedEpisode` for supported items without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. The adapters currently support Anime4Up; unsupported sources are reported and do not stop the scan.
+`dryRun: true` checks Favorites without sending Push notifications or changing scan state. The first real scan initializes the relevant notification cursor without sending historical notifications. The scan reads all rows with cursor pagination (100 rows per page), retries transient source/delivery failures once, and continues after an individual Favorite fails. Anime4Up has a dedicated adapter; a conservative generic HTTPS-page adapter handles `anime`, `manga`, `comic`, `movie`, `series`, and `drama`. Unsupported or failed sources are recorded in `favorite_scan_errors` and do not send a notification.
 
 ### مستخدم محدد
 
@@ -96,8 +96,8 @@ Broadcast للمشرفين فقط، ويستخدم `ANITV_BROADCAST_TOPIC_ID` و
 4. أنشئ Function جديدة باسم `AniTV Notifications`، Runtime Node.js 22، ثم ارفع محتويات هذا المجلد.
 5. أضف Environment Variables السابقة، وأنشئ Deployment جديدًا.
 6. لا تغيّر Function الحالية `6aa5ed04000f66117651`.
-7. من إعدادات Function نفسها اضبط **Schedule** واحدًا فقط لـ`favorite_scan` (مثل `0 */30 * * *`)، واستدعِها بالـsecret header. لا تنشئ Scheduler ثانيًا في Supabase أو جهاز العميل.
-8. أضف `SUPABASE_URL` و`SUPABASE_SERVICE_ROLE_KEY` إلى متغيرات Function السرية. لا تستخدم Service Role Key في Flutter.
+7. لا تحتوي Function على Scheduler داخلي. استدعِ `favorite_scan` من Cron/Scheduler خارجي مع `x-anitv-favorite-scan-secret`. استخدم جدولة كل 30 دقيقة للأنمي/المانجا، وكل 6 ساعات للأفلام/المسلسلات/الدراما. استخدم Scheduler واحدًا فقط، ولا تنشئ Scheduler ثانيًا في Supabase أو جهاز العميل.
+8. أضف `SUPABASE_URL` و`SUPABASE_SERVICE_ROLE_KEY` إلى متغيرات Function السرية. لا تستخدم Service Role Key في Flutter. لا تُضمّن `FIREBASE_SERVICE_ACCOUNT_JSON` في المستودع؛ هذه الوظيفة تستخدم Appwrite Messaging، ويجب إعداد FCM Provider في Appwrite Console.
 
 ## Flutter build variables
 

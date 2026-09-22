@@ -710,7 +710,7 @@ class AppStateProvider extends ChangeNotifier {
         _setErrorMessage('سجّل الدخول لحفظ المفضلة على حسابك.');
         return;
       }
-      final source = (item['source'] ?? '').toString();
+      final source = (item['source_id'] ?? item['source'] ?? '').toString();
       final userId = _userId!;
       final localId = 'local_${DateTime.now().microsecondsSinceEpoch}';
       final newItem = {...Map<String, dynamic>.from(item as Map), 'id': localId, 'type': isAnime ? 'anime' : 'comic'};
@@ -731,7 +731,7 @@ class AppStateProvider extends ChangeNotifier {
         }
         final document = await _appwrite.createFavorite(userId: userId, data: {
         'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
-        'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
+        'source': source, 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
         });
         final updated = list.map((value) => value is Map && value['id'] == localId ? {...Map<String, dynamic>.from(value), 'id': document.$id} : value).toList();
         if (isAnime) { _favoriteAnime = updated; } else { _favoriteComics = updated; }
@@ -741,7 +741,7 @@ class AppStateProvider extends ChangeNotifier {
       } catch (_) {
         await _cache.enqueueFavorite(userId, {'op': 'create', 'isAnime': isAnime, 'data': {
           'itemId': itemId, 'title': item['title'] ?? '', 'coverUrl': item['image_url'] ?? item['coverUrl'] ?? '',
-          'source': item['source'] ?? '', 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
+          'source': source, 'type': isAnime ? 'anime' : 'comic', 'addAt': DateTime.now().toUtc().toIso8601String(),
         }});
         _setErrorMessage('تم حفظ المفضلة محليًا، وستتم مزامنتها عند عودة الاتصال.');
       }

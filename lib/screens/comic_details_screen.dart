@@ -606,6 +606,8 @@ class _FavoriteIconActionState extends State<_FavoriteIconAction> {
                   'rating': widget.comic['rating'],
                   'type': widget.comic['type'],
                   'genres': widget.comic['genres'],
+                  'source': widget.comic['source'] ?? widget.comic['source_id'] ?? '',
+                  'source_id': widget.comic['source_id'] ?? '',
                }, false);
                ToastUtils.show('تمت الإضافة إلى المفضلة', backgroundColor: AppTheme.primaryColor);
             }
