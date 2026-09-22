@@ -98,7 +98,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: const Text('الملف الشخصي')),
+      appBar: AppBar(
+          title: Text(widget.isCurrentUser ? 'ملفي الشخصي' : 'ملف المستخدم')),
       body: FutureBuilder<CommunityProfile>(
           future: profileFuture,
           builder: (_, snapshot) {
@@ -128,15 +129,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         onFriend: profile.friendStatus == FriendStatus.friends
                             ? null
                             : widget.isCurrentUser ? null : _addFriend,
-                        onMessage: widget.isCurrentUser ? null : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ConversationScreen(
-                                    conversation: Conversation(
-                                        id: 'conversation-${profile.author.id}',
-                                        participant: profile.author,
-                                        lastMessage: '',
-                                        updatedAt: DateTime.now()))))),
+                        onMessage: widget.isCurrentUser
+                            ? null
+                            : () async {
+                                try {
+                                  final conversation = await CommunityRepositoryFactory
+                                      .chat()
+                                      .openConversation(profile.author.id,
+                                          profile.author);
+                                  if (!context.mounted) return;
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) => ConversationScreen(
+                                              conversation: conversation)));
+                                } catch (error) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(error.toString())));
+                                  }
+                                }
+                              },
                     if (profile.bio.isNotEmpty)
                       _InfoSection(
                           title: 'نبذة',

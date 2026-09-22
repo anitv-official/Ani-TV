@@ -84,6 +84,14 @@ class SupabaseCommunityRepository extends SupabaseRepositoryBase
   Future<CommunityPost> toggleLike(CommunityPost post) =>
       SupabaseLikeRepository(client: client, identity: identity).toggle(post);
   @override
+  Future<void> deletePost(String postId) async {
+    try {
+      await writeApi.invoke('delete_post', {'post_id': postId});
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
+  @override
   Future<List<CommunityComment>> fetchComments(String postId) =>
       _comments.fetchForPost(postId);
   @override
@@ -111,9 +119,10 @@ class SupabasePostRepository extends SupabaseRepositoryBase
       final rows = await request.order('created_at', ascending: false).range(
           before == null ? offset : 0,
           (before == null ? offset : 0) + limit - 1);
-      return (rows as List)
+      final posts = (rows as List)
           .map((row) => _postFromRow(Map<String, dynamic>.from(row as Map)))
           .toList();
+      return Future.wait(posts.map(_hydratePostAuthor));
     } catch (error) {
       throw this.error(error);
     }
@@ -216,6 +225,14 @@ class SupabaseCommentRepository extends SupabaseRepositoryBase
       throw this.error(error);
     }
   }
+  @override
+  Future<void> delete(String commentId) async {
+    try {
+      await writeApi.invoke('delete_comment', {'comment_id': commentId});
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
 }
 
 class SupabaseLikeRepository extends SupabaseRepositoryBase
@@ -312,9 +329,10 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
           .isFilter('deleted_at', null)
           .order('created_at', ascending: false)
           .range(0, 49);
-      return (rows as List)
+      final posts = (rows as List)
           .map((row) => _postFromRow(Map<String, dynamic>.from(row as Map)))
           .toList();
+      return Future.wait(posts.map(_hydratePostAuthor));
     } catch (error) {
       throw this.error(error);
     }
@@ -424,6 +442,22 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
     implements ChatRepository {
   SupabaseChatRepository({super.client, super.identity});
   @override
+  Future<Conversation> openConversation(
+      String userId, PostAuthor participant) async {
+    try {
+      final result = await writeApi.invoke('open_conversation', {
+        'user_id': userId,
+      });
+      return Conversation(
+          id: result['conversation_id'].toString(),
+          participant: participant,
+          lastMessage: '',
+          updatedAt: DateTime.now());
+    } catch (error) {
+      throw this.error(error);
+    }
+  }
+  @override
   Future<List<Conversation>> conversations() async {
     final me = await requireUser();
     try {
@@ -524,11 +558,22 @@ class SupabaseNotificationRepository extends SupabaseRepositoryBase
       final rows = (result['notifications'] as List?) ?? const [];
       return (rows as List).map((row) {
         final map = Map<String, dynamic>.from(row as Map);
+        final actor = Map<String, dynamic>.from(
+            (map['actor_profile'] as Map?) ?? const {});
+        final actorName = (actor['display_name'] ?? actor['username'] ?? 'مستخدم')
+            .toString();
+        final type = _notificationType(map['type'].toString());
         return CommunityNotification(
             id: map['id'].toString(),
-            type: _notificationType(map['type'].toString()),
-            title: map['type'].toString(),
-            body: '',
+            type: type,
+            title: type == NotificationType.friendRequest
+                ? 'طلب صداقة من $actorName'
+                : type == NotificationType.comment
+                    ? 'تعليق جديد من $actorName'
+                    : 'إعجاب جديد من $actorName',
+            body: type == NotificationType.friendRequest
+                ? 'يمكنك قبول الطلب أو رفضه.'
+                : 'لديك تفاعل جديد على منشورك.',
             createdAt: DateTime.parse(map['created_at'].toString()),
             isRead: map['is_read'] == true,
             friendRequestId: map['friend_request_id']?.toString());
@@ -629,6 +674,24 @@ class SupabaseShareRepository implements ShareRepository {
   Future<ShareReceipt> shareToUser(CommunityPost post, String userId) =>
       Future.value(
           ShareReceipt(postId: post.id, recipientId: userId, external: false));
+}
+
+Future<CommunityPost> _hydratePostAuthor(CommunityPost post) async {
+  try {
+    final document = await AppwriteService.instance.getProfile(post.author.id);
+    final data = document?.data ?? const <String, dynamic>{};
+    final username = data['username']?.toString().trim();
+    final displayName = data['displayname']?.toString().trim();
+    final imageId = data['profileImageId']?.toString().trim();
+    return post.copyWith(author: PostAuthor(
+        id: post.author.id,
+        username: username?.isNotEmpty == true ? username! : post.author.username,
+        displayName: displayName?.isNotEmpty == true ? displayName! : post.author.displayName,
+        avatarPath: imageId?.isNotEmpty == true ? imageId : post.author.avatarPath,
+        isVerified: post.author.isVerified));
+  } catch (_) {
+    return post;
+  }
 }
 
 CommunityPost _postFromRow(Map<String, dynamic> row) {

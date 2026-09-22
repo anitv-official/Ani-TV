@@ -141,7 +141,8 @@ class CommunityPost {
   bool get hasImage => media.any((item) => item.type == MediaType.image);
   bool get hasAudio => media.any((item) => item.type == MediaType.audio);
   CommunityPost copyWith(
-          {String? text,
+          {PostAuthor? author,
+          String? text,
           String? link,
           List<PostMedia>? media,
           PostType? type,
@@ -150,7 +151,7 @@ class CommunityPost {
           bool? likedByMe}) =>
       CommunityPost(
           id: id,
-          author: author,
+          author: author ?? this.author,
           text: text ?? this.text,
           link: link ?? this.link,
           media: media ?? this.media,

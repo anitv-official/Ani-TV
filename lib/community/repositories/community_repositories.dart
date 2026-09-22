@@ -10,6 +10,7 @@ abstract class CommunityRepository {
       String? audioPath,
       Duration audioDuration = Duration.zero});
   Future<CommunityPost> toggleLike(CommunityPost post);
+  Future<void> deletePost(String postId);
   Future<List<CommunityComment>> fetchComments(String postId);
   Future<CommunityComment> addComment(String postId, String text);
 }
@@ -23,6 +24,7 @@ abstract class PostRepository {
 abstract class CommentRepository {
   Future<List<CommunityComment>> fetchForPost(String postId);
   Future<CommunityComment> create(String postId, String text);
+  Future<void> delete(String commentId);
 }
 
 abstract class LikeRepository {
@@ -57,6 +59,7 @@ abstract class FriendRepository {
 }
 
 abstract class ChatRepository {
+  Future<Conversation> openConversation(String userId, PostAuthor participant);
   Future<List<Conversation>> conversations();
   Future<List<CommunityMessage>> messages(String conversationId);
   Future<CommunityMessage> sendMessage(String conversationId, String text);

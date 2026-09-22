@@ -195,6 +195,12 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<void> deletePost(String postId) async {
+    _posts.removeWhere((post) => post.id == postId);
+    _comments.remove(postId);
+  }
+
+  @override
   Future<List<CommunityComment>> fetchComments(String postId) async {
     await Future<void>.delayed(const Duration(milliseconds: 180));
     return List.unmodifiable(_comments[postId] ?? const []);
@@ -247,6 +253,9 @@ class MockCommentRepository implements CommentRepository {
   @override
   Future<CommunityComment> create(String postId, String text) =>
       source.addComment(postId, text);
+
+  @override
+  Future<void> delete(String commentId) async {}
 }
 
 class MockLikeRepository implements LikeRepository {
@@ -379,6 +388,9 @@ class MockFriendRepository implements FriendRepository {
 }
 
 class MockChatRepository implements ChatRepository {
+  @override
+  Future<Conversation> openConversation(String userId, PostAuthor participant) async =>
+      Conversation(id: 'conversation-$userId', participant: participant, lastMessage: '', updatedAt: DateTime.now());
   final conversationsData = <Conversation>[
     Conversation(
         id: 'conversation-1',

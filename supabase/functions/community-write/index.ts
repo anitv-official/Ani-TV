@@ -76,8 +76,11 @@ Deno.serve(async (req) => {
         return json({ requests: requests.map((row) => ({ ...row, requester_profile: byId.get(row.requester_id) ?? {} })) });
       }
       case "list_notifications": {
-        const notifications = await supabaseGet(config, `community_notifications?recipient_id=eq.${encodeURIComponent(identity.id)}&select=id,type,friend_request_id,is_read,created_at&order=created_at.desc&limit=50`);
-        return json({ notifications });
+        const notifications = await supabaseGet(config, `community_notifications?recipient_id=eq.${encodeURIComponent(identity.id)}&select=id,type,friend_request_id,is_read,created_at,actor_id&order=created_at.desc&limit=50`);
+        const actorIds = notifications.map((row) => row.actor_id).filter((id) => typeof id === "string");
+        const profiles = actorIds.length ? await supabaseGet(config, `community_profiles?user_id=in.(${actorIds.map((id) => encodeURIComponent(id)).join(",")})&select=user_id,username,display_name,profile_image_reference&limit=100`) : [];
+        const byId = new Map(profiles.map((row) => [row.user_id, row]));
+        return json({ notifications: notifications.map((row) => ({ ...row, actor_profile: byId.get(row.actor_id) ?? {} })) });
       }
       case "respond_friend_request": {
         const requestId = requireString(body.request_id, "request id", 80);
@@ -141,6 +144,20 @@ Deno.serve(async (req) => {
         const bio = typeof body.bio === "string" ? body.bio.trim().slice(0, 2000) : "";
         return json(await supabaseUpdate(config, "community_profiles", `user_id=eq.${encodeURIComponent(identity.id)}`, { bio }));
       }
+      case "open_conversation": {
+        const otherUserId = requireString(body.user_id, "user id", 128);
+        if (otherUserId === identity.id) throw new MediaFunctionError("invalid_input", 400, "You cannot message yourself.");
+        const mine = await supabaseGet(config, `community_conversation_members?user_id=eq.${encodeURIComponent(identity.id)}&select=conversation_id&limit=100`);
+        const ids = mine.map((row) => row.conversation_id).filter((id) => typeof id === "string");
+        if (ids.length) {
+          const shared = await supabaseGet(config, `community_conversation_members?conversation_id=in.(${ids.map((id) => encodeURIComponent(id)).join(",")})&user_id=eq.${encodeURIComponent(otherUserId)}&select=conversation_id&limit=1`);
+          if (shared.length) return json({ conversation_id: shared[0].conversation_id });
+        }
+        const conversation = await supabaseInsert(config, "community_conversations", { is_private: true, created_by: identity.id });
+        await supabaseInsert(config, "community_conversation_members", { conversation_id: conversation.id, user_id: identity.id });
+        await supabaseInsert(config, "community_conversation_members", { conversation_id: conversation.id, user_id: otherUserId });
+        return json({ conversation_id: conversation.id });
+      }
       case "send_message": {
         const conversationId = requireString(body.conversation_id, "conversation id", 80);
         const content = text(body.content, "message", 5000);
@@ -149,11 +166,15 @@ Deno.serve(async (req) => {
         await supabaseUpdate(config, "community_conversations", `id=eq.${encodeURIComponent(conversationId)}`, { updated_at: new Date().toISOString() });
         return json(message);
       }
+      case "delete_comment": {
+        const commentId = requireString(body.comment_id, "comment id", 80);
+        const comments = await supabaseGet(config, `community_comments?id=eq.${encodeURIComponent(commentId)}&author_id=eq.${encodeURIComponent(identity.id)}&deleted_at=is.null&select=id&limit=1`);
+        if (!comments.length) throw new MediaFunctionError("forbidden", 403, "You do not have permission for this comment.");
+        return json(await supabaseUpdate(config, "community_comments", `id=eq.${encodeURIComponent(commentId)}&author_id=eq.${encodeURIComponent(identity.id)}`, { deleted_at: new Date().toISOString() }));
+      }
       case "delete_post": {
         const postId = requireString(body.post_id, "post id", 80);
         await ownedPost(config, postId, identity.id);
-        const media = await supabaseGet(config, `community_post_media?post_id=eq.${encodeURIComponent(postId)}&select=id&limit=100`);
-        if (media.length) throw new MediaFunctionError("storage_cleanup_required", 409, "Media cleanup must complete before deleting this post.");
         return json(await supabaseUpdate(config, "community_posts", `id=eq.${encodeURIComponent(postId)}&author_id=eq.${encodeURIComponent(identity.id)}`, { deleted_at: new Date().toISOString() }));
       }
       default:

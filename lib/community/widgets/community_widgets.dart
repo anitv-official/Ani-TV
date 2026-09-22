@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../models/community_models.dart';
 import '../services/community_media_api.dart';
+import '../../services/appwrite_service.dart';
 
 class VerifiedBadge extends StatelessWidget {
   const VerifiedBadge({super.key, this.size = 16});
@@ -28,6 +29,7 @@ class CommunityAvatar extends StatelessWidget {
   final double radius;
   final VoidCallback? onTap;
   final Future<Uint8List>? avatarFuture;
+  static final Map<String, Future<Uint8List>> _imageCache = {};
   @override
   Widget build(BuildContext context) {
     final fallback = CircleAvatar(
@@ -40,10 +42,15 @@ class CommunityAvatar extends StatelessWidget {
                 color: AppTheme.primaryColor,
                 fontWeight: FontWeight.w900,
                 fontSize: radius * .65)));
-    Widget avatar = avatarFuture == null
+    final resolvedFuture = avatarFuture ??
+        (author.avatarPath == null || author.avatarPath!.isEmpty
+            ? null
+            : (_imageCache[author.avatarPath!] ??= AppwriteService.instance
+                .profileImageBytes(author.avatarPath!)));
+    Widget avatar = resolvedFuture == null
         ? fallback
         : FutureBuilder<Uint8List>(
-            future: avatarFuture,
+            future: resolvedFuture,
             builder: (_, snapshot) => snapshot.hasData
                 ? CircleAvatar(
                     radius: radius,
