@@ -41,3 +41,21 @@ abstract class MediaRepository {
   Future<void> deleteMedia(String mediaId);
   Future<String> getMediaUrl(PostMedia media);
 }
+
+abstract class ProfileRepository {
+  Future<CommunityProfile> getProfile(String userId);
+  Future<List<CommunityPost>> postsByUser(String userId);
+  Future<CommunityProfile> updateBio(String userId, String bio);
+}
+
+abstract class FriendRepository {
+  Future<FriendStatus> statusFor(String userId);
+  Future<FriendStatus> sendRequest(String userId);
+  Future<List<Friend>> friends();
+}
+
+abstract class ChatRepository {
+  Future<List<Conversation>> conversations();
+  Future<List<CommunityMessage>> messages(String conversationId);
+  Future<CommunityMessage> sendMessage(String conversationId, String text);
+}

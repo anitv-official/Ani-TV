@@ -10,6 +10,7 @@ import '../community/state/community_feed_provider.dart';
 import '../community/widgets/community_widgets.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
+import 'community_social_screens.dart';
 
 class CommunityScreen extends StatelessWidget {
   const CommunityScreen({super.key, this.embedded = false});
@@ -114,8 +115,11 @@ class _CommunityBodyState extends State<_CommunityBody> {
                       }
                     },
                     onComment: () => _showComments(context, post),
-                    onProfile: () => _snack(
-                        context, 'ملفات المستخدمين ستتوفر في المرحلة الثانية.'),
+                    onProfile: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                UserProfileScreen(userId: post.author.id))),
                     onShare: () => Share.share(post.text.isEmpty
                         ? 'منشور من مجتمع AniTV'
                         : post.text));
@@ -182,7 +186,10 @@ class _CommunityBodyState extends State<_CommunityBody> {
             clipBehavior: Clip.none,
             children: [
               IconButton(
-                  onPressed: () => _snack(context, 'لا توجد رسائل جديدة.'),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MessagesScreen())),
                   icon: const Icon(Icons.chat_bubble_outline_rounded),
                   tooltip: 'الرسائل'),
               Positioned(

@@ -6,21 +6,99 @@ enum MediaType { image, audio }
 
 enum NotificationType { friendRequest, comment, reaction }
 
+enum FriendStatus { none, pending, incoming, friends, blocked }
+
+enum MessageStatus { sending, sent, delivered, read, failed }
+
 class PostAuthor {
   final String id;
   final String username;
   final String displayName;
   final String? avatarPath;
   final bool isVerified;
-
   const PostAuthor(
       {required this.id,
       required this.username,
       required this.displayName,
       this.avatarPath,
       this.isVerified = false});
-
   String get label => displayName.trim().isEmpty ? '@$username' : displayName;
+}
+
+class CommunityProfile {
+  final PostAuthor author;
+  final String country;
+  final String birthDate;
+  final String bio;
+  final FriendStatus friendStatus;
+  final List<String> favoriteTitles;
+  const CommunityProfile(
+      {required this.author,
+      this.country = '',
+      this.birthDate = '',
+      this.bio = '',
+      this.friendStatus = FriendStatus.none,
+      this.favoriteTitles = const []});
+  CommunityProfile copyWith({String? bio, FriendStatus? friendStatus}) =>
+      CommunityProfile(
+          author: author,
+          country: country,
+          birthDate: birthDate,
+          bio: bio ?? this.bio,
+          friendStatus: friendStatus ?? this.friendStatus,
+          favoriteTitles: favoriteTitles);
+}
+
+class FriendRequest {
+  final String id;
+  final PostAuthor from;
+  final PostAuthor to;
+  final FriendStatus status;
+  const FriendRequest(
+      {required this.id,
+      required this.from,
+      required this.to,
+      required this.status});
+}
+
+class Friend {
+  final String id;
+  final PostAuthor user;
+  final FriendStatus status;
+  const Friend(
+      {required this.id,
+      required this.user,
+      this.status = FriendStatus.friends});
+}
+
+class Conversation {
+  final String id;
+  final PostAuthor participant;
+  final String lastMessage;
+  final DateTime updatedAt;
+  final int unreadCount;
+  const Conversation(
+      {required this.id,
+      required this.participant,
+      required this.lastMessage,
+      required this.updatedAt,
+      this.unreadCount = 0});
+}
+
+class CommunityMessage {
+  final String id;
+  final String conversationId;
+  final String senderId;
+  final String text;
+  final DateTime sentAt;
+  final MessageStatus status;
+  const CommunityMessage(
+      {required this.id,
+      required this.conversationId,
+      required this.senderId,
+      required this.text,
+      required this.sentAt,
+      this.status = MessageStatus.read});
 }
 
 class PostMedia {
@@ -29,14 +107,12 @@ class PostMedia {
   final String path;
   final String? url;
   final Duration duration;
-
   const PostMedia(
       {required this.id,
       required this.type,
       required this.path,
       this.url,
       this.duration = Duration.zero});
-
   bool get isLocal => path.isNotEmpty && File(path).existsSync();
 }
 
@@ -51,7 +127,6 @@ class CommunityPost {
   final int likeCount;
   final int commentCount;
   final bool likedByMe;
-
   const CommunityPost(
       {required this.id,
       required this.author,
@@ -63,10 +138,8 @@ class CommunityPost {
       this.likeCount = 0,
       this.commentCount = 0,
       this.likedByMe = false});
-
   bool get hasImage => media.any((item) => item.type == MediaType.image);
   bool get hasAudio => media.any((item) => item.type == MediaType.audio);
-
   CommunityPost copyWith(
           {String? text,
           String? link,
@@ -94,7 +167,6 @@ class CommunityComment {
   final PostAuthor author;
   final String text;
   final DateTime createdAt;
-
   const CommunityComment(
       {required this.id,
       required this.postId,
@@ -110,7 +182,6 @@ class CommunityNotification {
   final String body;
   final DateTime createdAt;
   final bool isRead;
-
   const CommunityNotification(
       {required this.id,
       required this.type,
@@ -126,14 +197,12 @@ class CreatePostDraft {
   final String? link;
   final String? audioPath;
   final Duration audioDuration;
-
   const CreatePostDraft(
       {this.text = '',
       this.imagePath,
       this.link,
       this.audioPath,
       this.audioDuration = Duration.zero});
-
   bool get hasContent =>
       text.trim().isNotEmpty ||
       (imagePath?.trim().isNotEmpty ?? false) ||

@@ -290,3 +290,141 @@ class MockMediaRepository implements MediaRepository {
   @override
   Future<String> getMediaUrl(PostMedia media) async => media.url ?? media.path;
 }
+
+class MockProfileRepository implements ProfileRepository {
+  MockProfileRepository(this.source);
+  final MockCommunityRepository source;
+  final Map<String, CommunityProfile> _profiles = {
+    'anitv': CommunityProfile(
+        author: MockCommunityRepository._authors[0],
+        bio: 'الحساب الرسمي لمجتمع AniTV.',
+        country: 'العالم العربي',
+        favoriteTitles: ['One Piece', 'Solo Leveling']),
+    'sora': CommunityProfile(
+        author: MockCommunityRepository._authors[1],
+        bio: 'أشارك انطباعاتي عن الأنمي والمانغا.',
+        country: 'المغرب',
+        birthDate: '2000-05-12',
+        favoriteTitles: ['Frieren', 'Blue Lock']),
+    'otaku': CommunityProfile(
+        author: MockCommunityRepository._authors[2],
+        bio: 'أكتشف أعمالًا جديدة كل يوم.',
+        country: 'مصر',
+        favoriteTitles: ['Naruto']),
+    'manga_fan': CommunityProfile(
+        author: MockCommunityRepository._authors[3],
+        bio: 'قارئ مانغا ومحب للقصص المصورة.',
+        country: 'الأردن',
+        favoriteTitles: ['Berserk']),
+  };
+  @override
+  Future<CommunityProfile> getProfile(String userId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 160));
+    return _profiles[userId] ??
+        CommunityProfile(author: MockCommunityRepository._authors[1]);
+  }
+
+  @override
+  Future<List<CommunityPost>> postsByUser(String userId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    return source.fetchPosts(limit: 50).then(
+        (items) => items.where((post) => post.author.id == userId).toList());
+  }
+
+  @override
+  Future<CommunityProfile> updateBio(String userId, String bio) async {
+    final profile = await getProfile(userId);
+    final updated = profile.copyWith(bio: bio.trim());
+    _profiles[userId] = updated;
+    return updated;
+  }
+}
+
+class MockFriendRepository implements FriendRepository {
+  final Map<String, FriendStatus> _statuses = {
+    'sora': FriendStatus.none,
+    'otaku': FriendStatus.friends
+  };
+  @override
+  Future<FriendStatus> statusFor(String userId) async =>
+      _statuses[userId] ?? FriendStatus.none;
+  @override
+  Future<FriendStatus> sendRequest(String userId) async {
+    _statuses[userId] = FriendStatus.pending;
+    return FriendStatus.pending;
+  }
+
+  @override
+  Future<List<Friend>> friends() async => [
+        Friend(id: 'friend-1', user: MockCommunityRepository._authors[2]),
+        Friend(id: 'friend-2', user: MockCommunityRepository._authors[3])
+      ];
+}
+
+class MockChatRepository implements ChatRepository {
+  final conversationsData = <Conversation>[
+    Conversation(
+        id: 'conversation-1',
+        participant: MockCommunityRepository._authors[2],
+        lastMessage: 'سأرسل لك اقتراحات جديدة قريبًا.',
+        updatedAt: _chatTime(1),
+        unreadCount: 2),
+    Conversation(
+        id: 'conversation-2',
+        participant: MockCommunityRepository._authors[1],
+        lastMessage: 'هل شاهدت الحلقة الجديدة؟',
+        updatedAt: _chatTime(4)),
+  ];
+  final Map<String, List<CommunityMessage>> messagesData = {
+    'conversation-1': [
+      CommunityMessage(
+          id: 'message-1',
+          conversationId: 'conversation-1',
+          senderId: 'otaku',
+          text: 'مرحبًا! ما العمل الذي تتابعه حاليًا؟',
+          sentAt: _chatTime(12),
+          status: MessageStatus.read),
+      CommunityMessage(
+          id: 'message-2',
+          conversationId: 'conversation-1',
+          senderId: 'guest',
+          text: 'أتابع موسمًا جديدًا ومتحمس للنقاش.',
+          sentAt: _chatTime(10),
+          status: MessageStatus.read),
+      CommunityMessage(
+          id: 'message-3',
+          conversationId: 'conversation-1',
+          senderId: 'otaku',
+          text: 'سأرسل لك اقتراحات جديدة قريبًا.',
+          sentAt: _chatTime(1),
+          status: MessageStatus.delivered),
+    ],
+  };
+  static DateTime _chatTime(int minutesAgo) =>
+      DateTime.now().subtract(Duration(minutes: minutesAgo));
+  @override
+  Future<List<Conversation>> conversations() async {
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    return List.unmodifiable(conversationsData);
+  }
+
+  @override
+  Future<List<CommunityMessage>> messages(String conversationId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 160));
+    return List.unmodifiable(messagesData[conversationId] ?? const []);
+  }
+
+  @override
+  Future<CommunityMessage> sendMessage(
+      String conversationId, String text) async {
+    final message = CommunityMessage(
+        id: 'message-${DateTime.now().microsecondsSinceEpoch}',
+        conversationId: conversationId,
+        senderId: 'guest',
+        text: text.trim(),
+        sentAt: DateTime.now(),
+        status: MessageStatus.sent);
+    (messagesData[conversationId] ??= []).add(message);
+    return message;
+  }
+}
