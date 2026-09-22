@@ -110,10 +110,7 @@ class AppStateProvider extends ChangeNotifier {
       await _applyAuthenticatedUser(user, syncCloud: false);
       if (_isLoggedIn && _userId != null) await _loadLocalAccountCache(_userId!);
       notifyListeners();
-      if (_isLoggedIn) {
-        unawaited(_syncAccountFromCloud());
-        unawaited(_refreshFacebookProfileImage());
-      }
+      if (_isLoggedIn) unawaited(_syncAccountFromCloud());
     } catch (error) {
       final prefs = await SharedPreferences.getInstance();
       final cachedUserId = prefs.getString(_lastUserIdKey);
