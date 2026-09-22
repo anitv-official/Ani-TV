@@ -76,6 +76,7 @@ jobs:
           deno check community-media-complete/index.ts
           deno check community-media-url/index.ts
           deno check community-media-delete/index.ts
+          deno check community-write/index.ts
 
       - name: Check no B2 credentials are committed
         run: |

@@ -4,6 +4,7 @@ import 'community_repositories.dart';
 import '../services/appwrite_community_identity.dart';
 import '../services/community_backend_config.dart';
 import '../services/community_media_api.dart';
+import '../services/community_write_api.dart';
 
 class SupabaseRepositoryBase {
   SupabaseRepositoryBase(
@@ -12,6 +13,7 @@ class SupabaseRepositoryBase {
         identity = identity ?? const AppwriteCommunityIdentity();
   final SupabaseClient client;
   final CommunityIdentityProvider identity;
+  final CommunityWriteApi writeApi = CommunityWriteApi();
   Future<String> requireUser() async =>
       (await identity.currentUserId()) ??
       (throw const AuthenticationError(
@@ -121,23 +123,15 @@ class SupabasePostRepository extends SupabaseRepositoryBase
     if (!draft.hasContent)
       throw const ValidationError('A post needs text, a link, or media.');
     try {
-      final userId = await requireUser();
-      final postType = draft.audioPath != null
-          ? (draft.text.trim().isEmpty ? 'audio' : 'mixed')
-          : draft.imagePath != null
-              ? (draft.text.trim().isEmpty ? 'image' : 'mixed')
-              : draft.link != null
-                  ? 'link'
-                  : 'text';
+      final result = await writeApi.invoke('create_post', {
+        'content': draft.text.trim(),
+        if (draft.link != null) 'link': draft.link,
+        'post_type': draft.link != null ? 'link' : 'text',
+      });
       final row = await client
           .from('community_posts')
-          .insert({
-            'author_id': userId,
-            'content': draft.text.trim(),
-            'post_type': postType,
-            'link_url': draft.link
-          })
           .select('*, community_profiles(*), community_post_media(*)')
+          .eq('id', result['id'].toString())
           .single();
       return _postFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
@@ -171,12 +165,14 @@ class SupabaseCommentRepository extends SupabaseRepositoryBase
     if (text.trim().isEmpty)
       throw const ValidationError('Comment cannot be empty.');
     try {
-      final userId = await requireUser();
+      final result = await writeApi.invoke('create_comment', {
+        'post_id': postId,
+        'content': text.trim(),
+      });
       final row = await client
           .from('community_comments')
-          .insert(
-              {'post_id': postId, 'author_id': userId, 'content': text.trim()})
           .select('*, community_profiles(*)')
+          .eq('id', result['id'].toString())
           .single();
       return _commentFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
@@ -191,27 +187,11 @@ class SupabaseLikeRepository extends SupabaseRepositoryBase
   @override
   Future<CommunityPost> toggle(CommunityPost post) async {
     try {
-      final userId = await requireUser();
-      final existing = await client
-          .from('community_post_likes')
-          .select('post_id')
-          .eq('post_id', post.id)
-          .eq('user_id', userId);
-      if ((existing as List).isEmpty) {
-        await client
-            .from('community_post_likes')
-            .insert({'post_id': post.id, 'user_id': userId});
-      } else {
-        await client
-            .from('community_post_likes')
-            .delete()
-            .eq('post_id', post.id)
-            .eq('user_id', userId);
-      }
+      final result = await writeApi.invoke('toggle_like', {'post_id': post.id});
+      final liked = result['liked'] == true;
       return post.copyWith(
-          likeCount: (post.likeCount + ((existing as List).isEmpty ? 1 : -1))
-              .clamp(0, 1 << 30),
-          likedByMe: (existing as List).isEmpty);
+          likeCount: (post.likeCount + (liked ? 1 : -1)).clamp(0, 1 << 30),
+          likedByMe: liked);
     } catch (error) {
       throw this.error(error);
     }
@@ -246,12 +226,10 @@ class SupabaseProfileRepository extends SupabaseRepositoryBase
     if (userId != await requireUser())
       throw const PermissionError('You can only update your own profile.');
     try {
-      final row = await client
-          .from('community_profiles')
-          .update({'bio': bio.trim()})
-          .eq('user_id', userId)
-          .select()
-          .single();
+      final result = await writeApi.invoke('update_profile', {'bio': bio.trim()});
+      final row = result['user_id'] == null
+          ? await client.from('community_profiles').select().eq('user_id', userId).single()
+          : result;
       return _profileFromRow(Map<String, dynamic>.from(row));
     } catch (error) {
       throw this.error(error);
@@ -285,14 +263,9 @@ class SupabaseFriendRepository extends SupabaseRepositoryBase
 
   @override
   Future<FriendStatus> sendRequest(String userId) async {
-    final me = await requireUser();
-    if (me == userId)
-      throw const ValidationError(
-          'You cannot send a friend request to yourself.');
     try {
-      await client
-          .from('community_friend_requests')
-          .insert({'requester_id': me, 'recipient_id': userId});
+      final result = await writeApi.invoke('send_friend_request', {'user_id': userId});
+      if (result['status'] == 'accepted') return FriendStatus.friends;
       return FriendStatus.pending;
     } catch (error) {
       throw this.error(error);
@@ -391,23 +364,17 @@ class SupabaseChatRepository extends SupabaseRepositoryBase
       String conversationId, String text) async {
     if (text.trim().isEmpty)
       throw const ValidationError('Message cannot be empty.');
-    final me = await requireUser();
     await _assertMember(conversationId);
     try {
-      final row = await client
-          .from('community_messages')
-          .insert({
-            'conversation_id': conversationId,
-            'sender_id': me,
-            'content': text.trim(),
-            'message_type': 'text'
-          })
-          .select()
-          .single();
+      final result = await writeApi.invoke('send_message', {
+        'conversation_id': conversationId,
+        'content': text.trim(),
+      });
+      final row = Map<String, dynamic>.from(result);
       return CommunityMessage(
           id: row['id'].toString(),
           conversationId: conversationId,
-          senderId: me,
+          senderId: row['sender_id'].toString(),
           text: row['content'].toString(),
           sentAt: DateTime.parse(row['created_at'].toString()),
           status: MessageStatus.sent);
