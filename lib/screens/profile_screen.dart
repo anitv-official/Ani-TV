@@ -628,6 +628,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final appState = context.watch<AppStateProvider>();
     final cloudAvatarBytes = appState.profileImageBytes;
     final facebookAvatarUrl = appState.profileImageUrl;
+    final ImageProvider<Object>? avatarImage = hasAvatar
+        ? FileImage(File(_avatarPath!)) as ImageProvider<Object>
+        : (facebookAvatarUrl == null ? null : NetworkImage(facebookAvatarUrl) as ImageProvider<Object>);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -644,9 +647,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: CircleAvatar(
               radius: 34,
               backgroundColor: AppTheme.elevatedColor,
-              backgroundImage: hasAvatar
-                  ? FileImage(File(_avatarPath!))
-                  : (facebookAvatarUrl == null ? null : NetworkImage(facebookAvatarUrl)),
+              backgroundImage: avatarImage,
               child: hasAvatar || facebookAvatarUrl != null
                   ? null
                   : (cloudAvatarBytes == null
