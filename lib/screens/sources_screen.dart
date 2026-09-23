@@ -238,10 +238,35 @@ class SourceSummary extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('مصادر المحتوى', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), TextButton(onPressed: onPressed, child: const Text('عرض الكل'))]),
-        SizedBox(height: 92, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: sources.length, separatorBuilder: (_, __) => const SizedBox(width: 10), itemBuilder: (_, index) {
-          final source = sources[index];
-          return InkWell(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => sourceContentPage(source))), borderRadius: BorderRadius.circular(14), child: Container(width: 172, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderColor)), child: Row(children: [SourceIcon(source: source, size: 36), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [Text(source.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)), const SizedBox(height: 4), Text(SourcePresentation.kindLabel(source.kind), style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11))]))]));
-        })),
+        SizedBox(
+          height: 92,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: sources.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final source = sources[index];
+              return InkWell(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => sourceContentPage(source))),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 172,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppTheme.borderColor)),
+                  child: Row(children: [
+                    SourceIcon(source: source, size: 36),
+                    const SizedBox(width: 9),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Text(source.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+                      const SizedBox(height: 4),
+                      Text(SourcePresentation.kindLabel(source.kind), style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)),
+                    ])),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
       ]),
     );
   }
