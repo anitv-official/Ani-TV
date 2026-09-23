@@ -18,6 +18,7 @@ import 'novel_explore_screen.dart';
 import 'extensions_screen.dart';
 import 'youtube_screen.dart';
 import 'community_screen.dart';
+import 'ai_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -176,6 +177,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       key: ValueKey(_section), child: _buildSection())),
             ],
           ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const AiChatScreen())),
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.auto_awesome_rounded),
+          label: const Text('AI'),
         ),
       ),
     );
