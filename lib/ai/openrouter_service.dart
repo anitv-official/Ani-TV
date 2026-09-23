@@ -41,6 +41,7 @@ class OpenRouterService {
                 if (tools.isNotEmpty) 'tools': tools,
                 'tool_choice': 'auto',
                 'temperature': 0.2,
+                'max_tokens': 700,
               }),
             )
             .timeout(config.timeout);

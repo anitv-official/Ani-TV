@@ -1,6 +1,8 @@
 import '../providers/app_state_provider.dart';
 import '../services/api_service.dart';
 import '../services/download_service.dart';
+import '../services/anilist_service.dart';
+import '../services/tmdb_service.dart';
 import '../sources/source_registry.dart';
 import 'ai_context_manager.dart';
 import 'ai_models.dart';
@@ -95,11 +97,30 @@ class SearchContentTool extends AiTool {
     if (query.isEmpty)
       return const AiToolResult(success: false, message: 'أدخل اسمًا للبحث.');
     final category = arguments['category']?.toString().toLowerCase() ?? 'all';
-    final rawItems = switch (category) {
-      'anime' => await ApiService.searchAnime(query),
-      'manga' => await ApiService.searchComics(query),
-      _ => await ApiService.searchAll(query),
+    final Future<List<dynamic>> localFuture = switch (category) {
+      'anime' => ApiService.searchAnime(query),
+      'manga' => ApiService.searchComics(query),
+      _ => ApiService.searchAll(query),
     };
+    List<dynamic> rawItems;
+    if (category == 'anime' || category == 'manga') {
+      final results = await Future.wait<dynamic>([
+        localFuture,
+        AniListService.search(query,
+            type: category == 'manga' ? 'MANGA' : 'ANIME'),
+      ]);
+      rawItems = [...results[0] as List, ...results[1] as List];
+    } else if (category == 'movie' ||
+        category == 'series' ||
+        category == 'drama') {
+      final results = await Future.wait<dynamic>([
+        localFuture,
+        TmdbService.search(query, tv: category != 'movie'),
+      ]);
+      rawItems = [...results[0] as List, ...results[1] as List];
+    } else {
+      rawItems = await localFuture;
+    }
     final items =
         category == 'all' || category == 'anime' || category == 'manga'
             ? rawItems
@@ -230,19 +251,54 @@ class SearchEpisodesTool extends AiTool {
       return const AiToolResult(
           success: false, message: 'رابط المحتوى ورقم الحلقة مطلوبان.');
     final details = await SourceRegistry.details(url);
+    final cover = (details?['cover_url'] ??
+            details?['poster'] ??
+            details?['image'] ??
+            details?['thumbnail'] ??
+            '')
+        .toString();
     final episodes = (details?['episodes'] as List?)
             ?.whereType<Map>()
-            .map((item) => Map<String, dynamic>.from(item))
+            .map((item) => {
+                  ...Map<String, dynamic>.from(item),
+                  if (cover.isNotEmpty) 'cover_url': cover,
+                  'content_url': url,
+                })
             .where((item) => '${item['title'] ?? ''} ${item['number'] ?? ''}'
                 .toLowerCase()
                 .contains(query))
             .toList() ??
         [];
-    return _items(
-        episodes,
-        episodes.isEmpty
+    AiAction? action;
+    if (episodes.length == 1) {
+      final episodeUrl = episodes.first['url']?.toString() ?? '';
+      if (episodeUrl.isNotEmpty) {
+        try {
+          final streams = await ApiService.fetchEpisodeStreams(episodeUrl);
+          final direct = (streams['direct_stream_urls'] as List?)
+                  ?.whereType<Map>()
+                  .map((item) => item['url']?.toString() ?? '')
+                  .firstWhere((value) => value.isNotEmpty, orElse: () => '') ??
+              '';
+          final streamUrl = streams['stream_url']?.toString() ?? direct;
+          if (streamUrl.isNotEmpty) {
+            action = AiAction(type: 'play_episode', payload: {
+              'url': streamUrl,
+              'title': episodes.first['title'] ?? 'حلقة',
+              'episodeId': episodeUrl,
+              'cover_url': cover,
+            });
+          }
+        } catch (_) {}
+      }
+    }
+    return AiToolResult(
+        success: episodes.isNotEmpty,
+        message: episodes.isEmpty
             ? 'لم أجد هذه الحلقة في البيانات الحقيقية.'
-            : 'وجدت الحلقة المطلوبة.');
+            : 'وجدت الحلقة المطلوبة.',
+        items: episodes,
+        action: action);
   }
 }
 

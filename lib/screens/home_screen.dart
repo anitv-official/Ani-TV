@@ -18,7 +18,7 @@ import 'novel_explore_screen.dart';
 import 'extensions_screen.dart';
 import 'youtube_screen.dart';
 import 'community_screen.dart';
-import 'ai_chat_screen.dart';
+import '../widgets/ai_floating_button.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<dynamic>? preloadedAnime;
@@ -169,22 +169,19 @@ class _HomeScreenState extends State<HomeScreen> {
           onSectionSelected: _selectSection,
         ),
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              const AppFixedHeader(),
-              Expanded(
-                  child: KeyedSubtree(
-                      key: ValueKey(_section), child: _buildSection())),
+              Column(
+                children: [
+                  const AppFixedHeader(),
+                  Expanded(
+                      child: KeyedSubtree(
+                          key: ValueKey(_section), child: _buildSection())),
+                ],
+              ),
+              const AiFloatingButton(),
             ],
           ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const AiChatScreen())),
-          backgroundColor: AppTheme.primaryColor,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.auto_awesome_rounded),
-          label: const Text('AI'),
         ),
       ),
     );

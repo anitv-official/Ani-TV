@@ -67,8 +67,8 @@ class _AiChatScreenState extends State<AiChatScreen> {
   }
 
   void _openItem(Map<String, dynamic> item) {
-    final url = item['url']?.toString() ?? item['itemId']?.toString() ?? '';
-    if (url.isEmpty) return;
+    final url = item['url']?.toString() ?? '';
+    if (url.isEmpty || item['external_only'] == true) return;
     final category =
         (item['category'] ?? item['type'] ?? '').toString().toLowerCase();
     final page = {'comic', 'manga', 'manhwa', 'manhua'}.contains(category)
@@ -77,22 +77,33 @@ class _AiChatScreenState extends State<AiChatScreen> {
     Navigator.push(context, MaterialPageRoute(builder: (_) => page));
   }
 
+  void _playItem(Map<String, dynamic> item) {
+    final url = (item['play_url'] ?? item['stream_url'])?.toString() ?? '';
+    if (url.isEmpty) return;
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => VideoPlayerScreen(
+                  url: url,
+                  title: item['title']?.toString() ??
+                      item['name']?.toString() ??
+                      'حلقة',
+                  episodeId: item['episodeId']?.toString() ?? url,
+                )));
+  }
+
   void _executeAction(AiAction action) {
-    final payload = action.payload;
-    if (action.type == 'open_content') {
-      _openItem({'url': payload['url'], 'category': payload['category']});
-    } else if (action.type == 'play_episode') {
-      final url = payload['url']?.toString() ?? '';
-      if (url.isEmpty) return;
-      Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => VideoPlayerScreen(
-                    url: url,
-                    title: payload['title']?.toString() ?? 'حلقة',
-                    episodeId: payload['episodeId']?.toString() ?? url,
-                  )));
-    }
+    if (action.type != 'play_episode') return;
+    final url = action.payload['url']?.toString() ?? '';
+    if (url.isEmpty) return;
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => VideoPlayerScreen(
+                  url: url,
+                  title: action.payload['title']?.toString() ?? 'حلقة',
+                  episodeId: action.payload['episodeId']?.toString() ?? url,
+                )));
   }
 
   @override
@@ -100,119 +111,191 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final configured = OpenRouterConfig.fromEnvironment().isConfigured;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('مساعد AniTV'),
-        backgroundColor: AppTheme.backgroundColor,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          if (!configured)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(.12),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.orange.withOpacity(.35)),
-              ),
-              child: const Text(
-                'يحتاج المساعد إلى إعداد OPENROUTER_API_KEY عبر dart-define قبل الاستخدام.',
-                style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
-              ),
-            ),
+      body: SafeArea(
+        child: Column(children: [
+          _header(),
+          if (!configured) _configurationBanner(),
           Expanded(
-            child: _entries.isEmpty
-                ? _empty()
-                : ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                    itemCount: _entries.length,
-                    itemBuilder: (_, index) => _bubble(_entries[index]),
-                  ),
-          ),
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text('يفكر المساعد ويبحث في المصادر...',
-                    style: TextStyle(
-                        color: AppTheme.textSecondaryColor, fontSize: 12)),
-              ),
-            ),
+              child: _entries.isEmpty
+                  ? _empty()
+                  : ListView.builder(
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                      itemCount: _entries.length,
+                      itemBuilder: (_, index) => _bubble(_entries[index]),
+                    )),
+          if (_loading) _thinking(),
           _composer(),
-        ],
+        ]),
       ),
     );
   }
 
-  Widget _empty() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.auto_awesome_rounded,
-                  color: AppTheme.primaryColor, size: 58),
-              const SizedBox(height: 14),
-              const Text('ماذا تريد أن تشاهد أو تقرأ?',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              Text('جرّب: ابحث عن Naruto أو هات آخر فصل من مانجا معينة.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.textSecondaryColor)),
-            ],
-          ),
+  Widget _header() => Container(
+        padding: const EdgeInsets.fromLTRB(18, 14, 14, 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+              colors: [AppTheme.surfaceColor, AppTheme.backgroundColor]),
+          border: Border(
+              bottom:
+                  BorderSide(color: AppTheme.primaryColor.withOpacity(.18))),
         ),
+        child: Row(children: [
+          IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon:
+                  const Icon(Icons.arrow_forward_rounded, color: Colors.white)),
+          const SizedBox(width: 4),
+          const AiBrandMark(size: 46),
+          const SizedBox(width: 12),
+          const Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('مساعد AniTV',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900)),
+                SizedBox(height: 3),
+                Text('بحث ذكي • تشغيل مباشر • أغلفة ومعلومات',
+                    style: TextStyle(
+                        color: AppTheme.textSecondaryColor, fontSize: 11)),
+              ])),
+          if (_entries.isNotEmpty)
+            IconButton(
+                onPressed: () => setState(() {
+                      _entries.clear();
+                      _controller.clear();
+                    }),
+                icon: const Icon(Icons.delete_sweep_outlined,
+                    color: Colors.white54)),
+        ]),
       );
+
+  Widget _configurationBanner() => Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(.11),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.orange.withOpacity(.35))),
+        child: const Row(children: [
+          Icon(Icons.info_outline_rounded,
+              color: Colors.orangeAccent, size: 20),
+          SizedBox(width: 9),
+          Expanded(
+              child: Text(
+                  'المساعد يحتاج إعداد مفتاح OpenRouter في نسخة البناء.',
+                  style: TextStyle(color: Colors.orangeAccent, fontSize: 12)))
+        ]),
+      );
+
+  Widget _empty() => Center(
+          child: SingleChildScrollView(
+              child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const AiBrandMark(size: 86),
+          const SizedBox(height: 18),
+          const Text('ماذا تريد أن تشاهد أو تقرأ؟',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          const Text(
+              'سأبحث في AniTV وAniList وأعرض الغلاف والمعلومات والخيارات المناسبة.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppTheme.textSecondaryColor,
+                  height: 1.5,
+                  fontSize: 13)),
+          const SizedBox(height: 22),
+          Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                'ابحث عن Naruto',
+                'آخر حلقة من One Piece',
+                'معلومات مانجا Solo Leveling'
+              ]
+                  .map((text) => ActionChip(
+                      label: Text(text),
+                      onPressed: () {
+                        _input.text = text;
+                        _send();
+                      },
+                      backgroundColor: AppTheme.surfaceColor,
+                      labelStyle:
+                          const TextStyle(color: Colors.white70, fontSize: 11)))
+                  .toList()),
+        ]),
+      )));
+
+  Widget _thinking() => const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 7),
+      child: Row(children: [
+        SizedBox(
+            width: 15,
+            height: 15,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: AppTheme.primaryColor)),
+        SizedBox(width: 9),
+        Text('يبحث في المصادر ويجهز النتائج...',
+            style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 12))
+      ]));
 
   Widget _bubble(_ChatEntry entry) => Align(
         alignment: entry.user
             ? AlignmentDirectional.centerEnd
             : AlignmentDirectional.centerStart,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          constraints: const BoxConstraints(maxWidth: 360),
-          padding: const EdgeInsets.all(13),
+          margin: const EdgeInsets.only(bottom: 14),
+          constraints: const BoxConstraints(maxWidth: 430),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: entry.user
-                ? AppTheme.primaryColor.withOpacity(.24)
-                : AppTheme.surfaceColor,
-            borderRadius: BorderRadius.circular(16),
+            gradient: entry.user
+                ? LinearGradient(colors: [
+                    AppTheme.primaryColor.withOpacity(.38),
+                    AppTheme.primaryColor.withOpacity(.18)
+                  ])
+                : LinearGradient(colors: [
+                    AppTheme.surfaceColor,
+                    AppTheme.surfaceColor.withOpacity(.72)
+                  ]),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
                 color: entry.user
-                    ? AppTheme.primaryColor.withOpacity(.5)
+                    ? AppTheme.primaryColor.withOpacity(.55)
                     : AppTheme.borderColor),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(entry.reply?.text ?? entry.text,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              if (!entry.user) const AiBrandMark(size: 24),
+              if (!entry.user) const SizedBox(width: 8),
+              Text(entry.user ? 'أنت' : 'AniTV AI',
                   style: TextStyle(
-                      color: entry.reply?.isError == true
-                          ? Colors.orangeAccent
-                          : Colors.white,
-                      height: 1.45)),
-              if (entry.reply?.items.isNotEmpty == true)
-                ...entry.reply!.items.take(8).map(_resultCard),
-              if (entry.reply?.action != null)
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    onPressed: () => _executeAction(entry.reply!.action!),
-                    icon: const Icon(Icons.open_in_new_rounded, size: 17),
-                    label: Text(entry.reply!.action!.type == 'play_episode'
-                        ? 'تشغيل'
-                        : 'فتح'),
-                  ),
-                ),
-            ],
-          ),
+                      color:
+                          entry.user ? Colors.white70 : AppTheme.primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800))
+            ]),
+            const SizedBox(height: 7),
+            Text(entry.reply?.text ?? entry.text,
+                style: TextStyle(
+                    color: entry.reply?.isError == true
+                        ? Colors.orangeAccent
+                        : Colors.white,
+                    height: 1.5,
+                    fontSize: 14)),
+            if (entry.reply?.items.isNotEmpty == true)
+              ...entry.reply!.items.take(8).map(_resultCard),
+            if (entry.reply?.action != null) _playAction(entry.reply!.action!),
+          ]),
         ),
       );
 
@@ -221,70 +304,162 @@ class _AiChatScreenState extends State<AiChatScreen> {
         item['name']?.toString() ??
         item['_ai_message']?.toString() ??
         'نتيجة';
-    final url = item['url']?.toString() ?? '';
-    return InkWell(
-      onTap: url.isEmpty ? null : () => _openItem(item),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: Row(
-          children: [
-            const Icon(Icons.movie_outlined,
-                color: AppTheme.primaryColor, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-                child: Text(title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white70, fontWeight: FontWeight.w700))),
-            if (url.isNotEmpty)
-              const Icon(Icons.chevron_left, color: Colors.white54, size: 18),
-          ],
-        ),
-      ),
+    final cover = item['cover_url']?.toString() ??
+        item['poster']?.toString() ??
+        item['image']?.toString() ??
+        '';
+    final description = item['description']?.toString() ?? '';
+    final source =
+        item['source']?.toString() ?? item['source_id']?.toString() ?? 'AniTV';
+    final score =
+        item['score']?.toString() ?? item['averageScore']?.toString() ?? '';
+    final playUrl =
+        item['play_url']?.toString() ?? item['stream_url']?.toString() ?? '';
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+          color: Colors.black.withOpacity(.16),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(.07))),
+      child: InkWell(
+          onTap: () => playUrl.isNotEmpty ? _playItem(item) : _openItem(item),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+              padding: const EdgeInsets.all(9),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _cover(cover, width: 70, height: 96),
+                const SizedBox(width: 11),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              height: 1.2)),
+                      const SizedBox(height: 5),
+                      Text(source,
+                          style: const TextStyle(
+                              color: AppTheme.primaryColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                      if (score.isNotEmpty)
+                        Text('التقييم: $score',
+                            style: const TextStyle(
+                                color: AppTheme.textSecondaryColor,
+                                fontSize: 10)),
+                      if (description.isNotEmpty)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(description,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 11,
+                                    height: 1.35))),
+                      const SizedBox(height: 7),
+                      Row(children: [
+                        if (playUrl.isNotEmpty)
+                          _smallAction(Icons.play_arrow_rounded, 'تشغيل',
+                              () => _playItem(item)),
+                        if (playUrl.isEmpty &&
+                            item['external_only'] != true &&
+                            (item['url']?.toString().isNotEmpty ?? false))
+                          _smallAction(Icons.open_in_new_rounded, 'فتح',
+                              () => _openItem(item))
+                      ]),
+                    ])),
+              ]))),
     );
   }
 
+  Widget _playAction(AiAction action) => Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+              onPressed: () => _executeAction(action),
+              icon: const Icon(Icons.play_circle_fill_rounded),
+              label: const Text('تشغيل الحلقة الآن'),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13))))));
+
+  Widget _smallAction(IconData icon, String label, VoidCallback onPressed) =>
+      Padding(
+          padding: const EdgeInsetsDirectional.only(end: 7),
+          child: OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 15),
+              label: Text(label, style: const TextStyle(fontSize: 11)),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  side:
+                      BorderSide(color: AppTheme.primaryColor.withOpacity(.5)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)))));
+
+  Widget _cover(String url, {required double width, required double height}) =>
+      ClipRRect(
+          borderRadius: BorderRadius.circular(11),
+          child: Container(
+              width: width,
+              height: height,
+              color: AppTheme.backgroundColor,
+              child: url.isEmpty
+                  ? const Icon(Icons.image_outlined,
+                      color: Colors.white24, size: 30)
+                  : Image.network(url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white24))));
+
   Widget _composer() => SafeArea(
-        top: false,
-        child: Padding(
+      top: false,
+      child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-          child: Row(
-            children: [
-              Expanded(
+          child: Row(children: [
+            Expanded(
                 child: TextField(
-                  controller: _input,
-                  minLines: 1,
-                  maxLines: 4,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _send(),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'اكتب طلبك...',
-                    hintStyle:
-                        const TextStyle(color: AppTheme.textSecondaryColor),
-                    filled: true,
-                    fillColor: AppTheme.surfaceColor,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
+                    controller: _input,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                        hintText: 'اسأل عن أنمي، مسلسل، فيلم أو مانجا...',
+                        hintStyle: const TextStyle(
+                            color: AppTheme.textSecondaryColor, fontSize: 12),
+                        filled: true,
+                        fillColor: AppTheme.surfaceColor,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 13)))),
+            const SizedBox(width: 8),
+            IconButton(
                 onPressed: _loading ? null : _send,
                 style: IconButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white),
-                icon: const Icon(Icons.send_rounded),
-              ),
-            ],
-          ),
-        ),
-      );
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.all(14)),
+                icon: const Icon(Icons.arrow_upward_rounded))
+          ])));
 }
 
 class _ChatEntry {
@@ -297,4 +472,41 @@ class _ChatEntry {
   const _ChatEntry.ai(this.reply)
       : user = false,
         text = '';
+}
+
+class AiBrandMark extends StatelessWidget {
+  final double size;
+  const AiBrandMark({super.key, this.size = 42});
+  @override
+  Widget build(BuildContext context) => Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xff51b7ff),
+                Color(0xff2774d8),
+                Color(0xff7d4ee8)
+              ]),
+          boxShadow: [
+            BoxShadow(
+                color: AppTheme.primaryColor.withOpacity(.35),
+                blurRadius: size * .35)
+          ]),
+      child: Stack(alignment: Alignment.center, children: [
+        Text('Ai',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: size * .34,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1)),
+        Positioned(
+            right: size * .16,
+            top: size * .13,
+            child: Icon(Icons.auto_awesome_rounded,
+                color: Colors.white, size: size * .18))
+      ]));
 }

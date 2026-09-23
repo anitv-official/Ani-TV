@@ -117,7 +117,7 @@ class OpenRouterConfig {
     required this.apiKey,
     required this.model,
     this.baseUrl = 'https://openrouter.ai/api/v1',
-    this.timeout = const Duration(seconds: 45),
+    this.timeout = const Duration(seconds: 25),
   });
 
   factory OpenRouterConfig.fromEnvironment() => const OpenRouterConfig(
