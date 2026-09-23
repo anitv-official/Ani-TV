@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/auth_branding.dart';
+import '../widgets/auth_ui.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
@@ -17,15 +17,11 @@ class AuthChoiceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
+      body: AuthPageBackground(child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 42, 24, 30),
           children: [
-            const AuthBranding(),
-            const SizedBox(height: 30),
-            const Text('ابدأ رحلتك مع AniTV', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 10),
-            const Text('اختر الطريقة المناسبة للمتابعة', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15)),
+            const AuthBrandHeader(title: 'ابدأ رحلتك مع AniTV', subtitle: 'اختر الطريقة المناسبة للمتابعة'),
             const SizedBox(height: 34),
             _ChoiceCard(icon: Icons.person_add_alt_1_rounded, title: 'مستخدم جديد', subtitle: 'أنشئ حسابك بخطوات بسيطة', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen()))),
             const SizedBox(height: 14),
@@ -49,7 +45,7 @@ class AuthChoiceScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }

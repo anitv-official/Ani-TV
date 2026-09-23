@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
-import '../widgets/auth_branding.dart';
+import '../widgets/auth_ui.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -68,23 +68,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: AppTheme.backgroundColor,
-        title: const Text('تأكيد البريد الإلكتروني'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).maybePop()),
-      ),
-      body: SafeArea(
+      appBar: const AuthTopBar(title: 'تأكيد البريد الإلكتروني'),
+      body: AuthPageBackground(child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AuthBranding(),
+              const AuthBrandHeader(title: 'تحقق من بريدك الإلكتروني', subtitle: 'أرسلنا رابط تأكيد إلى بريدك الإلكتروني. افتح الرابط لتأكيد ملكية البريد قبل المتابعة.'),
               const Icon(Icons.mark_email_read_outlined, size: 72, color: AppTheme.primaryColor),
               const SizedBox(height: 22),
-              const Text('تحقق من بريدك الإلكتروني', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 12),
-              const Text('أرسلنا رابط تأكيد إلى بريدك الإلكتروني. افتح الرابط لتأكيد ملكية البريد قبل المتابعة.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 15, height: 1.5)),
               const SizedBox(height: 12),
               Text(widget.email, textAlign: TextAlign.center, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 30),
@@ -107,7 +100,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
