@@ -99,10 +99,19 @@ jobs:
           chmod 600 android/key.properties
 
       - name: Build one universal release APK
-        run: >-
-          flutter build apk --release
-          --dart-define=ANITV_FCM_PROVIDER_ID=6aa7e29d002c93304bf6
-          --dart-define=ANITV_FCM_TOPIC_ID=6aa7e2fa002c5c5a4d8b
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'openrouter/free' }}
+        run: |
+          test -n "$OPENROUTER_API_KEY" || {
+            echo "Missing repository secret OPENROUTER_API_KEY. Add it in Settings > Secrets and variables > Actions, then rerun this workflow."
+            exit 1
+          }
+          flutter build apk --release \
+            --dart-define=OPENROUTER_API_KEY="$OPENROUTER_API_KEY" \
+            --dart-define=OPENROUTER_MODEL="$OPENROUTER_MODEL" \
+            --dart-define=ANITV_FCM_PROVIDER_ID=6aa7e29d002c93304bf6 \
+            --dart-define=ANITV_FCM_TOPIC_ID=6aa7e2fa002c5c5a4d8b
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
