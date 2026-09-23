@@ -130,10 +130,11 @@ class MainActivity: FlutterActivity() {
     private fun showDownloadNotification(title: String, body: String, progress: Int, total: Int, complete: Boolean, failed: Boolean, taskId: String, paused: Boolean) {
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) manager.createNotificationChannel(NotificationChannel("downloads", "التنزيلات", NotificationManager.IMPORTANCE_LOW))
-        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete || failed).setOngoing(!complete && !failed)
+        val notificationId = if (taskId.isBlank()) NOTIFICATION_ID + 2 else 10000 + ((taskId.hashCode() and 0x7fffffff) % 500000)
+        val builder = NotificationCompat.Builder(this, "downloads").setSmallIcon(com.anitv.app.R.mipmap.launcher_icon).setContentTitle(title).setContentText(body).setOnlyAlertOnce(true).setAutoCancel(complete || failed).setOngoing(!complete && !failed).setGroup("anitv_downloads")
         if (complete || failed) {
-            manager.cancel(NOTIFICATION_ID)
-            manager.notify(NOTIFICATION_ID + 1, builder.build())
+            manager.cancel(notificationId)
+            manager.notify(notificationId, builder.build())
         } else {
             if (taskId.isNotBlank()) {
                 val toggle = if (paused) "resumeDownload" else "pauseDownload"
@@ -143,7 +144,17 @@ class MainActivity: FlutterActivity() {
             }
             val percent = if (total > 0) ((progress * 100L) / total).toInt().coerceIn(0, 100) else 0
             builder.setProgress(if (total > 0) 100 else 0, percent, total <= 0)
-            manager.notify(NOTIFICATION_ID, builder.build())
+            manager.notify(notificationId, builder.build())
+            val summary = NotificationCompat.Builder(this, "downloads")
+                .setSmallIcon(com.anitv.app.R.mipmap.launcher_icon)
+                .setContentTitle("تنزيلات AniTV")
+                .setContentText("توجد تنزيلات نشطة")
+                .setGroup("anitv_downloads")
+                .setGroupSummary(true)
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .build()
+            manager.notify(NOTIFICATION_ID, summary)
         }
     }
 
