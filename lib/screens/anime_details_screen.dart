@@ -133,9 +133,10 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
       backdropUrl: (anime['backdrop_url'] ?? anime['backdrop'] ?? anime['cover_url'])?.toString(),
       typeLabel: _isMovie(anime) ? 'فيلم' : 'أنمي',
       status: anime['status']?.toString(),
+      posterAction: _FavoriteIconAction(anime: anime, url: widget.url),
       actions: [
         IconButton(onPressed: () => _shareAnime(anime['title']?.toString() ?? 'أنمي'), icon: const Icon(Icons.share_outlined), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
-        IconButton(onPressed: _copyAnimeLink, icon: const Icon(Icons.more_vert_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+        IconButton(onPressed: _copyAnimeLink, tooltip: 'نسخ الرابط', icon: const Icon(Icons.link_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
       ],
       onBack: () => Navigator.pop(context),
     );
@@ -234,16 +235,6 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
                 },
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-
-              _FavoriteIconAction(anime: anime, url: widget.url),
-              IconAction(icon: Icons.share_outlined, label: 'مشاركة', onTap: () => _shareAnime(anime['title']?.toString() ?? 'أنمي')),
-              IconAction(icon: Icons.link_rounded, label: 'نسخ الرابط', onTap: _copyAnimeLink),
           ],
         ),
       ],
@@ -647,32 +638,33 @@ class _EpisodeListScreenState extends State<EpisodeListScreen> {
     final episodes = (widget.anime['episodes'] as List<dynamic>? ?? const []).whereType<Map>().map((item) => Map<String, dynamic>.from(item)).where((episode) => episode['title']?.toString().toLowerCase().contains(_query.toLowerCase()) ?? true).toList();
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: Text('حلقات ${widget.anime['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis)),
-      body: Column(
-        children: [
-          Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 4), child: TextField(controller: _search, onChanged: (value) => setState(() => _query = value), style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'ابحث عن حلقة...', prefixIcon: Icon(Icons.search_rounded)))),
-          Expanded(
-            child: episodes.isEmpty
-                ? const EmptyState(icon: Icons.video_library_outlined, title: 'لا توجد حلقات')
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-                    itemCount: episodes.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final episode = episodes[index];
-                      return EpisodeTile(
-                        title: episode['title']?.toString() ?? 'حلقة ${index + 1}',
-                        subtitle: episode['duration']?.toString(),
-                        imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(),
-                        onTap: () => widget.onPlay(episode),
-                        onDownload: () async {
-                          widget.onDownload(episode);
-                          return true;
-                        },
-                      );
-                    },
-                  ),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 190,
+            backgroundColor: AppTheme.surfaceColor,
+            title: const Text('الحلقات', style: TextStyle(fontWeight: FontWeight.w800)),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(fit: StackFit.expand, children: [
+                Image.network((widget.anime['backdrop_url'] ?? widget.anime['image_url'] ?? '').toString(), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: AppTheme.surfaceColor)),
+                DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, AppTheme.backgroundColor.withOpacity(.96)]))),
+                PositionedDirectional(start: 18, end: 18, bottom: 16, child: Text(widget.anime['title']?.toString() ?? 'الأنمي', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900))),
+              ]),
+            ),
           ),
+          SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Column(children: [
+            TextField(controller: _search, onChanged: (value) => setState(() => _query = value), style: const TextStyle(color: Colors.white), decoration: InputDecoration(hintText: 'ابحث عن حلقة أو رقم...', prefixIcon: const Icon(Icons.search_rounded), filled: true, fillColor: AppTheme.surfaceColor, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none))),
+            const SizedBox(height: 12),
+            Row(children: [const Icon(Icons.video_library_rounded, color: AppTheme.primaryColor, size: 20), const SizedBox(width: 8), Text('${episodes.length} حلقة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), const Spacer(), if (_query.isNotEmpty) TextButton(onPressed: () { _search.clear(); setState(() => _query = ''); }, child: const Text('مسح البحث'))]),
+          ]))),
+          if (episodes.isEmpty)
+            const SliverFillRemaining(hasScrollBody: false, child: EmptyState(icon: Icons.video_library_outlined, title: 'لا توجد حلقات'))
+          else
+            SliverPadding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 28), sliver: SliverList(delegate: SliverChildBuilderDelegate((context, index) {
+              final episode = episodes[index];
+              return TweenAnimationBuilder<double>(tween: Tween(begin: 0, end: 1), duration: Duration(milliseconds: 260 + ((index.clamp(0, 8) as num).toInt() * 35)), curve: Curves.easeOutCubic, builder: (_, value, child) => Transform.translate(offset: Offset(0, 18 * (1 - value)), child: Opacity(opacity: value, child: child)), child: Padding(padding: const EdgeInsets.only(bottom: 10), child: EpisodeTile(title: episode['title']?.toString() ?? 'حلقة ${index + 1}', subtitle: episode['duration']?.toString(), imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(), onTap: () => widget.onPlay(episode), onDownload: () async { widget.onDownload(episode); return true; }))),
+              }, childCount: episodes.length))),
         ],
       ),
     );

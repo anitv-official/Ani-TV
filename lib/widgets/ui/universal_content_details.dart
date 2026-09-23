@@ -19,6 +19,7 @@ class UniversalDetailsHero extends StatelessWidget {
   final String? status;
   final IconData fallbackIcon;
   final List<Widget> actions;
+  final Widget? posterAction;
   final VoidCallback? onBack;
 
   const UniversalDetailsHero({
@@ -31,6 +32,7 @@ class UniversalDetailsHero extends StatelessWidget {
     this.status,
     this.fallbackIcon = Icons.movie_outlined,
     this.actions = const [],
+    this.posterAction,
     this.onBack,
   });
 
@@ -57,13 +59,13 @@ class UniversalDetailsHero extends StatelessWidget {
                 const Spacer(),
                 if (wide)
                   Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    _Poster(url: imageUrl, fallbackIcon: fallbackIcon, width: 156, height: 224),
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [_Poster(url: imageUrl, fallbackIcon: fallbackIcon, width: 156, height: 224), if (posterAction != null) ...[const SizedBox(width: 4), posterAction!]]),
                     const SizedBox(width: 20),
                     Expanded(child: _TitleBlock(title: title, alternativeTitle: alternativeTitle, typeLabel: typeLabel, status: status)),
                   ])
                 else
                   Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                    _Poster(url: imageUrl, fallbackIcon: fallbackIcon, width: 128, height: 184),
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [_Poster(url: imageUrl, fallbackIcon: fallbackIcon, width: 128, height: 184), if (posterAction != null) ...[const SizedBox(width: 4), posterAction!]]),
                     const SizedBox(width: 14),
                     Expanded(child: _TitleBlock(title: title, alternativeTitle: alternativeTitle, typeLabel: typeLabel, status: status)),
                   ]),

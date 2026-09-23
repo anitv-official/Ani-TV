@@ -38,7 +38,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   bool _chaptersAscending = false;
   bool _isDownloadingAll = false;
   final TextEditingController _chapterSearchController = TextEditingController();
-  bool _showChapters = false;
   bool _relatedLoaded = false;
   List<Map<String, dynamic>> _relatedItems = [];
 
@@ -291,10 +290,8 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                                   _buildInfo(context, _comicData!),
                                   const SizedBox(height: 12),
                                   _buildActionButtons(context, _comicData!),
-                                  if (_showChapters) ...[
-                                    const SizedBox(height: 18),
-                                    _buildChaptersList(context, _comicData!),
-                                  ],
+                                  const SizedBox(height: 18),
+                                  _buildChaptersList(context, _comicData!),
                                   if (_relatedItems.isNotEmpty) ...[
                                     const SizedBox(height: 20),
                                     RelatedContentRail(items: _relatedItems, onTap: (item) => Navigator.push(context, MaterialPageRoute(builder: (_) => ComicDetailsScreen(url: item['url'].toString(), type: item['type']?.toString())))),
@@ -319,9 +316,10 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
       typeLabel: comic['type']?.toString().trim().isNotEmpty == true ? comic['type'].toString() : 'مانجا',
       status: comic['status']?.toString(),
       fallbackIcon: Icons.menu_book_outlined,
+      posterAction: _FavoriteIconAction(comic: comic, url: widget.url),
       actions: [
         IconButton(onPressed: _shareComic, icon: const Icon(Icons.share_outlined), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
-        IconButton(onPressed: _copyComicLink, icon: const Icon(Icons.more_vert_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+        IconButton(onPressed: _copyComicLink, tooltip: 'نسخ الرابط', icon: const Icon(Icons.link_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
       ],
       onBack: () => Navigator.pop(context),
     );
@@ -355,14 +353,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
         Row(
           children: [
             Expanded(
-              child: PrimaryButton(
-                label: 'الفصول',
-                icon: Icons.format_list_bulleted_rounded,
-                onPressed: () => setState(() => _showChapters = !_showChapters),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
               child: SecondaryButton(
                 label: 'تنزيل',
                 icon: Icons.download_rounded,
@@ -376,15 +366,6 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
                 },
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-              _FavoriteIconAction(comic: comic, url: widget.url),
-              IconAction(icon: Icons.share_outlined, label: 'مشاركة', onTap: _shareComic),
-              IconAction(icon: Icons.link_rounded, label: 'نسخ الرابط', onTap: _copyComicLink),
           ],
         ),
       ],
