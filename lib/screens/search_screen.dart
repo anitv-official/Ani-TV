@@ -597,7 +597,16 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
     return Column(
       children: [
         const SizedBox(height: 28),
-        const Align(alignment: AlignmentDirectional.centerStart, child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('عمليات البحث الشائعة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900))),
+        const Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'عمليات البحث الشائعة',
+              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
         _popularSearchChips(),
         const Icon(Icons.search_rounded, size: 42, color: AppTheme.textMutedColor),
         const SizedBox(height: 10),
