@@ -15,6 +15,7 @@ import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/detail_ui.dart';
+import '../widgets/ui/universal_content_details.dart';
 import '../sources/source_registry.dart';
 
 class ComicDetailsScreen extends StatefulWidget {
@@ -310,49 +311,19 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, Map<String, dynamic> comic) {
-    return SizedBox(
-      height: 252,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppTheme.surfaceColor, AppTheme.backgroundColor],
-              ),
-            ),
-            child: SizedBox.expand(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(56, 18, 56, 18),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 176, maxHeight: 220),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                child: PosterImage(
-                  url: comic['image_url']?.toString(),
-                  fit: BoxFit.cover,
-                  fallbackIcon: Icons.menu_book_outlined,
-                  borderRadius: BorderRadius.zero,
-                ),
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            top: 8,
-            start: 8,
-            child: SafeArea(
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48)),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return UniversalDetailsHero(
+      title: comic['title']?.toString() ?? 'بدون عنوان',
+      alternativeTitle: (comic['alternative_title'] ?? comic['alt_title'] ?? comic['title_en'] ?? comic['native_title'])?.toString(),
+      imageUrl: comic['image_url']?.toString(),
+      backdropUrl: (comic['backdrop_url'] ?? comic['backdrop'] ?? comic['cover_url'])?.toString(),
+      typeLabel: comic['type']?.toString().trim().isNotEmpty == true ? comic['type'].toString() : 'مانجا',
+      status: comic['status']?.toString(),
+      fallbackIcon: Icons.menu_book_outlined,
+      actions: [
+        IconButton(onPressed: _shareComic, icon: const Icon(Icons.share_outlined), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+        IconButton(onPressed: _copyComicLink, icon: const Icon(Icons.more_vert_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+      ],
+      onBack: () => Navigator.pop(context),
     );
   }
 
@@ -361,28 +332,18 @@ class _ComicDetailsScreenState extends State<ComicDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          comic['title'] ?? 'بدون عنوان',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.2),
-        ),
-        const SizedBox(height: 8),
-        Row(children: [
-          SourceBadge(label: comic['source']?.toString() ?? 'AniTV', compact: false),
-          const SizedBox(width: 8),
-          if ((comic['type'] ?? '').toString().isNotEmpty)
-            SourceBadge(label: comic['type']?.toString()),
-        ]),
-        const SizedBox(height: 8),
-        DetailStatsCard(stats: [
-          DetailStat(value: '${chapters.length}', label: 'الفصول', icon: Icons.menu_book_rounded, color: const Color(0xFF67C96B)),
-          DetailStat(value: '${comic['rating'] ?? '—'}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
-          DetailStat(value: comic['status']?.toString() ?? '—', label: 'الحالة', icon: Icons.info_outline_rounded, color: const Color(0xFF36B9E8)),
+        UniversalMetadata(items: [
+          UniversalMetaItem(value: '${comic['rating'] ?? ''}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
+          UniversalMetaItem(value: '${chapters.length}', label: 'الفصول', icon: Icons.menu_book_rounded, color: const Color(0xFF67C96B)),
+          UniversalMetaItem(value: '${comic['year'] ?? comic['release_year'] ?? comic['last_updated'] ?? ''}', label: 'السنة', icon: Icons.calendar_month_rounded, color: const Color(0xFF36B9E8)),
+          UniversalMetaItem(value: comic['status']?.toString() ?? '', label: 'الحالة', icon: Icons.info_outline_rounded, color: Colors.greenAccent),
         ]),
         if (comic['genres'] is List && (comic['genres'] as List).isNotEmpty) ...[
-          const DetailSectionTitle('التصنيفات'),
-          DetailTags(tags: comic['genres'] as List),
+          const UniversalSectionHeader('التصنيفات'),
+          UniversalGenreChips(genres: comic['genres'] as List),
           const SizedBox(height: 16),
         ],
+        UniversalDescription(text: (comic['synopsis'] ?? comic['description'] ?? comic['story'] ?? comic['summary'])?.toString() ?? '', title: 'القصة'),
         _ExpandableDetails(comic: comic),
       ],
     );

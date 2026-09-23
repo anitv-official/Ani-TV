@@ -16,6 +16,7 @@ import '../widgets/ui/primary_button.dart';
 import '../widgets/ui/source_badge.dart';
 import '../widgets/ui/state_views.dart';
 import '../widgets/ui/detail_ui.dart';
+import '../widgets/ui/universal_content_details.dart';
 import '../sources/source_registry.dart';
 
 class AnimeDetailsScreen extends StatefulWidget {
@@ -125,48 +126,18 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
   }
 
   Widget _buildHeader(BuildContext context, Map<String, dynamic> anime) {
-    return SizedBox(
-      height: 252,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppTheme.surfaceColor, AppTheme.backgroundColor],
-              ),
-            ),
-            child: SizedBox.expand(),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(56, 18, 56, 18),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 176, maxHeight: 220),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                child: PosterImage(
-                  url: anime['image_url']?.toString(),
-                  fit: BoxFit.cover,
-                  borderRadius: BorderRadius.zero,
-                ),
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            top: 8,
-            start: 8,
-            child: SafeArea(
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48)),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return UniversalDetailsHero(
+      title: anime['title']?.toString() ?? 'بدون عنوان',
+      alternativeTitle: (anime['alternative_title'] ?? anime['alt_title'] ?? anime['title_en'] ?? anime['japanese'])?.toString(),
+      imageUrl: anime['image_url']?.toString(),
+      backdropUrl: (anime['backdrop_url'] ?? anime['backdrop'] ?? anime['cover_url'])?.toString(),
+      typeLabel: _isMovie(anime) ? 'فيلم' : 'أنمي',
+      status: anime['status']?.toString(),
+      actions: [
+        IconButton(onPressed: () => _shareAnime(anime['title']?.toString() ?? 'أنمي'), icon: const Icon(Icons.share_outlined), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+        IconButton(onPressed: _copyAnimeLink, icon: const Icon(Icons.more_vert_rounded), style: IconButton.styleFrom(backgroundColor: Colors.black.withOpacity(.48), foregroundColor: Colors.white)),
+      ],
+      onBack: () => Navigator.pop(context),
     );
   }
 
@@ -174,28 +145,18 @@ class _AnimeDetailsScreenState extends State<AnimeDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          anime['title'] ?? 'بدون عنوان',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, height: 1.2),
-        ),
-        const SizedBox(height: 8),
-        Row(children: [
-          SourceBadge(label: anime['source']?.toString() ?? 'AniTV', compact: false),
-          const SizedBox(width: 8),
-          if ((anime['status'] ?? '').toString().isNotEmpty)
-            SourceBadge(label: anime['status']?.toString()),
-        ]),
-        const SizedBox(height: 8),
-        DetailStatsCard(stats: [
-          DetailStat(value: '${anime['total_episodes'] ?? (anime['episodes'] as List?)?.length ?? 0}', label: 'الحلقات', icon: Icons.play_circle_outline_rounded, color: const Color(0xFF67C96B)),
-          DetailStat(value: '${anime['rating'] ?? '—'}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
-          DetailStat(value: anime['status']?.toString() ?? '—', label: 'الحالة', icon: Icons.info_outline_rounded, color: const Color(0xFF36B9E8)),
+        UniversalMetadata(items: [
+          UniversalMetaItem(value: '${anime['rating'] ?? ''}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
+          UniversalMetaItem(value: '${anime['total_episodes'] ?? (anime['episodes'] as List?)?.length ?? ''}', label: _isMovie(anime) ? 'الفيلم' : 'الحلقات', icon: Icons.play_circle_outline_rounded, color: const Color(0xFF67C96B)),
+          UniversalMetaItem(value: '${anime['year'] ?? anime['release_year'] ?? anime['aired_from'] ?? ''}', label: 'السنة', icon: Icons.calendar_month_rounded, color: const Color(0xFF36B9E8)),
+          UniversalMetaItem(value: anime['status']?.toString() ?? '', label: 'الحالة', icon: Icons.info_outline_rounded, color: Colors.greenAccent),
         ]),
         if (anime['genres'] is List && (anime['genres'] as List).isNotEmpty) ...[
-          const DetailSectionTitle('التصنيفات'),
-          DetailTags(tags: anime['genres'] as List),
+          const UniversalSectionHeader('التصنيفات'),
+          UniversalGenreChips(genres: anime['genres'] as List),
           const SizedBox(height: 16),
         ],
+        UniversalDescription(text: (anime['synopsis'] ?? anime['description'] ?? anime['story'] ?? anime['summary'])?.toString() ?? ''),
         _ExpandableDetails(anime: anime),
       ],
     );
