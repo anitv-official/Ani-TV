@@ -7,6 +7,7 @@ import 'landing_screen.dart';
 import 'auth_choice_screen.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state_provider.dart';
+import '../widgets/auth_ui.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -103,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Center(
+      body: AuthPageBackground(child: Center(
         child: FadeTransition(
           opacity: _animation,
           child: Column(
@@ -146,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

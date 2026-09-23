@@ -4,7 +4,7 @@ import '../providers/app_state_provider.dart';
 import '../services/appwrite_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/toast_utils.dart';
-import '../widgets/ui/primary_button.dart';
+import '../widgets/auth_ui.dart';
 
 class PasswordResetScreen extends StatefulWidget {
   final String userId;
@@ -50,20 +50,20 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppTheme.backgroundColor,
-    appBar: AppBar(title: const Text('استعادة كلمة المرور')),
-    body: Form(
+    appBar: const AuthTopBar(title: 'استعادة كلمة المرور'),
+    body: AuthPageBackground(child: SafeArea(child: Form(
       key: _formKey,
-      child: ListView(padding: const EdgeInsets.all(24), children: [
-        const Text('أنشئ كلمة مرور جديدة', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800), textAlign: TextAlign.center),
-        const SizedBox(height: 12),
-        const Text('يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.', style: TextStyle(color: AppTheme.textSecondaryColor), textAlign: TextAlign.center),
-        const SizedBox(height: 32),
-        TextFormField(controller: _password, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة'), validator: (value) => value == null || value.length < 8 ? 'أدخل 8 أحرف على الأقل' : null),
-        const SizedBox(height: 16),
-        TextFormField(controller: _confirm, obscureText: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور'), validator: (value) => value != _password.text ? 'كلمتا المرور غير متطابقتين' : null),
-        const SizedBox(height: 28),
-        PrimaryButton(expanded: true, label: 'حفظ كلمة المرور', loading: _loading, onPressed: _submit),
+      child: ListView(padding: const EdgeInsets.fromLTRB(22, 20, 22, 32), children: [
+        const AuthBrandHeader(title: 'أنشئ كلمة مرور جديدة', subtitle: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.'),
+        const SizedBox(height: 24),
+        AuthPanel(child: Column(children: [
+          TextFormField(controller: _password, obscureText: true, style: const TextStyle(color: Colors.white), decoration: AuthUi.fieldDecoration('كلمة المرور الجديدة', suffix: const Icon(Icons.lock_outline, color: AppTheme.textSecondaryColor)), validator: (value) => value == null || value.length < 8 ? 'أدخل 8 أحرف على الأقل' : null),
+          const SizedBox(height: 16),
+          TextFormField(controller: _confirm, obscureText: true, style: const TextStyle(color: Colors.white), decoration: AuthUi.fieldDecoration('تأكيد كلمة المرور', suffix: const Icon(Icons.lock_outline, color: AppTheme.textSecondaryColor)), validator: (value) => value != _password.text ? 'كلمتا المرور غير متطابقتين' : null),
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _loading ? null : _submit, style: AuthUi.primaryButton(), child: _loading ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('حفظ كلمة المرور'))),
+        ])),
       ]),
-    ),
+    ))),
   );
 }

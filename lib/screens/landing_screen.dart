@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_branding.dart';
+import '../widgets/auth_ui.dart';
 import 'auth_choice_screen.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -53,7 +54,7 @@ class _LandingScreenState extends State<LandingScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
+      body: AuthPageBackground(child: SafeArea(
         child: FadeTransition(
           opacity: CurvedAnimation(parent: _entrance, curve: Curves.easeOut),
           child: ListView(
@@ -92,7 +93,7 @@ class _LandingScreenState extends State<LandingScreen> with SingleTickerProvider
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

@@ -27,6 +27,7 @@ class AppNavigationDrawer extends StatelessWidget {
       width: (width * .82).clamp(280.0, 360.0).toDouble(),
       backgroundColor: AppTheme.backgroundColor,
       surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.horizontal(left: Radius.circular(28))),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(14),
@@ -92,6 +93,17 @@ class AppNavigationDrawer extends StatelessWidget {
             _item(context, Icons.info_outline_rounded, 'حول AniTV',
                 () => _select(context, AppSection.about),
                 selected: currentSection == AppSection.about),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(color: AppTheme.borderColor)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(color: AppTheme.elevatedColor.withOpacity(.72), borderRadius: BorderRadius.circular(16)),
+              child: Row(children: [
+                const Icon(Icons.dark_mode_rounded, color: Colors.white, size: 21),
+                const SizedBox(width: 12),
+                const Expanded(child: Text('وضع الليل', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))),
+                Switch(value: true, onChanged: null, activeColor: AppTheme.primaryColor),
+              ]),
+            ),
           ],
         ),
       ),

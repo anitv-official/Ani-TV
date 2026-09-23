@@ -29,6 +29,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
+void _showOAuthFailureIfStillLoggedOut(String message) {
+  Future<void>.delayed(const Duration(milliseconds: 1500), () {
+    final context = appNavigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    if (context.read<AppStateProvider>().isLoggedIn) return;
+    ToastUtils.show(message, backgroundColor: AppTheme.errorColor);
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   DownloadService.initialize();
@@ -166,7 +175,7 @@ class _MyAppState extends State<MyApp> {
       if (!isSuccess || !userIdPresent || !secretPresent) {
         final authState = appNavigatorKey.currentContext?.read<AppStateProvider>();
         if (!_googleCallbackInProgress && authState?.isLoggedIn != true && _lastGoogleCallback == null) {
-          ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+          _showOAuthFailureIfStillLoggedOut('تعذر إكمال تسجيل الدخول باستخدام Google.');
         }
         return;
       }
@@ -184,7 +193,7 @@ class _MyAppState extends State<MyApp> {
         } catch (error) {
           debugPrint('Google OAuth callback failed: ${error.runtimeType}');
           if (appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn != true) {
-            ToastUtils.show('تعذر إكمال تسجيل الدخول باستخدام Google.', backgroundColor: AppTheme.errorColor);
+            _showOAuthFailureIfStillLoggedOut('تعذر إكمال تسجيل الدخول باستخدام Google.');
           }
           final navigator = appNavigatorKey.currentState;
           if (navigator != null && appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn != true) {
@@ -208,6 +217,7 @@ class _MyAppState extends State<MyApp> {
         }
         debugPrint('Facebook OAuth callback rejected: success=$isSuccess; userId present=$userIdPresent; secret present=$secretPresent');
         if (appNavigatorKey.currentContext?.read<AppStateProvider>().isLoggedIn == true) return;
+        _showOAuthFailureIfStillLoggedOut('تعذر إكمال تسجيل الدخول باستخدام Facebook.');
         return;
       }
       final callbackKey = '$userId:$secret';

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/download_task.dart';
 
 /// Central download manager. Sources only provide a final media URL; this
 /// service owns queueing, persistence, storage, progress and notifications.
@@ -14,6 +15,7 @@ class DownloadService {
   static const _key = 'anitv_downloads';
   static const _channel = MethodChannel('com.anitv.app/downloads');
   static const int maxConcurrentDownloads = 2;
+  static const int maxAutomaticRetries = 3;
   static final ValueNotifier<int> changes = ValueNotifier<int>(0);
   static final Set<String> _paused = <String>{};
   static final Set<String> _cancelled = <String>{};
@@ -48,7 +50,8 @@ class DownloadService {
         changed = true;
       }
       final path = entry['path']?.toString() ?? '';
-      if (entry['status'] == 'completed' && path.isNotEmpty && !File(path).existsSync()) {
+      final exists = entry['kind']?.toString().toLowerCase() == 'manga' ? Directory(path).existsSync() : File(path).existsSync();
+      if (entry['status'] == 'completed' && path.isNotEmpty && !exists) {
         entry['status'] = 'failed';
         entry['error'] = 'الملف غير موجود على الجهاز';
         changed = true;
@@ -66,13 +69,13 @@ class DownloadService {
 
   static Future<void> pauseTask(String taskId) async {
     _paused.add(taskId);
-    await _update(taskId, {'status': 'paused', 'error': ''});
+    await _update(taskId, {'status': 'paused', 'error': '', 'speed': 0, 'eta_seconds': 0});
   }
 
   static Future<void> resumeTask(String taskId) async {
     _paused.remove(taskId);
     _cancelled.remove(taskId);
-    await _update(taskId, {'status': 'queued', 'error': ''});
+    await _update(taskId, {'status': 'queued', 'error': '', 'started_at': null});
     _pump();
   }
 
@@ -86,7 +89,7 @@ class DownloadService {
   static Future<void> retry(String taskId) async {
     _paused.remove(taskId);
     _cancelled.remove(taskId);
-    await _update(taskId, {'status': 'queued', 'error': '', 'bytes': 0, 'progress': 0});
+    await _update(taskId, {'status': 'queued', 'error': '', 'speed': 0, 'eta_seconds': 0});
     _pump();
   }
 
@@ -102,6 +105,8 @@ class DownloadService {
       return <Map<String, dynamic>>[];
     }
   }
+
+  static DownloadTask taskFromMap(Map<String, dynamic> value) => DownloadTask.fromMap(value);
 
   static Future<String?> enqueueMediaDownload({
     required String taskId,
@@ -148,7 +153,9 @@ class DownloadService {
       'total': 0,
       'speed': 0,
       'error': '',
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'retry_count': 0,
     });
     _pump();
     return taskId;
@@ -175,6 +182,8 @@ class DownloadService {
         if (path.isNotEmpty) {
           final file = File(path);
           if (file.existsSync()) await file.delete();
+          final directory = Directory(path);
+          if (directory.existsSync()) await directory.delete(recursive: true);
         }
       }
     }
@@ -189,6 +198,10 @@ class DownloadService {
       final path = item['path']?.toString() ?? '';
       final file = File(path);
       if (file.existsSync()) total += file.lengthSync();
+      final directory = Directory(path);
+      if (directory.existsSync()) {
+        for (final child in directory.listSync(recursive: true).whereType<File>()) total += child.lengthSync();
+      }
     }
     return total;
   }
@@ -235,7 +248,7 @@ class DownloadService {
     var received = part.existsSync() ? part.lengthSync() : 0;
     final client = http.Client();
     try {
-      await _update(id, {'status': 'downloading', 'error': '', 'bytes': received});
+      await _update(id, {'status': 'downloading', 'error': '', 'bytes': received, 'started_at': DateTime.now().toUtc().toIso8601String()});
       final request = http.Request('GET', Uri.parse(item['url'].toString()));
       request.headers.addAll(headers);
       if (received > 0) request.headers['Range'] = 'bytes=$received-';
@@ -255,7 +268,7 @@ class DownloadService {
       await _notify('جارٍ التنزيل', item['episode']?.toString() ?? item['title']?.toString() ?? '', received, total, taskId: id);
       await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
         while (isPaused(id) && !isCancelled(id)) {
-          await _update(id, {'status': 'paused', 'bytes': received, 'progress': _progress(received, total), 'speed': 0});
+          await _update(id, {'status': 'paused', 'bytes': received, 'progress': _progress(received, total), 'speed': 0, 'eta_seconds': 0});
           await Future<void>.delayed(const Duration(milliseconds: 500));
         }
         if (isCancelled(id)) {
@@ -268,7 +281,7 @@ class DownloadService {
         final elapsed = now.difference(lastTick).inMilliseconds;
         if (elapsed >= 500) {
           final speed = ((received - lastBytes) * 1000 / elapsed).round();
-          await _update(id, {'status': 'downloading', 'bytes': received, 'total': total, 'progress': _progress(received, total), 'speed': speed});
+          await _update(id, {'status': 'downloading', 'bytes': received, 'total': total, 'progress': _progress(received, total), 'speed': speed, 'eta_seconds': _eta(received, total, speed)});
           await _notify('جارٍ التنزيل', item['episode']?.toString() ?? item['title']?.toString() ?? '', received, total, taskId: id);
           lastTick = now;
           lastBytes = received;
@@ -284,9 +297,21 @@ class DownloadService {
       await _update(id, {'status': 'cancelled', 'error': 'تم إلغاء التنزيل'});
       _completeWaiter(id, error: error);
     } catch (error) {
-      await _update(id, {'status': 'failed', 'error': error.toString()});
-      await _notify('فشل التنزيل', item['episode']?.toString() ?? item['title']?.toString() ?? '', 0, 0, taskId: id, failed: true);
-      _completeWaiter(id, error: error);
+      final retryCount = (item['retry_count'] is num ? (item['retry_count'] as num).toInt() : 0) + 1;
+      if (error is! DownloadCancelledException && retryCount <= maxAutomaticRetries) {
+        final delay = Duration(seconds: 1 << (retryCount - 1));
+        await _update(id, {'status': 'retrying', 'retry_count': retryCount, 'error': _friendlyError(error), 'speed': 0});
+        await _notify('إعادة محاولة التنزيل', '${item['episode']?.toString() ?? item['title']?.toString() ?? ''} بعد ${delay.inSeconds} ث', 0, 0, taskId: id);
+        await Future<void>.delayed(delay);
+        if (!isCancelled(id)) {
+          await _update(id, {'status': 'queued'});
+          _pump();
+        }
+      } else {
+        await _update(id, {'status': error is DownloadCancelledException ? 'cancelled' : 'failed', 'error': error is DownloadCancelledException ? 'تم إلغاء التنزيل' : _friendlyError(error), 'retry_count': retryCount, 'speed': 0});
+        await _notify('فشل التنزيل', item['episode']?.toString() ?? item['title']?.toString() ?? '', 0, 0, taskId: id, failed: true);
+        _completeWaiter(id, error: error);
+      }
     } finally {
       client.close();
       _paused.remove(id);
@@ -306,6 +331,16 @@ class DownloadService {
   }
 
   static double _progress(int bytes, int total) => total > 0 ? (bytes / total).clamp(0, 1).toDouble() : 0;
+  static int _eta(int bytes, int total, int speed) => speed > 0 && total > bytes ? ((total - bytes) / speed).ceil() : 0;
+  static String _friendlyError(Object error) {
+    final text = error.toString().toLowerCase();
+    if (text.contains('socket') || text.contains('network') || text.contains('connection')) return 'انقطع اتصال الإنترنت.';
+    if (text.contains('timeout')) return 'انتهت مهلة الاتصال بالخادم.';
+    if (text.contains('http 429')) return 'الخادم مشغول مؤقتًا. ستتم إعادة المحاولة.';
+    if (text.contains('http 5')) return 'تعذر الاتصال بالخادم مؤقتًا.';
+    if (text.contains('space') || text.contains('storage')) return 'مساحة التخزين غير كافية.';
+    return 'تعذر استكمال التنزيل.';
+  }
 
   static void _completeWaiter(String id, {String? path, Object? error}) {
     final waiter = _waiters.remove(id);

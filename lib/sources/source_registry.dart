@@ -7,6 +7,7 @@ import 'mangatime_source.dart';
 import 'source_base.dart';
 import 'web_catalog_source.dart';
 import '../extensions/extension_catalog.dart';
+import '../extensions/source_extension_adapter.dart';
 
 /// Internal API catalog.
 ///
@@ -21,7 +22,7 @@ class SourceRegistry {
   static final _wecima = WecimaSource();
   static final _kormoz = KormozSource();
   static final List<ContentSource> _extensions = ExtensionCatalog.all;
-  // API-only adapters. Keep this list private so the UI cannot expose them.
+  // API adapters are also exposed through [extensionSources] using wrappers.
   static final List<ContentSource> _apis = [
     AnimeSlayerSource(),
     AnimefySource(),
@@ -48,11 +49,13 @@ class SourceRegistry {
   /// Kept for backwards compatibility. API adapters must not appear as sources.
   static const List<ContentSource> all = <ContentSource>[];
 
-  /// Sources that have a complete user-facing adapter and can be opened from
-  /// the Sources screen. Other adapters remain internal until their UI flow
-  /// and playback contracts are verified.
-  static List<ContentSource> get visibleSources =>
-      List.unmodifiable(_allSources.where((source) => source.id != 'aflaam' && source.id != 'youtube'));
+  /// All content providers exposed by the Sources/Extensions UI.
+  static List<ContentSource> get visibleSources => extensionSources;
+
+  static List<ContentSource> get extensionSources => List.unmodifiable([
+        ..._apis.map(SourceExtensionAdapter.new),
+        ..._extensions,
+      ]);
   /// Compatibility getters for tests/services. The UI uses [all], which is
   /// intentionally empty so API adapters are never shown as sources.
   static List<ContentSource> get animeSources => _animeApis;

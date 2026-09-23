@@ -59,9 +59,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final active = _items.where((item) => !{'completed', 'cancelled'}.contains(item['status'])).toList();
+    final active = _items.where((item) => !{'completed', 'cancelled', 'failed'}.contains(item['status'])).toList();
     final completed = _items.where((item) => item['status'] == 'completed').toList();
     final failed = _items.where((item) => item['status'] == 'failed' || item['status'] == 'cancelled').toList();
+    final paused = _items.where((item) => {'paused', 'queued', 'waiting', 'retrying'}.contains(item['status'])).length;
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       endDrawer: widget.embedded ? null : const AppNavigationDrawer(),
@@ -80,6 +81,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                           child: ListView(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                             children: [
+                              _dashboardSummary(active.length, completed.length, paused, failed.length),
                               FutureBuilder<int>(future: DownloadService.storageBytes(), builder: (_, snapshot) => _storageSummary(snapshot.data ?? 0)),
                               if (active.isNotEmpty) _section('قيد التنزيل أو الانتظار', active),
                               if (completed.isNotEmpty) _section('اكتملت', completed),
@@ -104,6 +106,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       child: Row(children: [const Icon(Icons.storage_rounded, color: AppTheme.primaryColor), const SizedBox(width: 10), Text('مساحة تنزيلات AniTV: $label', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)), const Spacer(), Text('${_items.where((e) => e['status'] == 'completed').length} ملف', style: const TextStyle(color: AppTheme.textSecondaryColor))]),
     );
   }
+
+  Widget _dashboardSummary(int active, int completed, int paused, int failed) => Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(color: AppTheme.surfaceColor, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppTheme.borderColor)),
+        child: Row(children: [_stat('نشطة', active, AppTheme.primaryColor), _stat('مكتملة', completed, Colors.greenAccent), _stat('معلقة', paused, Colors.amber), _stat('فشل', failed, Colors.orangeAccent)]),
+      );
+
+  Widget _stat(String label, int value, Color color) => Expanded(child: Column(children: [Text('$value', style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(label, style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11))]));
 
   Widget _section(String title, List<Map<String, dynamic>> items) {
     final mangaGroups = <String, List<Map<String, dynamic>>>{};
@@ -159,16 +170,16 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           const SizedBox(height: 9),
           LinearProgressIndicator(value: total > 0 ? progress : null, minHeight: 5, borderRadius: BorderRadius.circular(5), color: AppTheme.primaryColor),
           const SizedBox(height: 5),
-          Row(children: [Text(total > 0 ? '${(progress * 100).round()}%' : _formatBytes(bytes), style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (total > 0) Text('  ${_formatBytes(bytes)} / ${_formatBytes(total)}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), const Spacer(), if (status == 'paused') IconButton(onPressed: () => DownloadService.resumeTask(id), icon: const Icon(Icons.play_arrow_rounded, color: Colors.white)), if (status != 'paused') IconButton(onPressed: () => DownloadService.pauseTask(id), icon: const Icon(Icons.pause_rounded, color: Colors.white)), IconButton(onPressed: () => DownloadService.cancelTask(id), icon: const Icon(Icons.close_rounded, color: Colors.orange))]),
+          Row(children: [Text(total > 0 ? '${(progress * 100).round()}%' : _formatBytes(bytes), style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (total > 0) Text('  ${_formatBytes(bytes)} / ${_formatBytes(total)}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), if (item['speed'] is num && (item['speed'] as num) > 0) Text('  ${_formatSpeed((item['speed'] as num).toInt())}', style: const TextStyle(color: AppTheme.primaryColor, fontSize: 11)), if (item['eta_seconds'] is num && (item['eta_seconds'] as num) > 0) Text('  ${_formatEta((item['eta_seconds'] as num).toInt())}', style: const TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11)), const Spacer(), if (status == 'paused') IconButton(onPressed: () => DownloadService.resumeTask(id), icon: const Icon(Icons.play_arrow_rounded, color: Colors.white)), if (status != 'paused') IconButton(onPressed: () => DownloadService.pauseTask(id), icon: const Icon(Icons.pause_rounded, color: Colors.white)), IconButton(onPressed: () => DownloadService.cancelTask(id), icon: const Icon(Icons.close_rounded, color: Colors.orange))]),
         ],
-        if (status == 'failed' || status == 'cancelled' || (status == 'completed' && !exists)) Row(children: [Expanded(child: Text(item['error']?.toString().isNotEmpty == true ? item['error'].toString() : 'الملف غير موجود أو فشل التنزيل', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.orange, fontSize: 11))), TextButton(onPressed: () => DownloadService.retry(id), child: const Text('إعادة المحاولة'))]),
-        if (status == 'completed') Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(onPressed: () => DownloadService.delete(id), icon: const Icon(Icons.delete_outline, size: 18), label: const Text('حذف'))),
+        if (status == 'failed' || status == 'cancelled' || (status == 'completed' && !exists)) Row(children: [Expanded(child: Text(item['error']?.toString().isNotEmpty == true ? item['error'].toString() : 'الملف غير موجود أو فشل التنزيل', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.orange, fontSize: 11))), TextButton.icon(onPressed: () => DownloadService.retry(id), icon: const Icon(Icons.refresh, size: 17), label: const Text('إعادة المحاولة'))]),
+        if (status == 'completed') Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(onPressed: () => _confirmDelete(id), icon: const Icon(Icons.delete_outline, size: 18), label: const Text('حذف'))),
       ]),
     );
   }
 
   Widget _statusLine(String status, double progress) {
-    final text = {'queued': 'في قائمة الانتظار', 'downloading': 'جارٍ التنزيل', 'paused': 'متوقف مؤقتًا', 'completed': 'تم التنزيل', 'failed': 'فشل التنزيل', 'cancelled': 'تم الإلغاء'}[status] ?? status;
+    final text = {'queued': 'في قائمة الانتظار', 'waiting': 'بانتظار الاتصال', 'retrying': 'إعادة المحاولة', 'downloading': 'جارٍ التنزيل', 'paused': 'متوقف مؤقتًا', 'completed': 'تم التنزيل', 'failed': 'فشل التنزيل', 'cancelled': 'تم الإلغاء'}[status] ?? status;
     final color = status == 'completed' ? Colors.greenAccent : status == 'failed' || status == 'cancelled' ? Colors.orange : AppTheme.primaryColor;
     return Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700));
   }
@@ -176,6 +187,14 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   String _formatBytes(int value) {
     if (value < 1024 * 1024) return '${(value / 1024).toStringAsFixed(0)} KB';
     return '${(value / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  String _formatSpeed(int value) => value <= 0 ? '' : '${_formatBytes(value)}/ث';
+  String _formatEta(int seconds) => seconds <= 0 ? '' : seconds < 60 ? 'متبقي ${seconds}ث' : 'متبقي ${(seconds / 60).ceil()}د';
+
+  Future<void> _confirmDelete(String id) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (_) => AlertDialog(title: const Text('حذف هذا التنزيل؟'), content: const Text('سيتم حذف ملف التنزيل فقط ولن تتأثر المفضلة أو سجل المشاهدة.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف'))]));
+    if (confirmed == true) await DownloadService.delete(id);
   }
 
   Future<void> _open(Map<String, dynamic> item, bool isManga) async {

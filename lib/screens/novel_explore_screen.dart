@@ -10,6 +10,7 @@ import '../widgets/ui/app_search_bar.dart';
 import '../widgets/ui/content_card.dart';
 import '../widgets/ui/content_grid.dart';
 import '../widgets/ui/state_views.dart';
+import '../widgets/ui/universal_content_details.dart';
 
 class NovelExploreScreen extends StatefulWidget {
   final bool embedded;
@@ -159,7 +160,6 @@ class _NovelDetailsScreenState extends State<NovelDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: const Text('تفاصيل الرواية')),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _future,
         builder: (context, snapshot) {
@@ -175,68 +175,35 @@ class _NovelDetailsScreenState extends State<NovelDetailsScreen> {
               .toList();
           final image = novel['image_url']?.toString() ?? '';
           final title = novel['title']?.toString() ?? 'رواية بدون عنوان';
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: image.isEmpty
-                        ? Container(
-                            width: 112,
-                            height: 160,
-                            color: AppTheme.elevatedColor,
-                            child: const Icon(Icons.auto_stories_rounded, size: 42),
-                          )
-                        : Image.network(
-                            image,
-                            width: 112,
-                            height: 160,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 112,
-                              height: 160,
-                              color: AppTheme.elevatedColor,
-                              child: const Icon(Icons.broken_image_outlined),
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, height: 1.25, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 10),
-                        Text('${chapters.length} فصل متاح', style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if ((novel['synopsis']?.toString() ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text(novel['synopsis'].toString(), textDirection: TextDirection.rtl, style: const TextStyle(color: AppTheme.textSecondaryColor, height: 1.7)),
-              ],
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: Text('الفصول', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800))),
-                  Text('${chapters.length}', style: const TextStyle(color: AppTheme.textSecondaryColor)),
-                ],
-              ),
+          return ListView(children: [
+            UniversalDetailsHero(
+              title: title,
+              alternativeTitle: (novel['alternative_title'] ?? novel['alt_title'] ?? novel['author'])?.toString(),
+              imageUrl: image,
+              backdropUrl: (novel['backdrop_url'] ?? novel['backdrop'] ?? novel['cover_url'])?.toString(),
+              typeLabel: 'رواية',
+              status: novel['status']?.toString(),
+              fallbackIcon: Icons.auto_stories_rounded,
+              onBack: () => Navigator.pop(context),
+            ),
+            Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 32), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              UniversalMetadata(items: [
+                UniversalMetaItem(value: '${novel['rating'] ?? ''}', label: 'التقييم', icon: Icons.star_rounded, color: Colors.amber),
+                UniversalMetaItem(value: '${chapters.length}', label: 'الفصول', icon: Icons.menu_book_rounded, color: const Color(0xFF67C96B)),
+                UniversalMetaItem(value: '${novel['year'] ?? novel['release_year'] ?? ''}', label: 'السنة', icon: Icons.calendar_month_rounded, color: const Color(0xFF36B9E8)),
+                UniversalMetaItem(value: novel['status']?.toString() ?? '', label: 'الحالة', icon: Icons.info_outline_rounded, color: Colors.greenAccent),
+              ]),
+              if (novel['genres'] is List) UniversalGenreChips(genres: novel['genres'] as List),
+              const SizedBox(height: 14),
+              UniversalDescription(text: novel['synopsis']?.toString() ?? '', title: 'القصة'),
+              UniversalSectionHeader('الفصول', trailing: '${chapters.length} فصل'),
               const SizedBox(height: 10),
               if (chapters.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('لا توجد فصول متاحة حاليًا.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondaryColor)),
-                )
+                const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('لا توجد فصول متاحة حاليًا.', style: TextStyle(color: AppTheme.textSecondaryColor))))
               else
                 ...chapters.asMap().entries.map((entry) => _chapterTile(context, chapters, entry.key, entry.value)),
-            ],
-          );
+            ])),
+          ]);
         },
       ),
     );
