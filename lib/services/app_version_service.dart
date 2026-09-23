@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -202,11 +201,6 @@ class AppVersionService {
   }) async {
     try {
       // Permission check (Android only)
-      if (Platform.isAndroid && !(await _requestStoragePermission())) {
-        onError?.call('Storage permission denied');
-        return;
-      }
-
       // Get temporary directory
       final tempDir = await getTemporaryDirectory();
       final fileName = 'anitv_update.apk';
@@ -215,6 +209,11 @@ class AppVersionService {
       // Download file dengan progress
       final request = http.Request('GET', Uri.parse(downloadUrl));
       final streamedResponse = await request.send();
+
+      if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
+        onError?.call('تعذر تنزيل التحديث (HTTP ${streamedResponse.statusCode})');
+        return;
+      }
 
       final contentLength = streamedResponse.contentLength ?? 0;
       if (contentLength == 0) {
@@ -234,20 +233,32 @@ class AppVersionService {
 
       await sink.close();
 
+      if (!await file.exists() || await file.length() == 0) {
+        onError?.call('ملف التحديث غير صالح');
+        return;
+      }
+
       // Complete download
       onProgress(1.0); 
 
       // Install logic
       if (Platform.isAndroid) {
         try {
-          // Use platform channel to trigger APK installation
           const platform = MethodChannel('com.anitv.app/installer');
-          final result = true;
-          
+          final result = await platform.invokeMethod<String>('installApk', {'path': savePath});
+
           if (result == 'success') {
             onComplete?.call();
+          } else if (result == 'permission_required') {
+            onError?.call('السماح بتثبيت التطبيقات من هذا المصدر مطلوب من إعدادات Android');
           } else {
             onError?.call('Installation failed: $result');
+          }
+        } on PlatformException catch (e) {
+          if (e.code == 'INSTALL_PERMISSION_REQUIRED') {
+            onError?.call('السماح بتثبيت التطبيقات من هذا المصدر مطلوب من إعدادات Android');
+          } else {
+            onError?.call('تعذر فتح مثبت Android: ${e.message ?? e.code}');
           }
         } catch (e) {
           print('Error installing APK: $e');
@@ -257,40 +268,6 @@ class AppVersionService {
     } catch (e) {
       print('Error downloading update: $e');
       onError?.call('Error: $e');
-    }
-  }
-
-  // Request storage permission
-  static Future<bool> _requestStoragePermission() async {
-    try {
-      // For Android 13+ (API 33+) use more granular permissions
-      // For older versions use WRITE_EXTERNAL_STORAGE
-      if (Platform.isAndroid) {
-        // Check if we already have permission
-        if (await Permission.storage.isGranted ||
-            await Permission.manageExternalStorage.isGranted) {
-          return true;
-        }
-        
-        // Request storage permission
-        final storageStatus = await Permission.storage.request();
-        if (storageStatus.isGranted) {
-          return true;
-        }
-        
-        // If storage permission is denied, try manage external storage
-        final manageStatus = await Permission.manageExternalStorage.request();
-        if (manageStatus.isGranted) {
-          return true;
-        }
-        
-        return false;
-      } else {
-        return false;
-      }
-    } catch (e) {
-      print('Error requesting permission: $e');
-      return false;
     }
   }
 

@@ -6,6 +6,7 @@ import io.flutter.plugin.common.MethodChannel
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -73,6 +74,21 @@ class MainActivity: FlutterActivity() {
     private fun installApk(apkPath: String, result: MethodChannel.Result) {
         try {
             val file = File(apkPath)
+            if (!file.exists() || file.length() == 0L) {
+                result.error("INVALID_APK", "Downloaded APK is missing or empty", null)
+                return
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(settingsIntent)
+                result.error("INSTALL_PERMISSION_REQUIRED", "Allow AniTV to install unknown apps", null)
+                return
+            }
+
             val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 FileProvider.getUriForFile(
                     this,
