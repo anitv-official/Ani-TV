@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:anitv/extensions/extension_base.dart';
 import 'package:anitv/extensions/extension_catalog.dart';
+import 'package:anitv/sources/source_presentation.dart';
 import 'package:anitv/sources/source_registry.dart';
 
 void main() {
@@ -23,5 +24,17 @@ void main() {
     expect(SourceRegistry.sourceFor('https://www.fasel-hd.co/series/demo')?.id, 'faselhd');
     expect(SourceRegistry.sourceFor('https://www.youtube.com/watch?v=demo123')?.id, 'youtube');
     expect(SourceRegistry.sourceFor('https://youtu.be/demo123')?.id, 'youtube');
+  });
+
+  test('all API and extension providers are exposed in the unified catalog', () {
+    final ids = SourceRegistry.extensionSources.map((source) => source.id).toSet();
+    expect(ids, containsAll({
+      'anime_slayer', 'animefy', 'drama_slayer', 'swat', 'mangatime', 'manga_mello',
+      'anime_witcher', 'anime3rb', 'egydead', 'krmzy', 'aflaam', 'akwam', 'faselhd', 'youtube',
+    }));
+    expect(SourcePresentation.kindLabel('anime'), 'أنمي');
+    expect(SourcePresentation.kindLabel('manga'), 'مانجا');
+    expect(SourcePresentation.kindLabel('drama'), 'أفلام ومسلسلات');
+    expect(SourcePresentation.availability('anime3rb'), SourceAvailability.limited);
   });
 }
