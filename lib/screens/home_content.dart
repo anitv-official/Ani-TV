@@ -319,10 +319,10 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 2),
       child: GestureDetector(
         onTap: () => _openItem(item, isAnime: item['type'] != 'comic'),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          child: Container(
-            height: 210,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            child: Container(
+            height: 246,
             decoration: BoxDecoration(color: AppTheme.surfaceColor, image: image == null ? null : DecorationImage(image: NetworkImage(image), fit: BoxFit.cover)),
             child: Container(
               padding: const EdgeInsets.all(20),
@@ -334,7 +334,9 @@ class _HomeContentState extends State<HomeContent> with AutomaticKeepAliveClient
                   const SizedBox(height: 6),
                   Text(item['title']?.toString() ?? 'محتوى مميز', maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.headlineMedium),
                   const SizedBox(height: 8),
-                  Text('اضغط للانتقال إلى التفاصيل', style: Theme.of(context).textTheme.bodySmall),
+                  Text(item['type']?.toString() == 'comic' ? 'مانجا • محتوى مميز' : 'أنمي • محتوى مميز', style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(onPressed: () => _openItem(item, isAnime: item['type'] != 'comic'), icon: const Icon(Icons.play_arrow_rounded, size: 18), label: const Text('مشاهدة الآن'), style: ElevatedButton.styleFrom(minimumSize: const Size(0, 38), padding: const EdgeInsets.symmetric(horizontal: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))),
                 ])),
               ),
             ),

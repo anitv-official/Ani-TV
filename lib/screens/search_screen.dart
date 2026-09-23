@@ -147,10 +147,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'anime' || item['type'] == 'anime')
                 .toList();
-          } else if (_selectedFilter == 'Manga') {
+          } else if (_selectedFilter == 'Manga' || _selectedFilter == 'مانجا' || _selectedFilter == 'مانهوا') {
             filteredResults = filteredResults
-                .where((item) => item['category'] == 'comic' || item['type'] == 'comic' || item['type'] == 'manga')
+                .where((item) => item['category'] == 'comic' || item['type'] == 'comic' || item['type'] == 'manga' || (_selectedFilter == 'مانهوا' && item['type']?.toString().toLowerCase() == 'manhwa'))
                 .toList();
+          } else if (_selectedFilter == 'أفلام') {
+            filteredResults = filteredResults.where((item) => item['category'] == 'movie' || item['type']?.toString().toLowerCase() == 'movie').toList();
+          } else if (_selectedFilter == 'دراما' || _selectedFilter == 'مسلسلات') {
+            filteredResults = filteredResults.where((item) => item['category'] == 'drama' || item['type']?.toString().toLowerCase() == 'drama').toList();
           }
 
           _searchResults = filteredResults;
@@ -185,10 +189,14 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
             filteredResults = filteredResults
                 .where((item) => item['category'] == 'anime' || item['type'] == 'anime')
                 .toList();
-          } else if (_selectedFilter == 'Manga') {
+          } else if (_selectedFilter == 'Manga' || _selectedFilter == 'مانجا' || _selectedFilter == 'مانهوا') {
             filteredResults = filteredResults
-                .where((item) => item['category'] == 'comic' || item['type'] == 'comic')
+                .where((item) => item['category'] == 'comic' || item['type'] == 'comic' || item['type'] == 'manga' || (_selectedFilter == 'مانهوا' && item['type']?.toString().toLowerCase() == 'manhwa'))
                 .toList();
+          } else if (_selectedFilter == 'أفلام') {
+            filteredResults = filteredResults.where((item) => item['category'] == 'movie' || item['type']?.toString().toLowerCase() == 'movie').toList();
+          } else if (_selectedFilter == 'دراما' || _selectedFilter == 'مسلسلات') {
+            filteredResults = filteredResults.where((item) => item['category'] == 'drama' || item['type']?.toString().toLowerCase() == 'drama').toList();
           }
 
           _searchResults = filteredResults;
@@ -550,27 +558,26 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   Widget _buildSearchSuggestions() {
     return Container(
-      height: 58,
+      height: 106,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       margin: const EdgeInsets.only(bottom: 4),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          ..._genres.take(6).map((genre) => Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: ActionChip(
-                  label: Text(genre['name']?.toString() ?? ''),
-                  backgroundColor: AppTheme.elevatedColor,
-                  labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  side: const BorderSide(color: AppTheme.borderColor),
-                  onPressed: () {
-                    setState(() => _selectedChip = genre['name']?.toString() ?? '');
-                    _performGenreSearch(genre);
-                  },
-                ),
-              )),
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(height: 42, child: ListView.separated(scrollDirection: Axis.horizontal, itemCount: 8, separatorBuilder: (_, __) => const SizedBox(width: 7), itemBuilder: (_, index) {
+          const filters = ['الكل', 'أنمي', 'مانجا', 'مانهوا', 'روايات', 'أفلام', 'مسلسلات', 'دراما'];
+          final label = filters[index];
+          final selected = (_selectedFilter == 'All' && label == 'الكل') || _selectedFilter == label;
+          return ChoiceChip(label: Text(label), selected: selected, onSelected: (_) { setState(() => _selectedFilter = label == 'الكل' ? 'All' : label); if (_searchController.text.trim().isNotEmpty) _performSearch(_searchController.text.trim()); }, selectedColor: AppTheme.primaryColor, backgroundColor: AppTheme.elevatedColor, labelStyle: TextStyle(color: selected ? Colors.white : AppTheme.textSecondaryColor, fontWeight: FontWeight.w700), side: BorderSide(color: selected ? AppTheme.primaryColor : AppTheme.borderColor));
+        })),
+        const Text('التصنيفات الشائعة', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 11, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+
+  Widget _popularSearchChips() {
+    const popular = ['Solo Leveling', 'One Piece', 'Naruto', 'Attack on Titan', 'Jujutsu Kaisen', 'Demon Slayer'];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+      child: Wrap(spacing: 8, runSpacing: 8, children: popular.map((value) => ActionChip(label: Text(value), backgroundColor: AppTheme.elevatedColor, side: const BorderSide(color: AppTheme.borderColor), labelStyle: const TextStyle(color: Colors.white70, fontSize: 11), onPressed: () { _searchController.text = value; _performSearch(value); })).toList()),
     );
   }
 
@@ -589,11 +596,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   Widget _buildInitialSearchView() {
     return Column(
       children: [
-        const SizedBox(height: 36),
-        const Icon(Icons.search_rounded, size: 48, color: AppTheme.textMutedColor),
-        const SizedBox(height: 12),
-        const Text('اكتب للبحث عن أنمي أو مانجا', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 14)),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
+        const Align(alignment: AlignmentDirectional.centerStart, child: Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('عمليات البحث الشائعة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900))),
+        _popularSearchChips(),
+        const Icon(Icons.search_rounded, size: 42, color: AppTheme.textMutedColor),
+        const SizedBox(height: 10),
+        const Text('اكتب للبحث عن أنمي أو مانجا أو فيلم', style: TextStyle(color: AppTheme.textSecondaryColor, fontSize: 13)),
       ],
     );
   }
