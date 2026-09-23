@@ -663,7 +663,28 @@ class _EpisodeListScreenState extends State<EpisodeListScreen> {
           else
             SliverPadding(padding: const EdgeInsets.fromLTRB(16, 4, 16, 28), sliver: SliverList(delegate: SliverChildBuilderDelegate((context, index) {
               final episode = episodes[index];
-              return TweenAnimationBuilder<double>(tween: Tween(begin: 0, end: 1), duration: Duration(milliseconds: 260 + ((index.clamp(0, 8) as num).toInt() * 35)), curve: Curves.easeOutCubic, builder: (_, value, child) => Transform.translate(offset: Offset(0, 18 * (1 - value)), child: Opacity(opacity: value, child: child)), child: Padding(padding: const EdgeInsets.only(bottom: 10), child: EpisodeTile(title: episode['title']?.toString() ?? 'حلقة ${index + 1}', subtitle: episode['duration']?.toString(), imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(), onTap: () => widget.onPlay(episode), onDownload: () async { widget.onDownload(episode); return true; }))),
+              return TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: Duration(milliseconds: 260 + ((index.clamp(0, 8) as num).toInt() * 35)),
+                curve: Curves.easeOutCubic,
+                builder: (_, value, child) => Transform.translate(
+                  offset: Offset(0, 18 * (1 - value)),
+                  child: Opacity(opacity: value, child: child),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: EpisodeTile(
+                    title: episode['title']?.toString() ?? 'حلقة ${index + 1}',
+                    subtitle: episode['duration']?.toString(),
+                    imageUrl: (episode['image'] ?? episode['thumbnail'] ?? widget.anime['image_url'])?.toString(),
+                    onTap: () => widget.onPlay(episode),
+                    onDownload: () async {
+                      widget.onDownload(episode);
+                      return true;
+                    },
+                  ),
+                ),
+              );
               }, childCount: episodes.length))),
         ],
       ),
