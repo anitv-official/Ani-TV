@@ -120,7 +120,7 @@ class AuthPageBackground extends StatelessWidget {
         decoration: const BoxDecoration(color: AppTheme.backgroundColor),
         child: Stack(children: [
           Positioned(top: -100, right: -80, child: IgnorePointer(child: Container(width: 250, height: 250, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.primaryColor.withOpacity(.07))))),
-          Positioned(bottom: -120, left: -100, child: IgnorePointer(child: Container(width: 280, height: 280, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.primaryColor.withOpacity(.045)))),
+          Positioned(bottom: -120, left: -100, child: IgnorePointer(child: Container(width: 280, height: 280, decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.primaryColor.withOpacity(.045))))),
           child,
         ]),
       );

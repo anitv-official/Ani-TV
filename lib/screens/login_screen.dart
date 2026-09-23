@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(children: [if (_step > 0) Expanded(child: OutlinedButton(onPressed: _loading ? null : () => setState(() => _step = 0), style: AuthUi.secondaryButton(), child: const Text('رجوع'))), if (_step > 0) const SizedBox(width: 10), Expanded(child: ElevatedButton(onPressed: _loading ? null : _next, style: AuthUi.primaryButton(), child: _loading ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(_step == 0 ? 'متابعة' : 'تسجيل الدخول', style: const TextStyle(fontWeight: FontWeight.bold))))]),
             if (_step == 1) Align(alignment: AlignmentDirectional.center, child: TextButton(onPressed: _loading ? null : _forgotPassword, child: const Text('نسيت كلمة المرور؟'))),
           ])),
-        ]))),
+        ])))),
       );
 
   Widget _identifierStep() => Column(key: const ValueKey('identifier'), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
